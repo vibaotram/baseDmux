@@ -1,0 +1,37 @@
+# config file for snakemake to run wo
+
+# provide file paths
+#READS: "/home/baotram/tal/workflow/reads" # path to folders of each run
+#BASECALL: "/home/baotram/tal/workflow/basecall"
+#DEMUX_GUPPY: "/home/baotram/tal/workflow/demultiplex/guppy"
+#DEMUX_DEEPBINNER: "/home/baotram/tal/workflow/demultiplex/deepbinner"
+DIR: "/home/baotram/tal/workflow/test/"
+
+
+SINGULARITY:
+    'GUPPY': "/home/baotram/tal/workflow/container/new.simg" # guppy + miniconda
+    'DEEPBINNER': "/home/baotram/tal/workflow/container/deepbinner.simg" # deepbinner + ont_fast5_api + python3
+    'ALL': "cpu-py3-tsrf.simg"
+
+
+CONDA:
+    'MINIONQC': "/home/baotram/tal/workflow/conda/conda_minionqc.yaml"
+    'MULTIQC': "/home/baotram/tal/workflow/conda/conda_multiqc.yaml"
+
+QSCORE_CUTOFF: 7
+
+BASECALLER:
+    'RESOURCE': 'cpu' # or 'gpu'
+#    'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
+    'THREADS': 4
+    'NUM_CALLERS': 4
+    'MIN_QSCORE': 7
+    'HP_CORRECT': 'true'
+    'ENABLE_TRIMMING': 'true'
+    'GPU_RUNNERS': "1"
+    'GPU_DEVICE': "auto"
+
+KIT: "SQK-RBK004"
+FLOWCELL: "FLO-MIN106"
+
+DEMULTIPLEXER: [ "deepbinner"]

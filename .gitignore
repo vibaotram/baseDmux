@@ -1,0 +1,9 @@
+
+test/*
+container/*.simg
+.cache
+.conda
+.config
+.keras
+.snakemake
+.theano
