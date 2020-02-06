@@ -1,22 +1,18 @@
 # config file for snakemake to run wo
 
-# provide file paths
-#READS: "/home/baotram/tal/workflow/reads" # path to folders of each run
-#BASECALL: "/home/baotram/tal/workflow/basecall"
-#DEMUX_GUPPY: "/home/baotram/tal/workflow/demultiplex/guppy"
-#DEMUX_DEEPBINNER: "/home/baotram/tal/workflow/demultiplex/deepbinner"
-DIR: "/home/baotram/tal/workflow/test/"
+
+DIR: "/scratch/baotram/test/"
 
 
 SINGULARITY:
-    'GUPPY': "/home/baotram/tal/workflow/container/new.simg" # guppy + miniconda
-    'DEEPBINNER': "/home/baotram/tal/workflow/container/deepbinner.simg" # deepbinner + ont_fast5_api + python3
+    'GUPPY': "/scratch/baotram/baseDmux/container/new.simg" # guppy + miniconda
+    'DEEPBINNER': "/scratch/baotram/baseDmux/container/deepbinner.simg" # deepbinner + ont_fast5_api + python3
     'ALL': "" #"cpu-py3-tsrf.simg"
 
 
 CONDA:
-    'MINIONQC': "/home/baotram/tal/workflow/conda/conda_minionqc.yaml"
-    'MULTIQC': "/home/baotram/tal/workflow/conda/conda_multiqc.yaml"
+    'MINIONQC': "scratch/baotram/baseDmux/conda/conda_minionqc.yaml"
+    'MULTIQC': "/scratch/baotram/baseDmux/conda/conda_multiqc.yaml"
 
 QSCORE_CUTOFF: 7
 
