@@ -5,14 +5,14 @@ DIR: "/scratch/baotram/test/"
 
 
 SINGULARITY:
-    'GUPPY': "/scratch/baotram/baseDmux/container/new.simg" # guppy + miniconda
-    'DEEPBINNER': "/scratch/baotram/baseDmux/container/deepbinner.simg" # deepbinner + ont_fast5_api + python3
+    'GUPPY': "container/new.simg" # guppy + miniconda
+    'DEEPBINNER': "container/deepbinner.simg" # deepbinner + ont_fast5_api + python3
     'ALL': "" #"cpu-py3-tsrf.simg"
 
 
 CONDA:
-    'MINIONQC': "scratch/baotram/baseDmux/conda/conda_minionqc.yaml"
-    'MULTIQC': "/scratch/baotram/baseDmux/conda/conda_multiqc.yaml"
+    'MINIONQC': "conda/conda_minionqc.yaml"
+    'MULTIQC': "conda/conda_multiqc.yaml"
 
 QSCORE_CUTOFF: 7
 
