@@ -19,7 +19,7 @@ QSCORE_CUTOFF: 7
 BASECALLER:
     'RESOURCE': 'cpu' # or 'gpu'
 #    'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
-    'NUM_CALLERS': 4
+    'NUM_CALLERS': 12
     'MIN_QSCORE': 7
     'HP_CORRECT': 'true'
     'ENABLE_TRIMMING': 'true'
@@ -29,7 +29,7 @@ BASECALLER:
 
 KIT: "SQK-RBK004"
 FLOWCELL: "FLO-MIN106"
-THREADS: 4
+THREADS: 12
 
 DEMULTIPLEXER: ["guppy", "deepbinner"]
 DEMULTIPLEXING_CONFIG: "configuration.cfg"
