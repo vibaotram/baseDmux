@@ -5,6 +5,37 @@ import glob
 configfile:"config.yaml"
 
 
+DIR = config['DIR']
+run, = glob_wildcards(os.path.join(DIR, "reads/{run}/fast5"))
+
+demultiplexer = config['DEMULTIPLEXER']
+
+##############################
+## guppy_basecaller parameters
+
+RESOURCE = config['BASECALLER']['RESOURCE']
+
+KIT = config['KIT']
+
+FLOWCELL = config['FLOWCELL']
+
+MIN_QSCORE = config['BASECALLER']['MIN_QSCORE']
+HP_CORRECT = config['BASECALLER']['HP_CORRECT']
+
+THREADS = config['THREADS']
+
+GPU_RUNNERS_PER_DEVICE = config['BASECALLER']['GPU_PER_DEVICE']
+
+NUM_CALLERS = config['BASECALLER']['NUM_CALLERS']
+
+CUDA = config['BASECALLER']['CUDA']
+
+CPU_PER_CALLER = config['BASECALLER']['CPU_PER_CALLER']
+
+
+##############################
+## use different containers for guppy and deepbinner if no single container for all pakages is specified
+
 def guppy_container():
 	if len(config['SINGULARITY']['ALL']) == 0:
 		return(config['SINGULARITY']['GUPPY'])
@@ -18,38 +49,8 @@ def deepbinner_container():
 		return(config['SINGULARITY']['ALL'])
 
 
-DIR = config['DIR']
-
-run, = glob_wildcards(os.path.join(DIR, "reads/{run}/fast5"))
-
-
-
-KIT_PARAM = config['KIT']
-
-
-FLOWCELL_PARAM = config['FLOWCELL']
-
-
-
-MIN_QSCORE_PARAM = config['BASECALLER']['MIN_QSCORE']
-HP_CORRECT_PARAM = config['BASECALLER']['HP_CORRECT']
-ENABLE_TRIMMING_PARAM = config['BASECALLER']['ENABLE_TRIMMING']
-
-THREADS = config['BASECALLER']['THREADS']
-
-GPU_RUNNERS_PER_DEVICE_PARAM = config['BASECALLER']['GPU_RUNNERS']
-
-NUM_CALLERS_PARAM = config['BASECALLER']['NUM_CALLERS']
-
-DEVICE_PARAM = config['BASECALLER']['GPU_DEVICE']
-
-demultiplexer = config['DEMULTIPLEXER']
-
-#cpu_guppy_basecaller: guppy_basecaller -i $tempDir -s $tempOutDir --flowcell FLO-MIN106 --kit $kit --num_callers $ncallers --cpu_threads_per_caller $nthreads --qscore_filtering --min_qscore 7 --hp_correct true --enable_trimming true"
-#gpu_guppy_basecaller: guppy_basecaller -i $tempDir -s $tempOutDir --flowcell FLO-MIN106 --kit $kit --num_callers $ncallers --cpu_threads_per_caller $nthreads --qscore_filtering --min_qscore 7 --hp_correct true --enable_trimming true --gpu_runners_per_device $ngpu --device $name"
-
-
-
+##############################
+##############################
 
 rule all:
 	input:
@@ -69,18 +70,17 @@ rule cpu_guppy_basecalling:
 		fastq = DIR + "basecall/{run}/{run}.fastq"
 	params:
 		outpath = DIR + "basecall/{run}",
-		flowcell = FLOWCELL_PARAM,
-		kit = KIT_PARAM,
-#		config = BASECALLER_CONFIG_PARAM,
-		num_callers = NUM_CALLERS_PARAM,
-		min_qscore = MIN_QSCORE_PARAM,
-		hp_correct = HP_CORRECT_PARAM,
-#		enable_trimming = ENABLE_TRIMMING_PARAM,
+		flowcell = FLOWCELL,
+		kit = KIT,
+		num_callers = NUM_CALLERS,
+		cpu_threads_per_caller = CPU_PER_CALLER,
+		min_qscore = MIN_QSCORE,
+		hp_correct = HP_CORRECT,
 	threads: THREADS
 	singularity: guppy_container()
 	shell:
 		"""
-		guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --cpu_threads_per_caller {threads} --num_callers {params.num_callers} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct}
+		guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --num_callers {threads} --cpu_threads_per_caller {params.cpu_threads_per_caller} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct}
 		cat {params.outpath}/*.fastq > {output.fastq}
 		rm -f {params.outpath}/fastq_runid_*.fastq
 		"""
@@ -93,41 +93,48 @@ rule gpu_guppy_basecalling:
 		fastq = DIR + "basecall/{run}/{run}.fastq"
 	params:
 		outpath = DIR + "basecall/{run}",
-		flowcell = FLOWCELL_PARAM,
-		kit = KIT_PARAM,
-#		config = BASECALLER_CONFIG_PARAM,
-		num_callers = NUM_CALLERS_PARAM,
-		min_qscore = MIN_QSCORE_PARAM,
-		hp_correct = HP_CORRECT_PARAM,
-		enable_trimming = ENABLE_TRIMMING_PARAM,
-		gpu_runners_per_device = GPU_RUNNERS_PER_DEVICE_PARAM,
-		device = DEVICE_PARAM,
+		flowcell = FLOWCELL,
+		kit = KIT,
+		num_callers = NUM_CALLERS,
+		min_qscore = MIN_QSCORE,
+		hp_correct = HP_CORRECT,
+		gpu_runners_per_device = GPU_RUNNERS_PER_DEVICE,
+		device = CUDA,
 	threads: THREADS
 	singularity: guppy_container()
 	shell:
 		"""
-		guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --cpu_threads_per_caller {threads} --num_callers {params.num_callers} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct} --gpu_runners_per_device {params.gpu_runners_per_device} -device "{params.device}"
+		guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --num_callers {threads} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct} --gpu_runners_per_device {params.gpu_runners_per_device} --device "{params.device}"
 		cat {params.outpath}/*.fastq > {output.fastq}
 		rm -f {params.outpath}/fastq_runid_*.fastq
 		"""
 
+##############################
+## determine guppy version depending on type of RESOURCE
+
+def rules_guppy_basecaller_output_fastq():
+	if RESOURCE == 'cpu':
+		return(rules.cpu_guppy_basecalling.output.fastq)
+	elif RESOURCE == 'gpu':
+		return(rules.gpu_guppy_basecalling.output.fastq)
+
+def rules_guppy_basecaller_params_outpath():
+	if RESOURCE == 'cpu':
+		return(rules.cpu_guppy_basecalling.params.outpath)
+	elif RESOURCE == 'gpu':
+		return(rules.gpu_guppy_basecalling.params.outpath)
+
+def rules_guppy_basecaller_output_summary():
+	if config['BASECALLER']['RESOURCE'] == 'cpu':
+		return(rules.cpu_guppy_basecalling.output.summary)
+	elif config['BASECALLER']['RESOURCE'] == 'gpu':
+		return(rules.gpu_guppy_basecalling.output.summary)
 
 
 ##############################
 ############### DEMULTIPLEXING
 ##################### BY GUPPY
 
-def rules_guppy_basecaller_output_fastq():
-	if config['BASECALLER']['RESOURCE'] == 'cpu':
-		return(rules.cpu_guppy_basecalling.output.fastq)
-	elif config['BASECALLER']['RESOURCE'] == 'gpu':
-		return(rules.gpu_guppy_basecalling.output.fastq)
-
-def rules_guppy_basecaller_params_outpath():
-	if config['BASECALLER']['RESOURCE'] == 'cpu':
-		return(rules.cpu_guppy_basecalling.params.outpath)
-	elif config['BASECALLER']['RESOURCE'] == 'gpu':
-		return(rules.gpu_guppy_basecalling.params.outpath)
 
 rule guppy_demultiplexing:
 	input: rules_guppy_basecaller_output_fastq()
@@ -137,7 +144,7 @@ rule guppy_demultiplexing:
 	params:
 		inpath = rules_guppy_basecaller_params_outpath(),
 		outpath = DIR + "demultiplex/guppy/{run}",
-		kit = KIT_PARAM,
+		kit = KIT,
 		config = "configuration.cfg"
 	singularity: guppy_container()
 	conda: config['CONDA']['MINIONQC']
@@ -161,9 +168,10 @@ rule multi_to_single_fast5:
 	params:
 		output = DIR + "reads/{run}/singlefast5"
 	singularity: deepbinner_container()
+	threads: THREADS
 	shell:
 		"""
-		multi_to_single_fast5 -i {input} -s {params.output}
+		multi_to_single_fast5 -i {input} -s {params.output} -T {params.threads}
 		"""
 
 
@@ -177,8 +185,6 @@ rule deepbinner_classification:
 		"""
 		deepbinner classify --rapid {input} > {output.classification}
 		"""
-
-
 
 
 rule deepbinner_bin:
@@ -196,17 +202,31 @@ rule deepbinner_bin:
 		touch {output}
 		"""
 
+##############################
+## determine which demultiplexer to be executed
 
+def deepbinner_bin_output():
+	if "deepbinner" in demultiplexer:
+		return(rules.deepbinner_bin.output)
+	else:
+		return()
+
+def deepbinner_classification_output():
+	if "deepbinner" in demultiplexer:
+		return(rules.deepbinner_classification.output)
+	else:
+		return()
+
+def guppy_demultiplexing_output():
+	if "guppy" in demultiplexer:
+		return(rules.guppy_demultiplexing.output)
+	else:
+		return()
 
 ##############################
 ############# MINIONQC/MULTIQC
 ############## FOR BASECALLING
 
-def rules_guppy_basecaller_output_summary():
-	if config['BASECALLER']['RESOURCE'] == 'cpu':
-		return(rules.cpu_guppy_basecalling.output.summary)
-	elif config['BASECALLER']['RESOURCE'] == 'gpu':
-		return(rules.gpu_guppy_basecalling.output.summary)
 
 rule minionqc_basecall:
 	input: rules_guppy_basecaller_output_summary()
@@ -242,28 +262,8 @@ rule multiqc_basecall:
 ########### FOR DEMULTIPLEXING
 
 
-def deepbinner_bin_output():
-	if "deepbinner" in demultiplexer:
-		return(rules.deepbinner_bin.output)
-	else:
-		return()
-
-def deepbinner_classification_output():
-	if "deepbinner" in demultiplexer:
-		return(rules.deepbinner_classification.output)
-	else:
-		return()
-
-def guppy_demultiplexing_output():
-	if "guppy" in demultiplexer:
-		return(rules.guppy_demultiplexing.output)
-	else:
-		return()
-
-
 rule get_sequencing_summary_per_barcode:
 	input:
-		#DIR + "demultiplex/{demultiplexer}/{run}/demux.done",
 		deepbinner_bin_output(),
 		deepbinner_classification_output(),
 		guppy_demultiplexing_output()
@@ -327,6 +327,7 @@ rule get_multi_fast5_per_barcode:
 	params:
 		fast5 = DIR + "reads/{run}/fast5",
 		path = DIR + "demultiplex/{demultiplexer}/{run}"
+	threads: THREADS
 	shell:
 		"""
 		python3 script/fast5_subset.py {params.fast5} {params.path}
@@ -338,8 +339,10 @@ rule get_multi_fast5_per_barcode:
 ##################### HANDLERS
 
 onstart:
+	print("Basecalling will be performed by Guppy on", RESOURCE)
 	print("Demultiplexing will be performed by")
 	for d in demultiplexer: print("-", d)
+
 
 onsuccess:
 	print("Workflow finished, yay")

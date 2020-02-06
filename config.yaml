@@ -11,7 +11,7 @@ DIR: "/home/baotram/tal/workflow/test/"
 SINGULARITY:
     'GUPPY': "/home/baotram/tal/workflow/container/new.simg" # guppy + miniconda
     'DEEPBINNER': "/home/baotram/tal/workflow/container/deepbinner.simg" # deepbinner + ont_fast5_api + python3
-    'ALL': "cpu-py3-tsrf.simg"
+    'ALL': "" #"cpu-py3-tsrf.simg"
 
 
 CONDA:
@@ -23,15 +23,16 @@ QSCORE_CUTOFF: 7
 BASECALLER:
     'RESOURCE': 'cpu' # or 'gpu'
 #    'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
-    'THREADS': 4
     'NUM_CALLERS': 4
     'MIN_QSCORE': 7
     'HP_CORRECT': 'true'
     'ENABLE_TRIMMING': 'true'
-    'GPU_RUNNERS': "1"
-    'GPU_DEVICE': "auto"
+    'CPU_PER_CALLER': 1
+    'GPU_PER_DEVICE': 1
+    'CUDA': "auto"
 
 KIT: "SQK-RBK004"
 FLOWCELL: "FLO-MIN106"
+THREADS: 4
 
-DEMULTIPLEXER: [ "deepbinner"]
+DEMULTIPLEXER: ["guppy", "deepbinner"]
