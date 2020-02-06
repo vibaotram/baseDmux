@@ -75,7 +75,7 @@ rule cpu_guppy_basecalling:
 		num_callers = NUM_CALLERS,
 		cpu_threads_per_caller = CPU_PER_CALLER,
 		min_qscore = MIN_QSCORE,
-		hp_correct = HP_CORRECT,
+		hp_correct = HP_CORRECT
 	threads: THREADS
 	singularity: guppy_container()
 	shell:
@@ -99,7 +99,7 @@ rule gpu_guppy_basecalling:
 		min_qscore = MIN_QSCORE,
 		hp_correct = HP_CORRECT,
 		gpu_runners_per_device = GPU_RUNNERS_PER_DEVICE,
-		device = CUDA,
+		device = CUDA
 	threads: THREADS
 	singularity: guppy_container()
 	shell:
@@ -139,20 +139,18 @@ def rules_guppy_basecaller_output_summary():
 rule guppy_demultiplexing:
 	input: rules_guppy_basecaller_output_fastq()
 	output:
-		demux = DIR + "demultiplex/guppy/{run}/barcoding_summary.txt",
-		#check = DIR + "demultiplex/guppy/{run}/demux.done"
+		demux = DIR + "demultiplex/guppy/{run}/barcoding_summary.txt"
 	params:
 		inpath = rules_guppy_basecaller_params_outpath(),
 		outpath = DIR + "demultiplex/guppy/{run}",
 		kit = KIT,
-		config = "configuration.cfg"
+		config = config['DEMULTIPLEXING_CONFIG']
 	singularity: guppy_container()
 	conda: config['CONDA']['MINIONQC']
 	shell:
 		"""
 		guppy_barcoder -i {params.inpath} -s {params.outpath} -c {params.config} --barcode_kits {params.kit} --trim_barcodes --compress_fastq
 		Rscript script/rename_fastq_guppy_barcoder.R {params.outpath}
-		#touch {output.check}
 		"""
 
 
@@ -171,15 +169,14 @@ rule multi_to_single_fast5:
 	threads: THREADS
 	shell:
 		"""
-		multi_to_single_fast5 -i {input} -s {params.output} -T {params.threads}
+		multi_to_single_fast5 -i {input} -s {params.output} -T {threads}
 		"""
 
 
 rule deepbinner_classification:
 	input: rules.multi_to_single_fast5.output
 	output:
-		classification = DIR + "demultiplex/deepbinner/{run}/classification",
-		#check = DIR + "demultiplex/deepbinner/{run}/demux.done"
+		classification = DIR + "demultiplex/deepbinner/{run}/classification"
 	singularity: deepbinner_container()
 	shell:
 		"""
@@ -231,12 +228,11 @@ def guppy_demultiplexing_output():
 rule minionqc_basecall:
 	input: rules_guppy_basecaller_output_summary()
 	output:
-		summary = DIR + "basecall/{run}/summary.yaml",
+		summary = DIR + "basecall/{run}/summary.yaml"
 	conda: config['CONDA']['MINIONQC']
 	singularity: guppy_container()
 	params:
-		inpath = DIR + "basecall/{run}",
-		#combinedQC = "basecall/combinedQC"
+		inpath = DIR + "basecall/{run}"
 	shell:
 		"""
 		MinIONQC.R -i {params.inpath}
@@ -321,7 +317,6 @@ rule multiqc_demultiplex:
 rule get_multi_fast5_per_barcode:
 	input: rules.get_sequencing_summary_per_barcode.output
 	output:
-		#fast5 = DIR + "demultiplex/{demultiplexer}/{run}/{barcode}/batch_output_0.fast5",
 		check = DIR + "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"
 	singularity: deepbinner_container()
 	params:

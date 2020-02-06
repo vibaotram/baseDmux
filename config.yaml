@@ -36,3 +36,4 @@ FLOWCELL: "FLO-MIN106"
 THREADS: 4
 
 DEMULTIPLEXER: ["guppy", "deepbinner"]
+DEMULTIPLEXING_CONFIG: "configuration.cfg"
