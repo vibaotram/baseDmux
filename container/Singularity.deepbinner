@@ -2,6 +2,7 @@ Bootstrap: debootstrap
 OSVersion: bionic
 MirrorURL: http://us.archive.ubuntu.com/ubuntu/
 
+
 %labels
 MAINTAINER vibaotram
 
