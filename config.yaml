@@ -1,13 +1,13 @@
-# config file for snakemake to run wo
+# config file for snakemake
 
 
-DIR: "/scratch/baotram/test/"
+DIR: "/home/baotram/tal/workflow/test/"
 
 
 SINGULARITY:
-    'GUPPY': "container/new.simg" # guppy + miniconda
-    'DEEPBINNER': "container/deepbinner.simg" # deepbinner + ont_fast5_api + python3
-    'ALL': "" #"cpu-py3-tsrf.simg"
+    'GUPPY': "shub://vibaotram/simage:guppy" # guppy + miniconda
+    'DEEPBINNER': "shub://vibaotram/simage:deepbinner" # deepbinner + ont_fast5_api + python3
+    'ALL': "" # "container/cpu-py3-tsrf.simg"
 
 
 CONDA:
@@ -33,3 +33,5 @@ THREADS: 12
 
 DEMULTIPLEXER: ["guppy", "deepbinner"]
 DEMULTIPLEXING_CONFIG: "configuration.cfg"
+
+MINIONQC_FIG: ["channel_summary", "flowcell_overview", "gb_per_channel_overview", "length_by_hour", "length_histogram", "length_vs_q", "q_by_hour", "q_histogram", "reads_per_hour", "yield_by_length", "yield_over_time"]
