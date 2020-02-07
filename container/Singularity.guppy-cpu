@@ -10,7 +10,6 @@ MAINTAINER vibaotram
 %help
   A container to hold the nanopore barcode demultiplexer guppy cpu version and Miniconda3.
 
-
 %post
     echo 'export LC_ALL=C.UTF-8' >> /environment
     echo 'export LANG=C.UTF-8' >> /environment
