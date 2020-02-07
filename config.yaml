@@ -1,7 +1,7 @@
 # config file for snakemake
 
 
-DIR: "/home/baotram/tal/workflow/test/"
+DIR: "scratch/baotram/test"
 
 
 SINGULARITY:
