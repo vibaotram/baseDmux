@@ -4,26 +4,31 @@
 The workflow will be available in local computer as well as cluster environment.
 
 
-**Install**
+### Install
+
 ```
-git clone https://github.com/vibaotram/baseDmux.git, or
+git clone [https://github.com/vibaotram/baseDmux.git](https://github.com/vibaotram/baseDmux.git)
+```
+or
+```
 git clone git@github.com:vibaotram/baseDmux.git
-```
+``` 
 
 
-**Usage**
+### Usage
 
-```
 **Locally:**
+
+```
 snakemake --use-singularity --use-conda --cores 4 -p --verbose --report report.html
 ```
 
+**On cluster:**
 
 ```
-**On cluster:**
- snakemake --use-singularity --use-conda --cores 4 -p --verbose -j 999 \
- --cluster-config cluster.json \
- --cluster "sbatch --job-name {cluster.job-name}
+snakemake --use-singularity --use-conda --cores 4 -p --verbose -j 999 \
+--cluster-config cluster.json \
+--cluster "sbatch --job-name {cluster.job-name}
 -p {cluster.partition} \
 -t {cluster.time} \
 --output {cluster.output} \
