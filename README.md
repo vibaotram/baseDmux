@@ -7,11 +7,11 @@ The workflow will be available in local computer as well as cluster environment.
 ### Install
 
 ```
-git clone https://github.com/vibaotram/baseDmux.git
+    git clone https://github.com/vibaotram/baseDmux.git
 ```
 or
 ```
-git clone git@github.com:vibaotram/baseDmux.git
+    git clone git@github.com:vibaotram/baseDmux.git
 ```
 
 
