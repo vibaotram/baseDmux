@@ -1,11 +1,12 @@
-#############
 Bootstrap: debootstrap
 OSVersion: bionic
 MirrorURL: http://us.archive.ubuntu.com/ubuntu/
 
+%labels
+MAINTAINER vibaotram
+
 %help
-  A container to hold the nanopore barcode demultiplexer deepbinner.
-  Run `singularity exec deepbinner.simg deepbinner`
+  A container to hold the nanopore barcode demultiplexer deepbinner and ont_fast5_api.
 
 %environment
   PATH=/usr/local/bin:$PATH
@@ -33,5 +34,3 @@ MirrorURL: http://us.archive.ubuntu.com/ubuntu/
     # INSTALL ONT_FAST5_API
     #================================
     pip3 install git+https://github.com/nanoporetech/ont_fast5_api
-
-#############
