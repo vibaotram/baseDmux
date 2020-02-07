@@ -20,13 +20,13 @@ git clone git@github.com:vibaotram/baseDmux.git
 **Locally:**
 
 ```
-snakemake --use-singularity --use-conda --cores 'all' -p --verbose --report report.html
+snakemake --use-singularity --use-conda --cores -p --verbose --report report.html
 ```
 
 **On cluster:**
 
 ```
-snakemake --use-singularity --use-conda --cores 'all' -p --verbose \
+snakemake --use-singularity --use-conda --cores -p --verbose \
 --cluster-config cluster.json \
 --cluster "sbatch --job-name {cluster.job-name}
 -p {cluster.partition} \
