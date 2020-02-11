@@ -1,11 +1,11 @@
 # config file for snakemake
 
 
-DIR: "/home/baotram/tal/workflow/test/"
+DIR: "/scratch/baotram/test/"
 
 
 SINGULARITY:
-    'GUPPY': "shub://vibaotram/singularity-container:guppy" # guppy + miniconda
+    'GUPPY': "shub://vibaotram/singularity-container:guppy-cpu-conda" # guppy + miniconda
     'DEEPBINNER': "shub://vibaotram/singularity-container:deepbinner-api" # deepbinner + ont_fast5_api + python3
     'ALL': '' #"/home/baotram/tal/workflow/container/guppy-cpu-conda-api.simg" # "container/cpu-py3-tsrf.simg"
 

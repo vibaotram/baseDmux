@@ -55,7 +55,7 @@ def deepbinner_container():
 ##############################
 ##############################
 
-ruleorder: gpu_guppy_basecalling > cpu_guppy_basecalling
+# ruleorder: gpu_guppy_basecalling > cpu_guppy_basecalling
 
 rule finish:
 	input:
@@ -70,72 +70,76 @@ rule finish:
 ################## BASECALLING
 ##################### BY GUPPY
 
-rule cpu_guppy_basecalling:
-	input: os.path.join(DIR, "reads/{run}/fast5")
-	output:
-		summary = os.path.join(DIR, "basecall/{run}/sequencing_summary.txt"),
-		fastq = os.path.join(DIR, "basecall/{run}/{run}.fastq")
-	params:
-		outpath = os.path.join(DIR, "basecall/{run}"),
-		flowcell = FLOWCELL,
-		kit = KIT,
-		num_callers = NUM_CALLERS,
-		cpu_threads_per_caller = CPU_PER_CALLER,
-		min_qscore = MIN_QSCORE,
-		hp_correct = HP_CORRECT
-	threads: THREADS
-	singularity: guppy_container()
-	shell:
-		"""
-		guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --num_callers {threads} --cpu_threads_per_caller {params.cpu_threads_per_caller} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct}
-		cat {params.outpath}/*.fastq > {output.fastq}
-		rm -f {params.outpath}/fastq_runid_*.fastq
-		"""
+if RESOURCE == 'cpu':
+	rule guppy_basecalling:
+		input: os.path.join(DIR, "reads/{run}/fast5")
+		output:
+			summary = os.path.join(DIR, "basecall/{run}/sequencing_summary.txt"),
+			fastq = os.path.join(DIR, "basecall/{run}/{run}.fastq")
+		params:
+			outpath = os.path.join(DIR, "basecall/{run}"),
+			flowcell = FLOWCELL,
+			kit = KIT,
+			num_callers = NUM_CALLERS,
+			cpu_threads_per_caller = CPU_PER_CALLER,
+			min_qscore = MIN_QSCORE,
+			hp_correct = HP_CORRECT
+		threads: THREADS
+		singularity: guppy_container()
+		shell:
+			"""
+			guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --num_callers {threads} --cpu_threads_per_caller {params.cpu_threads_per_caller} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct}
+			cat {params.outpath}/*.fastq > {output.fastq}
+			rm -f {params.outpath}/fastq_runid_*.fastq
+			"""
+elif RESOURCE == 'gpu':
+	rule guppy_basecalling:
+		input: os.path.join(DIR, "reads/{run}/fast5")
+		output:
+			summary = os.path.join(DIR, "basecall/{run}/sequencing_summary.txt"),
+			fastq = os.path.join(DIR, "basecall/{run}/{run}.fastq")
+		params:
+			outpath = os.path.join(DIR, "basecall/{run}"),
+			flowcell = FLOWCELL,
+			kit = KIT,
+			num_callers = NUM_CALLERS,
+			min_qscore = MIN_QSCORE,
+			hp_correct = HP_CORRECT,
+			gpu_runners_per_device = GPU_RUNNERS_PER_DEVICE,
+			device = CUDA
+		threads: THREADS
+		singularity: guppy_container()
+		shell:
+			"""
+			guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --num_callers {threads} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct} --gpu_runners_per_device {params.gpu_runners_per_device} --device "{params.device}"
+			cat {params.outpath}/*.fastq > {output.fastq}
+			rm -f {params.outpath}/fastq_runid_*.fastq
+			"""
 
 
-rule gpu_guppy_basecalling:
-	input: os.path.join(DIR, "reads/{run}/fast5")
-	output:
-		summary = os.path.join(DIR, "basecall/{run}/sequencing_summary.txt"),
-		fastq = os.path.join(DIR, "basecall/{run}/{run}.fastq")
-	params:
-		outpath = os.path.join(DIR, "basecall/{run}"),
-		flowcell = FLOWCELL,
-		kit = KIT,
-		num_callers = NUM_CALLERS,
-		min_qscore = MIN_QSCORE,
-		hp_correct = HP_CORRECT,
-		gpu_runners_per_device = GPU_RUNNERS_PER_DEVICE,
-		device = CUDA
-	threads: THREADS
-	singularity: guppy_container()
-	shell:
-		"""
-		guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --num_callers {threads} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct} --gpu_runners_per_device {params.gpu_runners_per_device} --device "{params.device}"
-		cat {params.outpath}/*.fastq > {output.fastq}
-		rm -f {params.outpath}/fastq_runid_*.fastq
-		"""
+
+
 
 ##############################
 ## determine guppy version depending on type of RESOURCE
 
-def rules_guppy_basecaller_output_fastq():
-	if RESOURCE == 'cpu':
-		return(rules.cpu_guppy_basecalling.output.fastq)
-	elif RESOURCE == 'gpu':
-		return(rules.gpu_guppy_basecalling.output.fastq)
-
-def rules_guppy_basecaller_params_outpath():
-	if RESOURCE == 'cpu':
-		return(rules.cpu_guppy_basecalling.params.outpath)
-	elif RESOURCE == 'gpu':
-		return(rules.gpu_guppy_basecalling.params.outpath)
-
-def rules_guppy_basecaller_output_summary():
-	if config['BASECALLER']['RESOURCE'] == 'cpu':
-		return(rules.cpu_guppy_basecalling.output.summary)
-	elif config['BASECALLER']['RESOURCE'] == 'gpu':
-		return(rules.gpu_guppy_basecalling.output.summary)
+# def rules_guppy_basecaller_output_fastq():
+# 	if RESOURCE == 'cpu':
+# 		return(rules.cpu_guppy_basecalling.output.fastq)
+# 	elif RESOURCE == 'gpu':
+# 		return(rules.gpu_guppy_basecalling.output.fastq)
+#
+# def rules_guppy_basecaller_params_outpath():
+# 	if RESOURCE == 'cpu':
+# 		return(rules.cpu_guppy_basecalling.params.outpath)
+# 	elif RESOURCE == 'gpu':
+# 		return(rules.gpu_guppy_basecalling.params.outpath)
+#
+# def rules_guppy_basecaller_output_summary():
+# 	if config['BASECALLER']['RESOURCE'] == 'cpu':
+# 		return(rules.cpu_guppy_basecalling.output.summary)
+# 	elif config['BASECALLER']['RESOURCE'] == 'gpu':
+# 		return(rules.gpu_guppy_basecalling.output.summary)
 
 
 ##############################
@@ -144,11 +148,11 @@ def rules_guppy_basecaller_output_summary():
 
 
 rule guppy_demultiplexing:
-	input: rules_guppy_basecaller_output_fastq()
+	input: rules.guppy_basecalling.output.fastq
 	output:
 		demux = os.path.join(DIR, "demultiplex/guppy/{run}/barcoding_summary.txt")
 	params:
-		inpath = rules_guppy_basecaller_params_outpath(),
+		inpath = rules.guppy_basecalling.params.outpath,
 		outpath = os.path.join(DIR, "demultiplex/guppy/{run}"),
 		kit = KIT,
 		config = config['DEMULTIPLEXING_CONFIG']
@@ -194,7 +198,7 @@ rule deepbinner_classification:
 rule deepbinner_bin:
 	input:
 		classes = rules.deepbinner_classification.output.classification,
-		fastq = rules_guppy_basecaller_output_fastq()
+		fastq = rules.guppy_basecalling.output.fastq
 	output: os.path.join(DIR, "demultiplex/deepbinner/{run}/fastq_per_barcode.done")
 	params:
 		out_dir = os.path.join(DIR, "demultiplex/deepbinner/{run}")
@@ -233,7 +237,7 @@ def guppy_demultiplexing_output():
 
 
 rule minionqc_basecall:
-	input: rules_guppy_basecaller_output_summary()
+	input: rules.guppy_basecalling.output.summary
 	output:
 		summary = os.path.join(DIR, "basecall/{run}/summary.yaml")
 	conda: config['CONDA']['MINIONQC']
@@ -272,7 +276,7 @@ rule get_sequencing_summary_per_barcode:
 	output: os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/get_summary.done")
 	params:
 		barcoding_path = os.path.join(DIR, "demultiplex/{demultiplexer}/{run}"),
-		sequencing_file = rules_guppy_basecaller_output_summary()
+		sequencing_file = rules.guppy_basecalling.output.summary
 	conda: config['CONDA']['MINIONQC']
 	singularity: guppy_container()
 	shell:
