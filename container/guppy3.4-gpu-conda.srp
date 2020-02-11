@@ -10,7 +10,7 @@ From: tensorflow/tensorflow:1.13.1-gpu-py3
     export LC_ALL=C.UTF-8
     export LANG=C.UTF-8
     apt update
-    apt install -y git wget rsync zlib1g-dev dpkg
+    apt install -y git wget rsync zlib1g-dev dpkg python3-pip tzdata
 
 #### Miniconda
     # install miniconda
@@ -27,33 +27,14 @@ From: tensorflow/tensorflow:1.13.1-gpu-py3
     # set miniconda path
     export PATH="/opt/conda/bin:$PATH"
 
+    # update conda
+    conda update -n base -c defaults conda
     # activate conda
     #eval "$(/opt/conda/bin/conda shell.bash hook)"
     # configuring channels
     conda config --add channels defaults
     conda config --add channels bioconda
     conda config --add channels conda-forge
-
-
-
-#### CUDA
-#    wget https://developer.nvidia.com/compute/cuda/9.0/Prod/local_installers/cuda-repo-ubuntu1604-9-0-local_9.0.176-1_amd64-deb
-#    dpkg -x cuda-repo-ubuntu1604-9-0-local_9.0.176-1_amd64-deb cuda-repo-ubuntu1604-9-0-local_9.0.176-1_amd64.deb
-#    dpkg -i cuda-repo-ubuntu1604-9-0-local_9.0.176-1_amd64.deb
-#    apt-key add /var/cuda-repo-9.0-local/7fa2af80.pub
-#    apt update
-#    apt install cuda-toolkit-9.0  # don't just install cuda or else that will overwrite the drivers
-
-#    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/extras/CUPTI/lib64
-#    export PATH=$PATH:/usr/local/cuda-9.0/bin
-
-    apt-get install cuda -y
-    export PATH=/usr/local/cuda-10.2/bin:/usr/local/cuda-10.2/NsightCompute-2019.1${PATH:+:${PATH}}
-    export LD_LIBRARY_PATH=/usr/local/cuda-10.2/lib64\
-                         ${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-
-
-
 
 
 #### GUPPY GPU
@@ -84,19 +65,7 @@ From: tensorflow/tensorflow:1.13.1-gpu-py3
         rm -rf /var/lib/apt/lists/*
 
 
-#### For readr function in MinIONQC.R
-    apt-get update
-    apt-get install -y tzdata
-
-
-#### INSTALL DEEPBINNER
-    #================================
-    apt-get update
-    git clone https://github.com/rrwick/Deepbinner.git
-    cd Deepbinner
-    python3 -m pip install -r requirements.txt
-    python3 setup.py install
-    # dependency
+#### INSTALL ONT_FAST5_API
     python3 -m pip install git+https://github.com/nanoporetech/ont_fast5_api
 
 

@@ -1,13 +1,13 @@
 # config file for snakemake
 
 
-DIR: "/scratch/baotram/test"
+DIR: "/home/baotram/tal/workflow/test/"
 
 
 SINGULARITY:
-    'GUPPY': "shub://vibaotram/simage:guppy" # guppy + miniconda
-    'DEEPBINNER': "shub://vibaotram/simage:deepbinner" # deepbinner + ont_fast5_api + python3
-    'ALL': "" # "container/cpu-py3-tsrf.simg"
+    'GUPPY': "shub://vibaotram/singularity-container:guppy" # guppy + miniconda
+    'DEEPBINNER': "shub://vibaotram/singularity-container:deepbinner-api" # deepbinner + ont_fast5_api + python3
+    'ALL': '' #"/home/baotram/tal/workflow/container/guppy-cpu-conda-api.simg" # "container/cpu-py3-tsrf.simg"
 
 
 CONDA:
@@ -17,7 +17,7 @@ CONDA:
 QSCORE_CUTOFF: 7
 
 BASECALLER:
-    'RESOURCE': 'cpu' # or 'gpu'
+    'RESOURCE': 'cpu' # or 'gpu', "CPU", "GPU"
 #    'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
     'NUM_CALLERS': 12
     'MIN_QSCORE': 7
@@ -31,7 +31,7 @@ KIT: "SQK-RBK004"
 FLOWCELL: "FLO-MIN106"
 THREADS: 12
 
-DEMULTIPLEXER: ["guppy", "deepbinner"]
+DEMULTIPLEXER: ["guppy"] # or "GUPPY", "DEEPBINNER"
 DEMULTIPLEXING_CONFIG: "configuration.cfg"
 
 MINIONQC_FIG: ["channel_summary", "flowcell_overview", "gb_per_channel_overview", "length_by_hour", "length_histogram", "length_vs_q", "q_by_hour", "q_histogram", "reads_per_hour", "yield_by_length", "yield_over_time"]

@@ -1,13 +1,14 @@
 {
     "__default__" :
     {
-        "account" : "baotram",
+        "account" : "",
         "n" : 12,
         "partition" : "short",
         "job-name": "{rule}_{wildcards}",
-        "error": "{rule}_{wildcards}.err",
+        "output": "log/{rule}_{wildcards}.out",
+        "error": "log/{rule}_{wildcards}.err",
         "mail-user": "",
-        "mail-type": "ALL"
+        "mail-type": "ALL",
     },
 
     "gpu_guppy_basecalling" :

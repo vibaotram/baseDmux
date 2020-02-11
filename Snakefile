@@ -1,6 +1,7 @@
 import os
 import glob
 
+report: "report/workflow.rst"
 
 configfile:"config.yaml"
 
@@ -9,6 +10,8 @@ DIR = config['DIR']
 run, = glob_wildcards(os.path.join(DIR, "reads/{run}/fast5"))
 
 demultiplexer = config['DEMULTIPLEXER']
+
+fig = config['MINIONQC_FIG']
 
 ##############################
 ## guppy_basecaller parameters
@@ -52,11 +55,15 @@ def deepbinner_container():
 ##############################
 ##############################
 
-rule all:
+ruleorder: gpu_guppy_basecalling > cpu_guppy_basecalling
+
+rule finish:
 	input:
 		expand(os.path.join(DIR, "basecall/multiqc_{run}.done"), run=run), # BASECALLING QC
 		expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer=demultiplexer, run=run), # DEMULTIPLEXING QC
-		expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer=demultiplexer, run=run)
+		expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer=demultiplexer, run=run),
+		#expand(os.path.join(DIR, "basecall/{run}/{fig}.png"), run=run, fig=fig),
+		#expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/report.done"), demultiplexer=demultiplexer, run=run),
 
 
 ##############################
@@ -64,12 +71,12 @@ rule all:
 ##################### BY GUPPY
 
 rule cpu_guppy_basecalling:
-	input: DIR + "reads/{run}/fast5"
+	input: os.path.join(DIR, "reads/{run}/fast5")
 	output:
-		summary = DIR + "basecall/{run}/sequencing_summary.txt",
-		fastq = DIR + "basecall/{run}/{run}.fastq"
+		summary = os.path.join(DIR, "basecall/{run}/sequencing_summary.txt"),
+		fastq = os.path.join(DIR, "basecall/{run}/{run}.fastq")
 	params:
-		outpath = DIR + "basecall/{run}",
+		outpath = os.path.join(DIR, "basecall/{run}"),
 		flowcell = FLOWCELL,
 		kit = KIT,
 		num_callers = NUM_CALLERS,
@@ -87,12 +94,12 @@ rule cpu_guppy_basecalling:
 
 
 rule gpu_guppy_basecalling:
-	input: DIR + "reads/{run}/fast5"
+	input: os.path.join(DIR, "reads/{run}/fast5")
 	output:
-		summary = DIR + "basecall/{run}/sequencing_summary.txt",
-		fastq = DIR + "basecall/{run}/{run}.fastq"
+		summary = os.path.join(DIR, "basecall/{run}/sequencing_summary.txt"),
+		fastq = os.path.join(DIR, "basecall/{run}/{run}.fastq")
 	params:
-		outpath = DIR + "basecall/{run}",
+		outpath = os.path.join(DIR, "basecall/{run}"),
 		flowcell = FLOWCELL,
 		kit = KIT,
 		num_callers = NUM_CALLERS,
@@ -139,10 +146,10 @@ def rules_guppy_basecaller_output_summary():
 rule guppy_demultiplexing:
 	input: rules_guppy_basecaller_output_fastq()
 	output:
-		demux = DIR + "demultiplex/guppy/{run}/barcoding_summary.txt"
+		demux = os.path.join(DIR, "demultiplex/guppy/{run}/barcoding_summary.txt")
 	params:
 		inpath = rules_guppy_basecaller_params_outpath(),
-		outpath = DIR + "demultiplex/guppy/{run}",
+		outpath = os.path.join(DIR, "demultiplex/guppy/{run}"),
 		kit = KIT,
 		config = config['DEMULTIPLEXING_CONFIG']
 	singularity: guppy_container()
@@ -161,22 +168,22 @@ rule guppy_demultiplexing:
 
 
 rule multi_to_single_fast5:
-	input: DIR + "reads/{run}/fast5"
-	output: temp(directory(DIR + "reads/{run}/singlefast5"))
+	input: os.path.join(DIR, "reads/{run}/fast5")
+	output: temp(directory(os.path.join(DIR, "reads/{run}/singlefast5")))
 	params:
-		output = DIR + "reads/{run}/singlefast5"
+		output = os.path.join(DIR, "reads/{run}/singlefast5")
 	singularity: deepbinner_container()
 	threads: THREADS
 	shell:
 		"""
-		multi_to_single_fast5 -i {input} -s {params.output} -T {threads}
+		multi_to_single_fast5 -i {input} -s {params.output} -t {threads}
 		"""
 
 
 rule deepbinner_classification:
 	input: rules.multi_to_single_fast5.output
 	output:
-		classification = DIR + "demultiplex/deepbinner/{run}/classification"
+		classification = os.path.join(DIR, "demultiplex/deepbinner/{run}/classification")
 	singularity: deepbinner_container()
 	shell:
 		"""
@@ -188,9 +195,9 @@ rule deepbinner_bin:
 	input:
 		classes = rules.deepbinner_classification.output.classification,
 		fastq = rules_guppy_basecaller_output_fastq()
-	output: DIR + "demultiplex/deepbinner/{run}/fastq_per_barcode.done"
+	output: os.path.join(DIR, "demultiplex/deepbinner/{run}/fastq_per_barcode.done")
 	params:
-		out_dir = DIR + "demultiplex/deepbinner/{run}"
+		out_dir = os.path.join(DIR, "demultiplex/deepbinner/{run}")
 	singularity: deepbinner_container()
 	shell:
 		"""
@@ -228,25 +235,24 @@ def guppy_demultiplexing_output():
 rule minionqc_basecall:
 	input: rules_guppy_basecaller_output_summary()
 	output:
-		summary = DIR + "basecall/{run}/summary.yaml"
+		summary = os.path.join(DIR, "basecall/{run}/summary.yaml")
 	conda: config['CONDA']['MINIONQC']
 	singularity: guppy_container()
 	params:
-		inpath = DIR + "basecall/{run}"
+		inpath = os.path.join(DIR, "basecall/{run}")
 	shell:
 		"""
 		MinIONQC.R -i {params.inpath}
 		"""
 
 rule multiqc_basecall:
-	input: rules.minionqc_basecall.output
-	output:
-		DIR + "basecall/multiqc_{run}.done"
+	input: rules.minionqc_basecall.output.summary
+	output: os.path.join(DIR, "basecall/multiqc_{run}.done")
 	singularity: guppy_container()
 	conda: config['CONDA']['MULTIQC']
 	params:
-		inpath = DIR + "basecall",
-		outpath = DIR + "basecall/multiqc"
+		inpath = os.path.join(DIR, "basecall"),
+		outpath = os.path.join(DIR, "basecall/multiqc")
 	shell:
 		"""
 		multiqc -f -v -d -dd 2 -o {params.outpath} {params.inpath}
@@ -263,9 +269,9 @@ rule get_sequencing_summary_per_barcode:
 		deepbinner_bin_output(),
 		deepbinner_classification_output(),
 		guppy_demultiplexing_output()
-	output: DIR + "demultiplex/{demultiplexer}/{run}/get_summary.done"
+	output: os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/get_summary.done")
 	params:
-		barcoding_path = DIR + "demultiplex/{demultiplexer}/{run}",
+		barcoding_path = os.path.join(DIR, "demultiplex/{demultiplexer}/{run}"),
 		sequencing_file = rules_guppy_basecaller_output_summary()
 	conda: config['CONDA']['MINIONQC']
 	singularity: guppy_container()
@@ -279,11 +285,11 @@ rule get_sequencing_summary_per_barcode:
 rule minionqc_demultiplex:
 	input:
 		rules.get_sequencing_summary_per_barcode.output
-	output: DIR + "demultiplex/{demultiplexer}/{run}/minionqc.done"
+	output: os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/minionqc.done")
 	params:
-		outpath = DIR + "demultiplex/{demultiplexer}/{run}/minionqc",
+		outpath = os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/minionqc"),
 		inpath = rules.get_sequencing_summary_per_barcode.params.barcoding_path,
-		combinedQC = DIR + "demultiplex/{demultiplexer}/{run}/combinedQC"
+		combinedQC = os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/combinedQC")
 	conda: config['CONDA']['MINIONQC']
 	singularity: guppy_container()
 	shell:
@@ -297,12 +303,12 @@ rule minionqc_demultiplex:
 rule multiqc_demultiplex:
 	input:
 		rules.minionqc_demultiplex.output
-	output: DIR + "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"
+	output: os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html")
 	singularity: guppy_container()
 	conda: config['CONDA']['MULTIQC']
 	params:
 		inpath = rules.minionqc_demultiplex.params.inpath,
-		outpath = DIR + "demultiplex/{demultiplexer}/{run}/multiqc"
+		outpath = os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/multiqc")
 	shell:
 		"""
 		multiqc -f -v -d -dd 2 -o {params.outpath} {params.inpath}
@@ -317,11 +323,11 @@ rule multiqc_demultiplex:
 rule get_multi_fast5_per_barcode:
 	input: rules.get_sequencing_summary_per_barcode.output
 	output:
-		check = DIR + "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"
+		check = os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done")
 	singularity: deepbinner_container()
 	params:
-		fast5 = DIR + "reads/{run}/fast5",
-		path = DIR + "demultiplex/{demultiplexer}/{run}"
+		fast5 = os.path.join(DIR, "reads/{run}/fast5"),
+		path = os.path.join(DIR, "demultiplex/{demultiplexer}/{run}")
 	threads: THREADS
 	shell:
 		"""
@@ -330,17 +336,54 @@ rule get_multi_fast5_per_barcode:
 		"""
 
 
+
+
+rule report_basecall:
+	input: rules.multiqc_basecall.output
+	output: report(os.path.join(DIR, "basecall/{run}/{fig}.png"), caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
+	shell:
+		"touch {output}"
+
+
+
+rule clean:
+	shell:
+		"""
+		rm -rf basecall demultiplex
+		"""
+
+rule clean_basecall:
+	shell:
+		"""
+		rm -rf basecall
+		"""
+
+rule clean_demultiplex:
+	shell:
+		"""
+		rm -rf demultiplex
+		"""
+
+rule help:
+	shell:
+		"""
+		cat README.md
+		"""
+
 ##############################
 ##################### HANDLERS
 
-onstart:
-	print("Basecalling will be performed by Guppy on", RESOURCE)
-	print("Demultiplexing will be performed by")
-	for d in demultiplexer: print("-", d)
+#onstart:
+#	print("Basecalling will be performed by Guppy on", RESOURCE)
+#	print("Demultiplexing will be performed by",)
+#	for d in demultiplexer: print("\t-", d)
 
 
-onsuccess:
-	print("Workflow finished, yay")
+#onsuccess:
+#	print("Workflow finished, yay")
+#	print("Basecalling by Guppy on", RESOURCE)
+#	print("Demultiplexing by")
+#	for d in demultiplexer: print("\t-", d)
 
-onerror:
-    print("OMG ... error ... error ... again")
+#onerror:
+#	print("OMG ... error ... error ... again")
