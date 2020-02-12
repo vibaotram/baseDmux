@@ -70,7 +70,7 @@ rule finish:
 ################## BASECALLING
 ##################### BY GUPPY
 
-if RESOURCE == 'cpu':
+if RESOURCE == ('cpu' or 'CPU'):
 	rule guppy_basecalling:
 		input: os.path.join(DIR, "reads/{run}/fast5")
 		output:
@@ -88,11 +88,11 @@ if RESOURCE == 'cpu':
 		singularity: guppy_container()
 		shell:
 			"""
-			guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --num_callers {threads} --cpu_threads_per_caller {params.cpu_threads_per_caller} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct}
+			guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --num_callers {threads} --cpu_threads_per_caller {params.cpu_threads_per_caller} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct} --compress_fastq
 			cat {params.outpath}/*.fastq > {output.fastq}
 			rm -f {params.outpath}/fastq_runid_*.fastq
 			"""
-elif RESOURCE == 'gpu':
+elif RESOURCE == ('gpu' or 'GPU'):
 	rule guppy_basecalling:
 		input: os.path.join(DIR, "reads/{run}/fast5")
 		output:
@@ -111,7 +111,7 @@ elif RESOURCE == 'gpu':
 		singularity: guppy_container()
 		shell:
 			"""
-			guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --num_callers {threads} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct} --gpu_runners_per_device {params.gpu_runners_per_device} --device "{params.device}"
+			guppy_basecaller -i {input} -s {params.outpath} --flowcell {params.flowcell} --kit {params.kit} --num_callers {threads} --qscore_filtering --min_qscore {params.min_qscore} --hp_correct {params.hp_correct} --gpu_runners_per_device {params.gpu_runners_per_device} --device "{params.device}" --compress_fastq
 			cat {params.outpath}/*.fastq > {output.fastq}
 			rm -f {params.outpath}/fastq_runid_*.fastq
 			"""
@@ -214,19 +214,19 @@ rule deepbinner_bin:
 ## determine which demultiplexer to be executed
 
 def deepbinner_bin_output():
-	if "deepbinner" in demultiplexer:
+	if ("deepbinner" or "DEEPBINNER" or "Deepbinner") in demultiplexer:
 		return(rules.deepbinner_bin.output)
 	else:
 		return()
 
 def deepbinner_classification_output():
-	if "deepbinner" in demultiplexer:
+	if ("deepbinner" or "DEEPBINNER" or "Deepbinner") in demultiplexer:
 		return(rules.deepbinner_classification.output)
 	else:
 		return()
 
 def guppy_demultiplexing_output():
-	if "guppy" in demultiplexer:
+	if ("guppy" or "GUPPY" or "Guppy") in demultiplexer:
 		return(rules.guppy_demultiplexing.output)
 	else:
 		return()
@@ -332,7 +332,6 @@ rule get_multi_fast5_per_barcode:
 	params:
 		fast5 = os.path.join(DIR, "reads/{run}/fast5"),
 		path = os.path.join(DIR, "demultiplex/{demultiplexer}/{run}")
-	threads: THREADS
 	shell:
 		"""
 		python3 script/fast5_subset.py {params.fast5} {params.path}
@@ -351,21 +350,28 @@ rule report_basecall:
 
 
 rule clean:
+	params:
+		basecall = os.path.join(DIR, "basecall"),
+		demultiplex = os.path.join(DIR, "demultiplex")
 	shell:
 		"""
-		rm -rf basecall demultiplex
+		rm -rf {params.basecall} {params.demultiplex}
 		"""
 
 rule clean_basecall:
+	params:
+		basecall = os.path.join(DIR, "basecall"),
 	shell:
 		"""
-		rm -rf basecall
+		rm -rf {params.basecall}
 		"""
 
 rule clean_demultiplex:
+	params:
+		demultiplex = os.path.join(DIR, "demultiplex")
 	shell:
 		"""
-		rm -rf demultiplex
+		rm -rf {params.demultiplex}
 		"""
 
 rule help:
