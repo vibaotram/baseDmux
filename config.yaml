@@ -1,37 +1,40 @@
 # config file for snakemake
 
 
-DIR: "/scratch/baotram/test/"
+INDIR: "/scratch/baotram/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
+0UTDIR: "/scratch/baotram/test/results" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
 
 
 SINGULARITY:
-    'GUPPY': "shub://vibaotram/singularity-container:guppy-cpu-conda" # guppy + miniconda
+    'GUPPY': "shub://vibaotram/singularity-container:guppy3.4gpu-conda-api" # guppy + miniconda
     'DEEPBINNER': "shub://vibaotram/singularity-container:deepbinner-api" # deepbinner + ont_fast5_api + python3
-    'ALL': '' #"/home/baotram/tal/workflow/container/guppy-cpu-conda-api.simg" # "container/cpu-py3-tsrf.simg"
+    'ALL': ''
 
 
 CONDA:
     'MINIONQC': "conda/conda_minionqc.yaml"
     'MULTIQC': "conda/conda_multiqc.yaml"
 
-QSCORE_CUTOFF: 7
 
 BASECALLER:
-    'RESOURCE': 'cpu' # or 'gpu', "CPU", "GPU"
-#    'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
-    'NUM_CALLERS': 12
+    'RESOURCE': 'GPU' # or 'gpu', "CPU", "GPU"
+    # 'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
+    'QSCORE_FILTERING': 'yes' # 'yes'/'true'/'no'/'false'/''
     'MIN_QSCORE': 7
     'HP_CORRECT': 'true'
     'ENABLE_TRIMMING': 'true'
-    'CPU_PER_CALLER': 1
-    'GPU_PER_DEVICE': 1
+    'NUM_CALLERS': 2
+    'CPU_PER_CALLER': 12
+    'GPU_PER_DEVICE': 4
     'CUDA': "auto"
 
 KIT: "SQK-RBK004"
 FLOWCELL: "FLO-MIN106"
 THREADS: 12
 
-DEMULTIPLEXER: ["guppy"] # or "GUPPY", "DEEPBINNER"
+DEMULTIPLEXER: ["GUPPY", "DEEPBINNER"] # or "GUPPY", "DEEPBINNER"
 DEMULTIPLEXING_CONFIG: "configuration.cfg"
 
-MINIONQC_FIG: ["channel_summary", "flowcell_overview", "gb_per_channel_overview", "length_by_hour", "length_histogram", "length_vs_q", "q_by_hour", "q_histogram", "reads_per_hour", "yield_by_length", "yield_over_time"]
+MINIONQC:
+    'QSCORE_CUTOFF': 7
+    'FIG': ["channel_summary", "flowcell_overview", "gb_per_channel_overview", "length_by_hour", "length_histogram", "length_vs_q", "q_by_hour", "q_histogram", "reads_per_hour", "yield_by_length", "yield_over_time"]

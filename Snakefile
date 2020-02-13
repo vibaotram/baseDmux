@@ -39,16 +39,18 @@ CUDA = config['BASECALLER']['CUDA']
 
 CPU_THREADS_PER_CALLER = config['BASECALLER']['CPU_PER_CALLER']
 
-if QSCORE_FILTERING == 'yes':
+if QSCORE_FILTERING == 'yes' or 'true':
 	FILTERING_OPT = '--qscore_filtering'
 	FASTQ = 'pass/fastq_runid_*.fastq'
-elif (QSCORE_FILTERING == 'yes' or QSCORE_FILTERING == ''):
+elif QSCORE_FILTERING == '' or 'no' or 'false':
 	FILTERING_OPT = ''
 	FASTQ = 'fastq_runid_*.fastq'
 
-if (RESOURCE == 'cpu' or RESOURCE == 'CPU'):
+if RESOURCE == 'cpu' or 'CPU':
+	SINGULARITY_ARGS = ''
 	BASECALLER_OPT = "--flowcell {flowcell} --kit {kit} --num_callers {num_callers} --cpu_threads_per_caller {cpu_threads_per_caller} --min_qscore {min_qscore} --hp_correct {hp_correct} {qscore_filtering}".format(flowcell=FLOWCELL, kit=KIT, num_callers=NUM_CALLERS, cpu_threads_per_caller=CPU_THREADS_PER_CALLER, min_qscore=MIN_QSCORE, hp_correct=HP_CORRECT, qscore_filtering=FILTERING_OPT)
-elif (RESOURCE == 'gpu' or RESOURCE == 'GPU'):
+elif RESOURCE == 'gpu' or 'GPU':
+	SINGULARITY_ARGS = '--nv'
 	BASECALLER_OPT = "--flowcell {flowcell} --kit {kit} --num_callers {num_callers} --min_qscore {min_qscore} --hp_correct {hp_correct} --gpu_runners_per_device {gpu_runners_per_device} --device \"{cuda}\" {qscore_filtering}".format(flowcell=FLOWCELL, kit=KIT, num_callers=NUM_CALLERS, min_qscore=MIN_QSCORE, hp_correct=HP_CORRECT, gpu_runners_per_device=GPU_RUNNERS_PER_DEVICE, cuda=CUDA, qscore_filtering=FILTERING_OPT)
 
 
@@ -181,19 +183,19 @@ rule deepbinner_bin:
 ## determine which demultiplexer to be executed
 
 def deepbinner_bin_output():
-	if ("deepbinner" or "DEEPBINNER" or "Deepbinner") in demultiplexer:
+	if "deepbinner" or "DEEPBINNER" or "Deepbinner" in demultiplexer:
 		return(rules.deepbinner_bin.output)
 	else:
 		return()
 
 def deepbinner_classification_output():
-	if ("deepbinner" or "DEEPBINNER" or "Deepbinner") in demultiplexer:
+	if "deepbinner" or "DEEPBINNER" or "Deepbinner" in demultiplexer:
 		return(rules.deepbinner_classification.output)
 	else:
 		return()
 
 def guppy_demultiplexing_output():
-	if ("guppy" or "GUPPY" or "Guppy") in demultiplexer:
+	if "guppy" or "GUPPY" or "Guppy" in demultiplexer:
 		return(rules.guppy_demultiplexing.output)
 	else:
 		return()
