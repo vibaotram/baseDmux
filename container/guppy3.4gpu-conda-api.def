@@ -10,7 +10,8 @@ From: tensorflow/tensorflow:1.13.1-gpu-py3
     export LC_ALL=C.UTF-8
     export LANG=C.UTF-8
     apt update
-    apt install -y git wget rsync zlib1g-dev dpkg python3-pip tzdata
+    apt install -y git wget rsync zlib1g-dev dpkg
+
 
 #### Miniconda
     # install miniconda
@@ -27,14 +28,14 @@ From: tensorflow/tensorflow:1.13.1-gpu-py3
     # set miniconda path
     export PATH="/opt/conda/bin:$PATH"
 
-    # update conda
-    conda update -n base -c defaults conda
     # activate conda
     #eval "$(/opt/conda/bin/conda shell.bash hook)"
     # configuring channels
     conda config --add channels defaults
     conda config --add channels bioconda
     conda config --add channels conda-forge
+
+
 
 
 #### GUPPY GPU
@@ -63,6 +64,11 @@ From: tensorflow/tensorflow:1.13.1-gpu-py3
         apt-get autoremove --purge --yes && \
         apt-get clean && \
         rm -rf /var/lib/apt/lists/*
+
+
+#### For readr function in MinIONQC.R
+    apt-get update
+    apt-get install -y tzdata
 
 
 #### INSTALL ONT_FAST5_API
