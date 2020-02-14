@@ -11,8 +11,9 @@
         "mail-type": "ALL",
     },
 
-    "gpu_guppy_basecalling" :
+    "guppy_basecalling" :
     {
-        "partition": "gpu"
+        "partition": "gpu",
+        "cores": "{threads.guppy_basecalling}"
     }
 }

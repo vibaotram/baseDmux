@@ -1,12 +1,12 @@
 # config file for snakemake
 
 
-INDIR: "/scratch/baotram/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
+INDIR: "/home/baotram/tal/workflow/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
 0UTDIR: "/scratch/baotram/test/results" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
 
 
 SINGULARITY:
-    'GUPPY': "shub://vibaotram/singularity-container:guppy3.4gpu-conda-api" # guppy + miniconda
+    'GUPPY': "shub://vibaotram/singularity-container:guppy3.4gpu-conda-api" # guppy + miniconda + ont_fast5_api + python3
     'DEEPBINNER': "shub://vibaotram/singularity-container:deepbinner-api" # deepbinner + ont_fast5_api + python3
     'ALL': ''
 
@@ -16,25 +16,34 @@ CONDA:
     'MULTIQC': "conda/conda_multiqc.yaml"
 
 
-BASECALLER:
-    'RESOURCE': 'GPU' # or 'gpu', "CPU", "GPU"
-    # 'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
-    'QSCORE_FILTERING': 'yes' # 'yes'/'true'/'no'/'false'/''
-    'MIN_QSCORE': 7
-    'HP_CORRECT': 'true'
-    'ENABLE_TRIMMING': 'true'
-    'NUM_CALLERS': 2
-    'CPU_PER_CALLER': 12
-    'GPU_PER_DEVICE': 4
-    'CUDA': "auto"
-
 KIT: "SQK-RBK004"
 FLOWCELL: "FLO-MIN106"
 THREADS: 12
 
-DEMULTIPLEXER: ["GUPPY", "DEEPBINNER"] # or "GUPPY", "DEEPBINNER"
+BASECALLER:
+    'RESOURCE': 'GPU' # or 'gpu', "CPU", "GPU"
+    # 'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
+    'QSCORE_FILTERING': 'true' # 'yes'/'no'
+    'MIN_QSCORE': 7
+    'HP_CORRECT': 'true' # 'true'/'false'
+    'ENABLE_TRIMMING': 'true' # 'true'/'false'
+    'NUM_CALLERS': 2
+    'CPU_PER_CALLER': 12
+    'GPU_PER_DEVICE': 4
+    'CUDA': "auto"
+# --worker_threads
+
+DEMULTIPLEXER: ["guppy", "deepbinner"]
 DEMULTIPLEXING_CONFIG: "configuration.cfg"
+
+GUPPY_BARCODER:
+
+DEEPBINNER_CLASSIFY:
+    'PRESET': 'rapid' # 'native'/'rapid'
+    'THREADS':
 
 MINIONQC:
     'QSCORE_CUTOFF': 7
+    'SMALLFIGURES': 'FALSE' # 'TRUE'/'FALSE'
+    'PROCESSORS': 12
     'FIG': ["channel_summary", "flowcell_overview", "gb_per_channel_overview", "length_by_hour", "length_histogram", "length_vs_q", "q_by_hour", "q_histogram", "reads_per_hour", "yield_by_length", "yield_over_time"]
