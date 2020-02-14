@@ -1,7 +1,7 @@
 # config file for snakemake
 
 
-INDIR: "/home/baotram/tal/workflow/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
+INDIR: "/scratch/baotram/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
 0UTDIR: "/scratch/baotram/test/results" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
 
 
@@ -14,6 +14,7 @@ SINGULARITY:
 CONDA:
     'MINIONQC': "conda/conda_minionqc.yaml"
     'MULTIQC': "conda/conda_multiqc.yaml"
+    'PANDAS': "conda/conda_pandas.yaml" # for choose_gpu.py
 
 
 KIT: "SQK-RBK004"
@@ -23,7 +24,7 @@ THREADS: 12
 BASECALLER:
     'RESOURCE': 'GPU' # or 'gpu', "CPU", "GPU"
     # 'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
-    'QSCORE_FILTERING': 'true' # 'yes'/'no'
+    'QSCORE_FILTERING': 'false' # 'yes'/'no'
     'MIN_QSCORE': 7
     'HP_CORRECT': 'true' # 'true'/'false'
     'ENABLE_TRIMMING': 'true' # 'true'/'false'
