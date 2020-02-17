@@ -1,12 +1,12 @@
 {
     "__default__" :
     {
-        "account" : "",
+        "account" : "bioinfo",
         "cores" : 12,
         "partition" : "short",
         "jobname": "{rule}_{wildcards}",
-        "output": "log/{rule}_{wildcards}.out",
-        "error": "log/{rule}_{wildcards}.err",
+        "output": "/scratch/baotram/log/{rule}_{wildcards}.out",
+        "error": "/scratch/baotram/log/{rule}_{wildcards}.err",
         "mail-user": "",
         "mail-type": "ALL",
     },
@@ -14,6 +14,7 @@
     "guppy_basecalling" :
     {
         "partition": "gpu",
-        "cores": "{threads.guppy_basecalling}"
+        "account": "gpu_group"
+        "cores": 8,
     }
 }

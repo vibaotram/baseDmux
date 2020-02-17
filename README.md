@@ -1,7 +1,7 @@
 # BASEcalling and DeMUltipleXing
 ## workflow for ONT sequencing data
 
-The workflow will be available in local computer as well as cluster environment.
+The workflow will be (not now) available in local computer as well as cluster environment.
 
 
 ### Install
@@ -10,9 +10,9 @@ The workflow will be available in local computer as well as cluster environment.
 git clone https://github.com/vibaotram/baseDmux.git
 ```
 or
-
-    git clone git@github.com:vibaotram/baseDmux.git
-
+```
+git clone git@github.com:vibaotram/baseDmux.git
+```
 
 
 ### Usage
@@ -20,24 +20,24 @@ or
 **Locally:**
 
 ```
-snakemake --use-singularity --use-conda --cores -p --verbose --report report.html
+snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " --report path/to/report.html
 ```
 
 **On cluster:**
 
 ```
-snakemake --use-singularity --use-conda --cores -p --verbose \
+snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " \
 --cluster-config cluster.json \
---cluster "sbatch --job-name {cluster.job-name}
+--cluster "sbatch --job-name {cluster.jobname} \
+-n {cluster.cores} \
 -p {cluster.partition} \
--t {cluster.time} \
 --output {cluster.output} \
---error {cluster.error} \
---nodes {cluster.nodes} \
---ntasks {cluster.ntasks} \
---cpus-per-task {cluster.cpus} \
---mem {cluster.mem}" \
---mail-user {cluster.mail-user} \
---mail-type {cluster.mail-type}"
---report report.html
+--error {cluster.error}"
 ```
+
+
+
+### Requirements
+* snakemake 5.x
+* singularity >= 2.5
+* conda 4.x

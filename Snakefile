@@ -85,11 +85,11 @@ def deepbinner_container():
 ##############################
 ## path to scripts
 
-CHOOSE_AVAIL_GPU = "python3 " + config['SCRIPT']['CHOOSE_AVAIL_GPU']
-FAST5_SUBSET = "python3 " + config['SCRIPT']['FAST5_SUBSET']
-GET_FASTQ_PER_BARCODE = "python3 " + config['SCRIPT']['GET_FASTQ_PER_BARCODE']
-GET_SUMMARY_PER_BARCODE = "Rscript " + config['SCRIPT']['GET_SUMMARY_PER_BARCODE']
-RENAME_FASTQ_GUPPY_BARCODER = "Rscript " + config['SCRIPT']['RENAME_FASTQ_GUPPY_BARCODER']
+CHOOSE_AVAIL_GPU = config['SCRIPT']['CHOOSE_AVAIL_GPU']
+FAST5_SUBSET = config['SCRIPT']['FAST5_SUBSET']
+GET_FASTQ_PER_BARCODE = config['SCRIPT']['GET_FASTQ_PER_BARCODE']
+GET_SUMMARY_PER_BARCODE = config['SCRIPT']['GET_SUMMARY_PER_BARCODE']
+RENAME_FASTQ_GUPPY_BARCODER = config['SCRIPT']['RENAME_FASTQ_GUPPY_BARCODER']
 
 
 ##############################
@@ -128,7 +128,7 @@ rule guppy_basecalling:
 	conda: config['CONDA']['PANDAS']
 	shell:
 		"""
-		CUDA=$({params.choose_avail_gpu})
+		CUDA=$(python3 {params.choose_avail_gpu})
 		guppy_basecaller -i {input} -s {params.outpath} {params.opt}
 		cat {params.outpath}/{params.fastq} > {output.fastq}
 		rm -rf {params.outpath}/fastq_runid_*.fastq
@@ -155,7 +155,7 @@ rule guppy_demultiplexing:
 	shell:
 		"""
 		guppy_barcoder -i {params.inpath} -s {params.outpath} -c {params.config} --barcode_kits {params.kit} --trim_barcodes --compress_fastq
-		{params.rename_fastq_guppy_barcoder} {params.outpath}
+		Rscript {params.rename_fastq_guppy_barcoder} {params.outpath}
 		"""
 
 
@@ -199,7 +199,7 @@ rule deepbinner_bin:
 	shell:
 		"""
 		deepbinner bin --classes {input.classes} --reads {input.fastq} --out_dir {params.out_dir}
-		{params.get_fastq_per_barcode} {params.out_dir}
+		python3 {params.get_fastq_per_barcode} {params.out_dir}
 		touch {output}
 		"""
 
@@ -277,7 +277,7 @@ rule get_sequencing_summary_per_barcode:
 	singularity: guppy_container()
 	shell:
 		"""
-		{params.get_summary_per_barcode} {params.sequencing_file} {params.barcoding_path}
+		Rscript {params.get_summary_per_barcode} {params.sequencing_file} {params.barcoding_path}
 		touch {output}
 		"""
 
@@ -335,7 +335,7 @@ rule get_multi_fast5_per_barcode:
 		fast5_subset = FAST5_SUBSET
 	shell:
 		"""
-		{params.fast5_subset} {params.fast5} {params.path}
+		python3 {params.fast5_subset} {params.fast5} {params.path}
 		touch {output.check}
 		"""
 
