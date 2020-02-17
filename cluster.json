@@ -14,7 +14,7 @@
     "guppy_basecalling" :
     {
         "partition": "gpu",
-        "account": "gpu_group"
+        "account": "gpu_group",
         "cores": 8,
     }
 }
