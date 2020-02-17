@@ -2,9 +2,9 @@
     "__default__" :
     {
         "account" : "",
-        "n" : 12,
+        "cores" : 12,
         "partition" : "short",
-        "job-name": "{rule}_{wildcards}",
+        "jobname": "{rule}_{wildcards}",
         "output": "log/{rule}_{wildcards}.out",
         "error": "log/{rule}_{wildcards}.err",
         "mail-user": "",

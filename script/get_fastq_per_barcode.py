@@ -15,9 +15,10 @@ for file in fastq:
     filename = os.path.basename(file)
     barcode = filename.split(".fastq.gz")[0]
     barcodePath = os.path.join(runPath, barcode)
-    mkdir_cmd = "mkdir {}".format(barcodePath)
+    if os.path.exists(barcodePath) == 'False':
+        mkdir_cmd = "mkdir {}".format(barcodePath)
     os.system(mkdir_cmd)
-    mv_cmd = "mv {} {}".format(file, barcodePath)
+    mv_cmd = "mv -f {} {}".format(file, barcodePath)
     os.system(mv_cmd)
 
-print(len(fastq), "fastq files moved to corresponding barcode folder")
+print(len(fastq), "fastq files moved to corresponding barcode folders")

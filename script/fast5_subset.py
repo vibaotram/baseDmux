@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 
+## take all barcode folders from provided directory (non-recursively) then input each to "fast5_subset" command
+
 import glob
 import os
 import sys
 
 
 fast5 = sys.argv[1] # path to raw fast5 files
-path = sys.argv[2] # path to barcode folders
+path = sys.argv[2] # directory containing barcode folders
 
 
 summary = glob.glob(os.path.join(path, "*/sequencing_summary.txt")) # get full paths
