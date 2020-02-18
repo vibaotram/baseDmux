@@ -17,8 +17,6 @@ account = job_properties["cluster"]["account"]
 output = job_properties["cluster"]["output"]
 error = job_properties["cluster"]["error"]
 
-if rule == "guppy_basecalling":
-    cmdline = 'sbatch -J {jobname} -p {partition} -A {account} -c {cores} {script}'.format(jobname=jobname, partition=partition, account=account, cores=cores, script=jobscript)
-else:
-    cmdline = 'sbatch -J {jobname} -p {partition} {script}'.format(jobname=jobname, partition=partition, script=jobscript)
+cmdline = 'sbatch -J {jobname} -p {partition} -A {account} -c {cores} {script}'.format(jobname=jobname, partition=partition, account=account, cores=cores, script=jobscript)
+
 os.system(cmdline)

@@ -1,7 +1,7 @@
 # config file for snakemake
 
 
-INDIR: "/scratch/baotram-snakemake/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
+INDIR: "/home/baotram/tal/workflow/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
 0UTDIR: "/scratch/baotram-snakemake/test/results" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
 
 
@@ -33,13 +33,11 @@ BASECALLER:
     # 'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
     'QSCORE_FILTERING': 'false' # 'yes'/'no'
     'MIN_QSCORE': 7
-    'HP_CORRECT': 'true' # 'true'/'false'
-    'ENABLE_TRIMMING': 'true' # 'true'/'false'
     'NUM_CALLERS': 2
     'CPU_PER_CALLER': 12
     'GPU_PER_DEVICE': 4
     'CUDA': "auto"
-    'ADDITION': '' # additional params that do not affect output format or other rules
+    'ADDITION': '--hp_correct true' # additional params that do not affect output format or other rules
 # --worker_threads
 
 DEMULTIPLEXER: ["guppy", "deepbinner"]
@@ -50,6 +48,7 @@ GUPPY_BARCODER:
 DEEPBINNER_CLASSIFY:
     'PRESET': 'rapid' # 'native'/'rapid'
     'THREADS': 12
+    'ADDITION': ''
 
 MINIONQC:
     'QSCORE_CUTOFF': 7
