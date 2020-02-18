@@ -1,8 +1,8 @@
 # config file for snakemake
 
 
-INDIR: "reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
-0UTDIR: "results" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
+INDIR: "test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
+0UTDIR: "test/results" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
 
 
 SINGULARITY:
