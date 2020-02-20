@@ -18,6 +18,10 @@ for file in fastq:
     mkdir_cmd = "mkdir -p {}".format(barcodePath)
     os.system(mkdir_cmd)
     mv_cmd = "mv -f {} {}".format(file, barcodePath)
-    os.system(mv_cmd)
-
+    exit_code = os.system(mv_cmd)
+    if exit_code == 0:
+        pass
+    else:
+        sys.exit(1)
+        
 print(len(fastq), "fastq files moved to corresponding barcode folders")
