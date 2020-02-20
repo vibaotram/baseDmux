@@ -43,7 +43,7 @@ if QSCORE_FILTERING == 'true':
 	FILTERING_OPT = '--qscore_filtering --fast5_out'
 	FASTQ = 'pass/fastq_runid_*.fastq'
 	FAST5 = os.path.join(outdir, "basecall/{run}/workspace"),
-	FAST5_OUTPUT = FAST5
+	FAST5_OUTPUT = directory(FAST5)
 if QSCORE_FILTERING == 'false':
 	FILTERING_OPT = ''
 	FASTQ = 'fastq_runid_*.fastq'
@@ -53,9 +53,9 @@ if QSCORE_FILTERING == 'false':
 
 # adjust guppy_basecaller parameters based on RESOURCE
 if RESOURCE == 'CPU':
-	BASECALLER_OPT = "--flowcell {flowcell} --kit {kit} --num_callers {num_callers} --cpu_threads_per_caller {cpu_threads_per_caller} --min_qscore {min_qscore} {qscore_filtering} {addition}".format(flowcell=FLOWCELL, kit=KIT, num_callers=NUM_CALLERS, cpu_threads_per_caller=CPU_THREADS_PER_CALLER, min_qscore=MIN_QSCORE, qscore_filtering=FILTERING_OPT, addition=BASECALLER_ADDITION)
+	BASECALLER_OPT = "--flowcell {flowcell} --kit {kit} --num_callers {num_callers} --cpu_threads_per_caller {cpu_threads_per_caller} --min_qscore {min_qscore} --qscore_filtering {addition}".format(flowcell=FLOWCELL, kit=KIT, num_callers=NUM_CALLERS, cpu_threads_per_caller=CPU_THREADS_PER_CALLER, min_qscore=MIN_QSCORE, addition=BASECALLER_ADDITION)
 if RESOURCE == 'GPU':
-	BASECALLER_OPT = "--flowcell {flowcell} --kit {kit} --num_callers {num_callers} --min_qscore {min_qscore} --gpu_runners_per_device {gpu_runners_per_device} --device $CUDA {qscore_filtering} {addition}".format(flowcell=FLOWCELL, kit=KIT, num_callers=NUM_CALLERS, min_qscore=MIN_QSCORE, gpu_runners_per_device=GPU_RUNNERS_PER_DEVICE, qscore_filtering=FILTERING_OPT, addition=BASECALLER_ADDITION)
+	BASECALLER_OPT = "--flowcell {flowcell} --kit {kit} --num_callers {num_callers} --min_qscore {min_qscore} --qscore_filtering --gpu_runners_per_device {gpu_runners_per_device} --device $CUDA {addition}".format(flowcell=FLOWCELL, kit=KIT, num_callers=NUM_CALLERS, min_qscore=MIN_QSCORE, gpu_runners_per_device=GPU_RUNNERS_PER_DEVICE, addition=BASECALLER_ADDITION)
 
 
 ##############################
@@ -122,8 +122,10 @@ rule guppy_basecalling:
 	input: os.path.join(indir, "{run}/fast5")
 	output:
 		summary = os.path.join(outdir, "basecall/{run}/sequencing_summary.txt"),
-		fastq = os.path.join(outdir, "basecall/{run}/{run}.fastq"),
-		fast5 = FAST5_OUTPUT
+		passed_summary = temp(os.path.join(outdir, "basecall/{run}/passed_sequencing_summary.txt")),
+		# fastq = os.path.join(outdir, "basecall/{run}/{run}.fastq"),
+		fastq = directory(os.path.join(outdir, "basecall/{run}/pass")),
+		fast5 = temp(directory(os.path.join(outdir, "basecall/{run}/passed_fast5")))
 	message: "GUPPY basecalling running on {}".format(RESOURCE)
 	params:
 		outpath = os.path.join(outdir, "basecall/{run}"),
@@ -134,8 +136,10 @@ rule guppy_basecalling:
 		"""
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU})
 		guppy_basecaller -i {input} -s {params.outpath} {BASECALLER_OPT}
-		cat {params.outpath}/{FASTQ} > {output.fastq}
-		rm -rf {params.outpath}/fastq_runid_*.fastq
+		# cat {params.outpath}/pass/fastq_runid_*.fastq > {output.fastq}
+		# rm -rf {params.outpath}/pass/fastq_runid_*.fastq
+		grep 'read_id' {output.summary} > {output.passed_summary}
+		grep 'TRUE' {output.summary} >> {output.passed_summary}
 		"""
 
 
@@ -169,7 +173,7 @@ rule guppy_demultiplexing:
 
 
 rule multi_to_single_fast5:
-	input: FAST5
+	input: rules.guppy_basecalling.output.fast5
 	output: temp(directory(os.path.join(outdir, "demultiplex/deepbinner/{run}/singlefast5")))
 	singularity: deepbinner_container()
 	threads: THREADS
@@ -272,7 +276,7 @@ rule get_sequencing_summary_per_barcode:
 	output: os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/get_summary.done")
 	params:
 		barcoding_path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
-		sequencing_file = rules.guppy_basecalling.output.summary,
+		sequencing_file = rules.guppy_basecalling.output.passed_summary,
 	conda: config['CONDA']['MINIONQC']
 	singularity: guppy_container()
 	shell:
@@ -322,7 +326,9 @@ rule multiqc_demultiplex:
 
 
 rule get_multi_fast5_per_barcode:
-	input: rules.get_sequencing_summary_per_barcode.output
+	input:
+		summary = rules.get_sequencing_summary_per_barcode.output,
+		fast5 = rules.guppy_basecalling.output.fast5
 	output:
 		check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done")
 	singularity: deepbinner_container()
@@ -330,7 +336,7 @@ rule get_multi_fast5_per_barcode:
 		path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
 	shell:
 		"""
-		python3 {FAST5_SUBSET} {FAST5} {params.path}
+		python3 {FAST5_SUBSET} {input.fast5} {params.path}
 		touch {output.check}
 		"""
 

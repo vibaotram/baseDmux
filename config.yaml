@@ -1,8 +1,8 @@
 # config file for snakemake
 
 
-INDIR: "test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
-0UTDIR: "test/results" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
+INDIR: "/scratch/baotram/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
+0UTDIR: "/scratch/baotram/test/results" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
 
 
 SINGULARITY:
@@ -31,12 +31,12 @@ THREADS: 12
 BASECALLER:
     'RESOURCE': 'GPU' # or 'gpu', "CPU", "GPU"
     # 'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
-    'QSCORE_FILTERING': 'false' # 'yes'/'no'
+    # 'QSCORE_FILTERING': 'true' # 'true'/'fasle', if 'true',
     'MIN_QSCORE': 7
     'NUM_CALLERS': 2
     'CPU_PER_CALLER': 12
     'GPU_PER_DEVICE': 4
-    'CUDA': "auto"
+    # 'CUDA': "auto"
     'ADDITION': '--hp_correct true' # additional params that do not affect output format or other rules
 # --worker_threads
 
