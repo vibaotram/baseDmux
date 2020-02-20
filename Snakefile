@@ -122,13 +122,14 @@ rule guppy_basecalling:
 	input: os.path.join(indir, "{run}/fast5")
 	output:
 		summary = os.path.join(outdir, "basecall/{run}/sequencing_summary.txt"),
-		passed_summary = temp(os.path.join(outdir, "basecall/{run}/passed_sequencing_summary.txt")),
+		passed_summary = os.path.join(outdir, "basecall/{run}/passed_sequencing_summary.txt"),
 		# fastq = os.path.join(outdir, "basecall/{run}/{run}.fastq"),
 		fastq = directory(os.path.join(outdir, "basecall/{run}/pass")),
-		fast5 = temp(directory(os.path.join(outdir, "basecall/{run}/passed_fast5")))
+		fast5 = directory(os.path.join(outdir, "basecall/{run}/passed_fast5"))
 	message: "GUPPY basecalling running on {}".format(RESOURCE)
 	params:
 		outpath = os.path.join(outdir, "basecall/{run}"),
+		fast5_name = "{run}_"
 	threads: THREADS
 	singularity: guppy_container()
 	conda: config['CONDA']['PANDAS']
@@ -140,6 +141,7 @@ rule guppy_basecalling:
 		# rm -rf {params.outpath}/pass/fastq_runid_*.fastq
 		grep 'read_id' {output.summary} > {output.passed_summary}
 		grep 'TRUE' {output.summary} >> {output.passed_summary}
+		fast5_subset --input {input} --save_path {output.fast5} --read_id_list {output.passed_summary} --filename_base {params.fast5_name}
 		"""
 
 
@@ -202,10 +204,12 @@ rule deepbinner_bin:
 	output: os.path.join(outdir, "demultiplex/deepbinner/{run}/fastq_per_barcode.done")
 	params:
 		out_dir = os.path.join(outdir, "demultiplex/deepbinner/{run}"),
+		fastq = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/{run}.fastq"))
 	singularity: deepbinner_container()
 	shell:
 		"""
-		deepbinner bin --classes {input.classes} --reads {input.fastq} --out_dir {params.out_dir}
+		cat {input.fastq}/fastq_runid_*.fastq > {params.fastq}
+		deepbinner bin --classes {input.classes} --reads {params.fastq} --out_dir {params.out_dir}
 		python3 {GET_FASTQ_PER_BARCODE} {params.out_dir}
 		touch {output}
 		"""

@@ -2,11 +2,11 @@
     "__default__" :
     {
         "account" : "bioinfo",
-        "cores" : 12,
+        "cpus-per-task" : 12,
         "partition" : "short",
-        "jobname": "{rule}_{wildcards}",
-        "output": "/scratch/baotram/log/{rule}_{wildcards}.out",
-        "error": "/scratch/baotram/log/{rule}_{wildcards}.err",
+        "job-name": "{rule}_{wildcards}",
+        "output": "/scratch/baotram/test/results/log/{rule}_{wildcards}.out",
+        "error": "/scratch/baotram/test/results/log/{rule}_{wildcards}.err",
         "mail-user": "",
         "mail-type": "ALL",
     },
@@ -15,6 +15,13 @@
     {
         "partition": "gpu",
         "account": "gpu_group",
-        "cores": 8,
+        "cpus-per-task": {CPU_THREADS_PER_CALLER},
+    },
+
+    "guppy_demultiplexing" :
+    {
+        "partition": "gpu",
+        "account": "gpu_group",
+        "cpus-per-task": {CPU_THREADS_PER_CALLER},
     }
 }
