@@ -26,7 +26,7 @@ KIT = config['KIT']
 
 FLOWCELL = config['FLOWCELL']
 
-QSCORE_FILTERING = config['BASECALLER']['QSCORE_FILTERING']
+# QSCORE_FILTERING = config['BASECALLER']['QSCORE_FILTERING']
 MIN_QSCORE = config['BASECALLER']['MIN_QSCORE']
 
 CPU_THREADS_PER_CALLER = config['BASECALLER']['CPU_PER_CALLER']
@@ -39,16 +39,16 @@ BASECALLER_ADDITION = config['BASECALLER']['ADDITION']
 GPU_RUNNERS_PER_DEVICE = config['BASECALLER']['GPU_PER_DEVICE']
 
 # adjust parameters and variales based on guppy_basecaller option 'qscore_filtering'
-if QSCORE_FILTERING == 'true':
-	FILTERING_OPT = '--qscore_filtering --fast5_out'
-	FASTQ = 'pass/fastq_runid_*.fastq'
-	FAST5 = os.path.join(outdir, "basecall/{run}/workspace"),
-	FAST5_OUTPUT = directory(FAST5)
-if QSCORE_FILTERING == 'false':
-	FILTERING_OPT = ''
-	FASTQ = 'fastq_runid_*.fastq'
-	FAST5 = os.path.join(indir, "{run}/fast5"),
-	FAST5_OUTPUT = []
+# if QSCORE_FILTERING == 'true':
+# 	FILTERING_OPT = '--qscore_filtering --fast5_out'
+# 	FASTQ = 'pass/fastq_runid_*.fastq'
+# 	FAST5 = os.path.join(outdir, "basecall/{run}/workspace"),
+# 	FAST5_OUTPUT = directory(FAST5)
+# if QSCORE_FILTERING == 'false':
+# 	FILTERING_OPT = ''
+# 	FASTQ = 'fastq_runid_*.fastq'
+# 	FAST5 = os.path.join(indir, "{run}/fast5"),
+# 	FAST5_OUTPUT = []
 
 
 # adjust guppy_basecaller parameters based on RESOURCE
