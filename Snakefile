@@ -155,7 +155,7 @@ rule guppy_demultiplexing:
 	output:
 		demux = os.path.join(outdir, "demultiplex/guppy/{run}/barcoding_summary.txt")
 	params:
-		inpath = rules.guppy_basecalling.params.outpath,
+		# inpath = rules.guppy_basecalling.params.outpath,
 		outpath = os.path.join(outdir, "demultiplex/guppy/{run}"),
 		config = config['DEMULTIPLEXING_CONFIG'],
 	singularity: guppy_container()
@@ -163,7 +163,7 @@ rule guppy_demultiplexing:
 	threads: THREADS
 	shell:
 		"""
-		guppy_barcoder -i {params.inpath} -s {params.outpath} -c {params.config} --barcode_kits {KIT} --trim_barcodes --compress_fastq
+		guppy_barcoder -i {input} -s {params.outpath} -c {params.config} --barcode_kits {KIT} --trim_barcodes --compress_fastq
 		Rscript {RENAME_FASTQ_GUPPY_BARCODER} {params.outpath}
 		"""
 
