@@ -7,4 +7,5 @@ channels:
 dependencies:
     - r-minionqc = 1.4.1
     - mkl-service = 2.3.0
-    - fonts-conda-forge 
+    - fonts-conda-forge
+    - pandas = 1.0.1
