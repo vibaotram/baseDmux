@@ -3,25 +3,66 @@
     {
         "account" : "bioinfo",
         "cpus-per-task" : 12,
+        "gpus" : 0,
         "partition" : "short",
         "job-name": "{rule}_{wildcards}",
-        "output": "/scratch/baotram/test/results/log/{rule}_{wildcards}.out",
-        "error": "/scratch/baotram/test/results/log/{rule}_{wildcards}.err",
-        "mail-user": "",
-        "mail-type": "ALL",
+        "output": "{SLURM_LOG}/{rule}_{wildcards.run}.o_%j",
+        "error": "{SLURM_LOG}/{rule}_{wildcards.run}.e_%j",
+        "mail-user" : "",
+        "mail-type" : "ALL",
     },
 
     "guppy_basecalling" :
     {
-        "partition": "gpu",
-        "account": "gpu_group",
-        "cpus-per-task": {CPU_THREADS_PER_CALLER},
+        "partition" : "gpu",
+        "account" : "gpu_group",
+        "cpus-per-task" : "{threads}",
+        "gpus" : 1,
     },
 
     "guppy_demultiplexing" :
     {
-        "partition": "gpu",
-        "account": "gpu_group",
-        "cpus-per-task": {CPU_THREADS_PER_CALLER},
-    }
+        "partition" : "gpu",
+        "account" : "gpu_group",
+        "cpus-per-task" : "{threads}",
+        "gpus" : 1
+    },
+
+    "deepbinner_classification" :
+    {
+        "partition" : "gpu",
+        "account" : "gpu_group",
+        "cpus-per-task" : "{threads}",
+    },
+
+    "minionqc_demultiplex" :
+    {
+        "cpus-per-task" : "{threads}",
+        "output": "{SLURM_LOG}/{rule}_{wildcards.demultiplexer}_{wildcards.run}.o_%j",
+        "error": "{SLURM_LOG}/{rule}_{wildcards.demultiplexer}_{wildcards.run}.e_%j",
+    },
+
+    "multiqc_basecall" :
+    {
+        "output": "{SLURM_LOG}/{rule}.o_%j",
+        "error": "{SLURM_LOG}/{rule}.e_%j",
+    },
+
+    "get_sequencing_summary_per_barcode" :
+    {
+        "output": "{SLURM_LOG}/{rule}_{wildcards.demultiplexer}_{wildcards.run}.o_%j",
+        "error": "{SLURM_LOG}/{rule}_{wildcards.demultiplexer}_{wildcards.run}.e_%j",
+    },
+
+    "multiqc_demultiplex" :
+    {
+        "output": "{SLURM_LOG}/{rule}_{wildcards.demultiplexer}_{wildcards.run}.o_%j",
+        "error": "{SLURM_LOG}/{rule}_{wildcards.demultiplexer}_{wildcards.run}.e_%j",
+    },
+
+    "get_multi_fast5_per_barcode" :
+    {
+        "output": "{SLURM_LOG}/{rule}_{wildcards.demultiplexer}_{wildcards.run}.o_%j",
+        "error": "{SLURM_LOG}/{rule}_{wildcards.demultiplexer}_{wildcards.run}.e_%j",
+    },
 }

@@ -16,27 +16,31 @@ demultiplexer = config['DEMULTIPLEXER']
 
 THREADS = config['THREADS']
 
+##############################
+## make slurm logs directory
+SLURM_LOG = f'{outdir}/logs/slurm'
+os.system(f"mkdir -p {SLURM_LOG}")
 
 ##############################
 ## guppy_basecaller parameters
 
-RESOURCE = config['BASECALLER']['RESOURCE']
+RESOURCE = config['GUPPY_BASECALLER']['RESOURCE']
 
 KIT = config['KIT']
 
 FLOWCELL = config['FLOWCELL']
 
 # QSCORE_FILTERING = config['BASECALLER']['QSCORE_FILTERING']
-MIN_QSCORE = config['BASECALLER']['MIN_QSCORE']
+MIN_QSCORE = config['GUPPY_BASECALLER']['MIN_QSCORE']
 
-CPU_THREADS_PER_CALLER = config['BASECALLER']['CPU_PER_CALLER']
-NUM_CALLERS = config['BASECALLER']['NUM_CALLERS']
+CPU_THREADS_PER_CALLER = config['GUPPY_BASECALLER']['CPU_PER_CALLER']
+NUM_CALLERS = config['GUPPY_BASECALLER']['NUM_CALLERS']
 
-BASECALLER_ADDITION = config['BASECALLER']['ADDITION']
+BASECALLER_ADDITION = config['GUPPY_BASECALLER']['ADDITION']
 
 # CUDA = config['BASECALLER']['CUDA']
 
-GPU_RUNNERS_PER_DEVICE = config['BASECALLER']['GPU_PER_DEVICE']
+GPU_RUNNERS_PER_DEVICE = config['GUPPY_BASECALLER']['GPU_PER_DEVICE']
 
 # adjust parameters and variales based on guppy_basecaller option 'qscore_filtering'
 # if QSCORE_FILTERING == 'true':
@@ -57,7 +61,17 @@ if RESOURCE == 'CPU':
 if RESOURCE == 'GPU':
 	BASECALLER_OPT = "--flowcell {flowcell} --kit {kit} --num_callers {num_callers} --min_qscore {min_qscore} --qscore_filtering --gpu_runners_per_device {gpu_runners_per_device} --device $CUDA {addition}".format(flowcell=FLOWCELL, kit=KIT, num_callers=NUM_CALLERS, min_qscore=MIN_QSCORE, gpu_runners_per_device=GPU_RUNNERS_PER_DEVICE, addition=BASECALLER_ADDITION)
 
+##############################
+## guppy_barcoder parameters
 
+BARCODER_CONFIG = config['GUPPY_BARCODER']['CONFIG']
+WORKER_THREADS = config['GUPPY_BARCODER']['WORKER_THREADS']
+ADDITION = config['GUPPY_BARCODER']['ADDITION']
+
+if RESOURCE == 'CPU':
+	DEVICE = ''
+if RESOURCE == 'GPU':
+	DEVICE = "--device $CUDA"
 ##############################
 ## MinIONQC parameters
 
@@ -132,7 +146,7 @@ rule guppy_basecalling:
 		fast5_name = "{run}_"
 	threads: THREADS
 	singularity: guppy_container()
-	conda: config['CONDA']['PANDAS']
+	conda: config['CONDA']['MINIONQC']
 	shell:
 		"""
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU})
@@ -157,13 +171,14 @@ rule guppy_demultiplexing:
 	params:
 		# inpath = rules.guppy_basecalling.params.outpath,
 		outpath = os.path.join(outdir, "demultiplex/guppy/{run}"),
-		config = config['DEMULTIPLEXING_CONFIG'],
+		# config = config['DEMULTIPLEXING_CONFIG'],
 	singularity: guppy_container()
 	conda: config['CONDA']['MINIONQC']
 	threads: THREADS
 	shell:
 		"""
-		guppy_barcoder -i {input} -s {params.outpath} -c {params.config} --barcode_kits {KIT} --trim_barcodes --compress_fastq
+		CUDA=$(python3 {CHOOSE_AVAIL_GPU})
+		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {WORKER_THREADS} {DEVICE} --trim_barcodes --compress_fastq {ADDITION}
 		Rscript {RENAME_FASTQ_GUPPY_BARCODER} {params.outpath}
 		"""
 
@@ -246,16 +261,16 @@ rule minionqc_basecall:
 		summary = os.path.join(outdir, "basecall/{run}/summary.yaml")
 	conda: config['CONDA']['MINIONQC']
 	singularity: guppy_container()
-	params:
-		inpath = os.path.join(outdir, "basecall/{run}"),
+	# params:
+	# 	inpath = os.path.join(outdir, "basecall/{run}"),
 	shell:
 		"""
-		MinIONQC.R -i {params.inpath} -q {QSCORE_CUTOFF} -s {SMALLFIGURES}
+		MinIONQC.R -i {input} -q {QSCORE_CUTOFF} -s {SMALLFIGURES}
 		"""
 
 rule multiqc_basecall:
-	input: rules.minionqc_basecall.output.summary
-	output: os.path.join(outdir, "basecall/multiqc_{run}.done")
+	input: expand(rules.minionqc_basecall.output.summary, run=run)
+	output: expand(os.path.join(outdir, "basecall/multiqc_{run}.done"), run=run)
 	singularity: guppy_container()
 	conda: config['CONDA']['MULTIQC']
 	params:
@@ -357,12 +372,10 @@ rule report_basecall:
 ############### SOMETHING ELSE
 
 rule clean:
-	params:
-		basecall = os.path.join(outdir, "basecall"),
-		demultiplex = os.path.join(outdir, "demultiplex")
 	shell:
 		"""
-		rm -rf {params.basecall} {params.demultiplex}
+		rm -rf {outdir}
+		echo "removed {outdir}"
 		"""
 
 rule clean_basecall:
@@ -387,6 +400,11 @@ rule help:
 		cat README.md
 		"""
 
+# rule add_slurm_logs:
+# 	shell:
+# 		"""
+# 		mkdir -p {outdir}/slurm_logs
+# 		"""
 ##############################
 ##################### HANDLERS
 

@@ -1,8 +1,8 @@
 # config file for snakemake
 
 
-INDIR: "/scratch/baotram/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
-0UTDIR: "/scratch/baotram/test/results" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
+INDIR: "/data3/projects/xanthopore/baotram/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads"
+0UTDIR: "/data3/projects/xanthopore/baotram/test/results" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
 
 
 SINGULARITY:
@@ -28,7 +28,7 @@ KIT: "SQK-RBK004"
 FLOWCELL: "FLO-MIN106"
 THREADS: 12
 
-BASECALLER:
+GUPPY_BASECALLER:
     'RESOURCE': 'GPU' # or 'gpu', "CPU", "GPU"
     # 'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
     # 'QSCORE_FILTERING': 'true' # 'true'/'fasle', if 'true',
@@ -41,9 +41,11 @@ BASECALLER:
 # --worker_threads
 
 DEMULTIPLEXER: ["guppy", "deepbinner"]
-DEMULTIPLEXING_CONFIG: "configuration.cfg"
 
 GUPPY_BARCODER:
+    'CONFIG': "configuration.cfg"
+    'WORKER_THREADS': 8
+    'ADDITION': ''
 
 DEEPBINNER_CLASSIFY:
     'PRESET': 'rapid' # 'native'/'rapid'
