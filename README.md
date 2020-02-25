@@ -17,13 +17,13 @@ git clone git@github.com:vibaotram/baseDmux.git
 
 ### Usage
 
-**Locally:**
+**On a laptop:**
 
 ```
 snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " --report path/to/report.html
 ```
 
-**On cluster:**
+**On a HP-Cluster:**
 
 ```
 snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " \
@@ -41,3 +41,5 @@ snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args 
 * snakemake 5.x
 * singularity >= 2.5
 * conda 4.x
+
+
