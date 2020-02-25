@@ -12,11 +12,15 @@ else:
 
 import pandas as pd
 
+gpus_number = int(sys.argv[1])
+
 try:
     gpu_info = subprocess.check_output(["nvidia-smi", "--format=csv", "--query-gpu=utilization.memory,utilization.gpu,temperature.gpu"])
     gpu_df = pd.read_csv(StringIO(gpu_info.decode('UTF-8')),names=['utilization.memory', 'utilization.gpu', 'temperature.gpu'],skiprows=1)
     gpu_df.sort_values(by=['utilization.memory', 'utilization.gpu', 'temperature.gpu'], inplace=True)
-    cuda = 'CUDA:' + str(gpu_df.index[0]) # take the one that has lowest values
-    print(cuda)
+    cuda = []
+    for i in range(0,gpus_number):
+        cuda.append(str(gpu_df.index[i])) # take the one that has lowest values
+    print('CUDA:' + ','.join(cuda))
 except (PermissionError, FileNotFoundError): # in case of no GPU, "nvidia-smi" is not available
 	pass
