@@ -5,40 +5,19 @@ INDIR: "/data3/projects/xanthopore/baotram/test/reads" #"/scratch/baotram/test/r
 0UTDIR: "/data3/projects/xanthopore/baotram/test/results" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
 
 
-SINGULARITY:
-    'GUPPY': "shub://vibaotram/singularity-container:guppy3.4gpu-conda-api" # guppy + miniconda + ont_fast5_api + python3
-    'DEEPBINNER': "shub://vibaotram/singularity-container:deepbinner-api" # deepbinner + ont_fast5_api + python3
-    'ALL': ''
-
-
-CONDA:
-    'MINIONQC': "conda/conda_minionqc.yaml"
-    'MULTIQC': "conda/conda_multiqc.yaml"
-    'PANDAS': "conda/conda_pandas.yaml" # for choose_gpu.py
-
-SCRIPT:
-    'CHOOSE_AVAIL_GPU': "script/choose_avail_gpu.py"
-    'FAST5_SUBSET': "script/fast5_subset.py"
-    'GET_FASTQ_PER_BARCODE': "script/get_fastq_per_barcode.py"
-    'GET_SUMMARY_PER_BARCODE': "script/get_summary_per_barcode.R"
-    'RENAME_FASTQ_GUPPY_BARCODER': "script/rename_fastq_guppy_barcoder.R"
-
 
 KIT: "SQK-RBK004"
 FLOWCELL: "FLO-MIN106"
-THREADS: 12
+# THREADS: 12
+RESOURCE: 'GPU' # "CPU"/"GPU"
 
 GUPPY_BASECALLER:
-    'RESOURCE': 'GPU' # or 'gpu', "CPU", "GPU"
-    # 'CONFIG': "dna_r9.4.1_450bps_fast.cfg"
-    # 'QSCORE_FILTERING': 'true' # 'true'/'fasle', if 'true',
     'MIN_QSCORE': 7
     'NUM_CALLERS': 2
     'CPU_PER_CALLER': 12
     'GPU_PER_DEVICE': 4
-    # 'CUDA': "auto"
     'ADDITION': '--hp_correct true' # additional params that do not affect output format or other rules
-# --worker_threads
+
 
 DEMULTIPLEXER: ["guppy", "deepbinner"]
 
@@ -49,7 +28,7 @@ GUPPY_BARCODER:
 
 DEEPBINNER_CLASSIFY:
     'PRESET': 'rapid' # 'native'/'rapid'
-    'THREADS': 12
+    'OMP_NUM_THREADS': 12 # GPU mode only
     'ADDITION': ''
 
 MINIONQC:
@@ -57,3 +36,6 @@ MINIONQC:
     'SMALLFIGURES': 'FALSE' # 'TRUE'/'FALSE'
     'PROCESSORS': 12
     'FIG': ["channel_summary", "flowcell_overview", "gb_per_channel_overview", "length_by_hour", "length_histogram", "length_vs_q", "q_by_hour", "q_histogram", "reads_per_hour", "yield_by_length", "yield_over_time"]
+
+ONT_FAST5_API:
+    'THREADS': 12
