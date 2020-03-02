@@ -58,10 +58,10 @@ NUM_GPUS = config['NUM_GPUS']
 
 # adjust guppy_basecaller parameters based on RESOURCE
 if RESOURCE == 'CPU':
-	BASECALLER_OPT = r"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}"
+	BASECALLER_OPT = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}"
 	BASECALLER_THREADS = NUM_CALLERS*CPU_THREADS_PER_CALLER
 if RESOURCE == 'GPU':
-	BASECALLER_OPT = r"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}"
+	BASECALLER_OPT = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}"
 	BASECALLER_THREADS = NUM_CALLERS
 
 ##############################
@@ -115,17 +115,39 @@ GET_SUMMARY_PER_BARCODE = 'script/get_summary_per_barcode.R'
 RENAME_FASTQ_GUPPY_BARCODER = 'script/rename_fastq_guppy_barcoder.R'
 
 
+
+##############################
+## cluster variables
+
+snakemake_dir = os.getcwd()
+
+user = subprocess.check_output("whoami")
+user = user.decode('UTF-8').strip('\n')
+
+nasID = config['NASID']
+if nasID == '':
+	HOST_PREFIX = ''
+	# TEMPDIR = '\'\''
+	# TEMP_INDIR = indir
+	# TEMP_OUTDIR = outdir
+else:
+	HOST_PREFIX = f'{user}@{nasID}:'
+	# TEMPDIR = '`mktemp -d`'
+	# TEMP_INDIR = '$tempdir/indir'
+	# TEMP_OUTDIR = '$tempdir/outdir'
+
+
 ##############################
 ##############################
 
-# ruleorder: gpu_guppy_basecalling > cpu_guppy_basecalling
+
 
 rule finish:
 	input:
 		expand(os.path.join(outdir, "basecall/multiqc_{run}.done"), run=run), # BASECALLING QC
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer=demultiplexer, run=run), # DEMULTIPLEXING QC
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer=demultiplexer, run=run),
-		expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
+		#expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
 		#expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/report.done"), demultiplexer=demultiplexer, run=run),
 
 
@@ -145,19 +167,39 @@ rule guppy_basecalling:
 	message: "GUPPY basecalling running on {}".format(RESOURCE)
 	params:
 		outpath = os.path.join(outdir, "basecall/{run}"),
-		fast5_name = "{run}_"
+		fast5_name = "{run}_",
+		# temp_input = os.path.join(TEMP_INDIR, "{run}/fast5"),
+		# temp_summary = os.path.join(TEMP_OUTDIR, "basecall/{run}/sequencing_summary.txt"),
+		# temp_passed_summary = os.path.join(TEMP_OUTDIR, "basecall/{run}/passed_sequencing_summary.txt"),
+		# temp_fast5 = directory(os.path.join(TEMP_OUTDIR, "basecall/{run}/passed_fast5"))
 	threads: BASECALLER_THREADS
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
 	shell:
 		"""
+		host_prefix='{HOST_PREFIX}'
+		if [ $host_prefix == '' ]; then
+			temp_indir={input}
+			temp_outdir={params.outpath}
+		else
+			temp_indir=$(mktemp -d); echo -e "##$(date)    Creating temporary working directory on local drive: $temp_indir \n"
+			temp_outdir=$(mktemp -d); echo -e "##$(date)    Creating temporary working directory on local drive: $temp_outdir \n"
+		fi
+		cmd="rsync -avP $host_prefix{input}/ $temp_indir"
+		echo "$cmd"
+		$cmd
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
-		guppy_basecaller -i {input} -s {params.outpath} {BASECALLER_OPT}
+		guppy_basecaller -i $temp_indir -s $temp_outdir {BASECALLER_OPT}
 		# cat {params.outpath}/pass/fastq_runid_*.fastq > {output.fastq}
 		# rm -rf {params.outpath}/pass/fastq_runid_*.fastq
-		grep 'read_id' {output.summary} > {output.passed_summary}
-		grep 'TRUE' {output.summary} >> {output.passed_summary}
-		fast5_subset --input {input} --save_path {output.fast5} --read_id_list {output.passed_summary} --filename_base {params.fast5_name}
+		grep 'read_id' $temp_outdir/sequencing_summary.txt > $temp_outdir/passed_sequencing_summary.txt
+		grep 'TRUE' $temp_outdir/sequencing_summary.txt >> $temp_outdir/passed_sequencing_summary.txt
+		fast5_subset --input $temp_indir --save_path $temp_outdir/passed_fast5 --read_id_list $temp_outdir/passed_sequencing_summary.txt --filename_base {params.fast5_name}
+		rsync -avP $temp_outdir/ {HOST_PREFIX}{params.outpath}
+		if [ $host_prefix != '' ]; then
+			rm -rf $temp_indir
+			rm -rf $temp_outdir
+		fi
 		"""
 
 
@@ -381,7 +423,7 @@ rule clean:
 	shell:
 		"""
 		rm -rf {outdir}
-		echo "removed {outdir}"
+		echo "#################\nremoved {outdir}\n#################"
 		"""
 
 rule clean_basecall:

@@ -17,7 +17,7 @@
         "partition" : "gpu",
         "account" : "gpu_group",
         "cpus-per-task" : "{threads}",
-        "gpus" : 1,
+        "gpus" : "{NUM_GPUS}",
     },
 
     "guppy_demultiplexing" :
@@ -25,7 +25,7 @@
         "partition" : "gpu",
         "account" : "gpu_group",
         "cpus-per-task" : "{threads}",
-        "gpus" : 1
+        "gpus" : "{NUM_GPUS}",
     },
 
     "deepbinner_classification" :
