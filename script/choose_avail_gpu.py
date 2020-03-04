@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 
-## select a GPU based on memory, utilization and temperature (in order of priority)
-## if GPU is available: output 'CUDA:x', else: output nothing
+'''
+select a number of GPUs based on memory, utilization and temperature (in order of priority)
+if GPU is available: output 'CUDA:x,y,z', else: output nothing
+'''
 
 import subprocess
 import sys
@@ -21,6 +23,6 @@ try:
     cuda = []
     for i in range(0,gpus_number):
         cuda.append(str(gpu_df.index[i])) # take the one that has lowest values
-    print('CUDA:' + ','.join(cuda))
+    print('cuda:' + ','.join(cuda))
 except (PermissionError, FileNotFoundError): # in case of no GPU, "nvidia-smi" is not available
 	pass
