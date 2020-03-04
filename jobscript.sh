@@ -2,8 +2,27 @@
 # properties = {properties}
 # this is identical to the default jobscript with the exception of the exit code
 
+<<<<<<< HEAD
 {exec_job}
 
+=======
+Dir={"rule"}_{"jobid"}
+
+mkdir /scratch/$Dir
+
+module load bioinfo/snakemake/5.9.1-conda
+module load system/singularity/3.3.0
+
+cd /scratch/$Dir
+rsync -vaur --progress nas:/home/baotram/test .
+
+{exec_job}
+
+rsync -vaur --progress /scratch/$Dir/test/results nas:/home/baotram/test
+
+rm -rf /scratch/$Dir
+
+>>>>>>> c402d1c35beb45594167d448badc18863f356dd1
 # if the job succeeds, snakemake
 # touches jobfinished, thus if it exists cat succeeds. if cat fails, the error code indicates job failure
 # see https://groups.google.com/forum/#!searchin/snakemake/immediate$20submit%7Csort:relevance/snakemake/1QelazgzilY/mz0KfAzJAgAJ
