@@ -1,10 +1,16 @@
 # config file for snakemake
 
 
+<<<<<<< HEAD
 INDIR: "/data3/projects/xanthopore/baotram/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads", "/data3/projects/xanthopore/baotram/test/reads"
 0UTDIR: "/data3/projects/xanthopore/baotram/test/results_scratch" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
 
+=======
+INDIR: "/home/baotram/tal/workflow/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads", "/data3/projects/xanthopore/baotram/test/reads"
+0UTDIR: "/data3/projects/xanthopore/baotram/test/results_scratch" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results"
+>>>>>>> c402d1c35beb45594167d448badc18863f356dd1
 
+NASID: ''
 
 NASID: 'nas3'
 
