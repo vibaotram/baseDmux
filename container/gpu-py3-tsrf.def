@@ -36,26 +36,6 @@ From: tensorflow/tensorflow:1.13.1-gpu-py3
 
 
 
-#### CUDA
-#    wget https://developer.nvidia.com/compute/cuda/9.0/Prod/local_installers/cuda-repo-ubuntu1604-9-0-local_9.0.176-1_amd64-deb
-#    dpkg -x cuda-repo-ubuntu1604-9-0-local_9.0.176-1_amd64-deb cuda-repo-ubuntu1604-9-0-local_9.0.176-1_amd64.deb
-#    dpkg -i cuda-repo-ubuntu1604-9-0-local_9.0.176-1_amd64.deb
-#    apt-key add /var/cuda-repo-9.0-local/7fa2af80.pub
-#    apt update
-#    apt install cuda-toolkit-9.0  # don't just install cuda or else that will overwrite the drivers
-
-#    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/extras/CUPTI/lib64
-#    export PATH=$PATH:/usr/local/cuda-9.0/bin
-
-#    apt-get install cuda -y
-#    export PATH=/usr/local/cuda-10.2/bin:/usr/local/cuda-10.2/NsightCompute-2019.1${PATH:+:${PATH}}
-#    export LD_LIBRARY_PATH=/usr/local/cuda-10.2/lib64\
-#                         ${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}
-
-
-
-
-
 #### GUPPY GPU
     GUPPY_VERSION=3.4.3
       apt-get update && \
