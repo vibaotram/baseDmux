@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
-# move all fastq.gz files to corresponding folders from provided path based on barcode id
+'''
+move all fastq.gz files to corresponding folders from provided path based on barcode id
+'''
 
 import glob
 import os

@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
-## take all barcode folders from provided directory (non-recursively) then input each to "fast5_subset" command
+'''
+take all barcode folders from provided directory (non-recursively)
+then input each to "fast5_subset" command
+'''
 
 import glob
 import os
