@@ -1,5 +1,6 @@
 import os
 import glob
+import getpass
 
 report: "report/workflow.rst"
 
@@ -18,9 +19,11 @@ demultiplexer = config['DEMULTIPLEXER']
 
 ##############################
 ## make slurm logs directory
-SLURM_LOG = f'{outdir}/logs/slurm'
-os.system(f"mkdir -p {SLURM_LOG}")
+SLURM_LOG = os.path.join(outdir, "logs/slurm")
+# os.system(f"mkdir -p {SLURM_LOG}")
+os.makedirs(SLURM_LOG, exist_ok=True)
 
+SNAKEMAKE_LOG = os.path.join(outdir, "logs/snakemake")
 ##############################
 ## guppy_basecaller parameters
 
@@ -119,23 +122,27 @@ RENAME_FASTQ_GUPPY_BARCODER = 'script/rename_fastq_guppy_barcoder.R'
 ##############################
 ## cluster variables
 
-snakemake_dir = os.getcwd()
+# snakemake_dir = os.getcwd()
 
-user = subprocess.check_output("whoami")
-user = user.decode('UTF-8').strip('\n')
+# user = subprocess.check_output("whoami")
+# user = user.decode('UTF-8').strip('\n')
+
+user = getpass.getuser()
 
 nasID = config['NASID']
-if nasID == '':
+if nasID:
+	HOST_PREFIX = user + '@' + nasID + ':'
+	# TEMPDIR = '`mktemp -d`'
+	# TEMP_INDIR = '$tempdir/indir'
+	# TEMP_OUTDIR = '$tempdir/outdir'
+else:
 	HOST_PREFIX = ''
 	# TEMPDIR = '\'\''
 	# TEMP_INDIR = indir
 	# TEMP_OUTDIR = outdir
-else:
-	HOST_PREFIX = f'{user}@{nasID}:'
-	# TEMPDIR = '`mktemp -d`'
-	# TEMP_INDIR = '$tempdir/indir'
-	# TEMP_OUTDIR = '$tempdir/outdir'
 
+
+# shell.prefix("exec > >(tee "{log}") 2>&1; ")
 
 ##############################
 ##############################
@@ -174,31 +181,31 @@ rule guppy_basecalling:
 		# temp_fast5 = directory(os.path.join(TEMP_OUTDIR, "basecall/{run}/passed_fast5"))
 	threads: BASECALLER_THREADS
 	singularity: guppy_container
-	conda: 'conda/conda_minionqc.yaml'
+	conda: 'conda/conda_python_package.yaml'
+	log: os.path.join(SNAKEMAKE_LOG, "guppy_basecalling_{run}.log")
 	shell:
 		"""
+		exec > >(tee "{log}") 2>&1
 		host_prefix='{HOST_PREFIX}'
 		if [ $host_prefix == '' ]; then
 			temp_indir={input}
 			temp_outdir={params.outpath}
 		else
-			temp_indir=$(mktemp -d); echo -e "##$(date)    Creating temporary working directory on local drive: $temp_indir \n"
-			temp_outdir=$(mktemp -d); echo -e "##$(date)    Creating temporary working directory on local drive: $temp_outdir \n"
+			temp_indir=$(mktemp -d); echo -e "##$(date)    Creating temporary input directory on local drive: $temp_indir \n"
+			temp_outdir=$(mktemp -d); echo -e "##$(date)    Creating temporary output directory on local drive: $temp_outdir \n"
+			rsync -arvP $host_prefix{input}/ $temp_indir
 		fi
-		cmd="rsync -avP $host_prefix{input}/ $temp_indir"
-		echo "$cmd"
-		$cmd
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		guppy_basecaller -i $temp_indir -s $temp_outdir {BASECALLER_OPT}
 		# cat {params.outpath}/pass/fastq_runid_*.fastq > {output.fastq}
 		# rm -rf {params.outpath}/pass/fastq_runid_*.fastq
 		grep 'read_id' $temp_outdir/sequencing_summary.txt > $temp_outdir/passed_sequencing_summary.txt
 		grep 'TRUE' $temp_outdir/sequencing_summary.txt >> $temp_outdir/passed_sequencing_summary.txt
-		fast5_subset --input $temp_indir --save_path $temp_outdir/passed_fast5 --read_id_list $temp_outdir/passed_sequencing_summary.txt --filename_base {params.fast5_name}
-		rsync -avP $temp_outdir/ {HOST_PREFIX}{params.outpath}
+		echo "Filtering passed reads in fast5 files \n"; fast5_subset --input $temp_indir --save_path $temp_outdir/passed_fast5 --read_id_list $temp_outdir/passed_sequencing_summary.txt --filename_base {params.fast5_name}
 		if [ $host_prefix != '' ]; then
-			rm -rf $temp_indir
-			rm -rf $temp_outdir
+			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {params.outpath}\n"; rsync -arvP $temp_outdir/ {HOST_PREFIX}{params.outpath}
+			rm -rf $temp_indir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_indir \n"
+			rm -rf $temp_outdir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_outdir \n"
 		fi
 		"""
 
@@ -219,8 +226,10 @@ rule guppy_demultiplexing:
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
 	threads: WORKER_THREADS
+	log: os.path.join(SNAKEMAKE_LOG, "guppy_demultiplexing_{run}.log")
 	shell:
 		"""
+		exec > >(tee "{log}") 2>&1
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} --trim_barcodes --compress_fastq {ADDITION}
 		Rscript {RENAME_FASTQ_GUPPY_BARCODER} {params.outpath}
@@ -236,11 +245,26 @@ rule guppy_demultiplexing:
 rule multi_to_single_fast5:
 	input: rules.guppy_basecalling.output.fast5
 	output: temp(directory(os.path.join(outdir, "demultiplex/deepbinner/{run}/singlefast5")))
-	singularity: deepbinner_container
 	threads: API_THREADS
+	log: os.path.join(SNAKEMAKE_LOG, "multi_to_single_fast5_{run}.log")
 	shell:
 		"""
-		multi_to_single_fast5 -i {input} -s {output} -t {threads}
+		exec > >(tee "{log}") 2>&1
+		host_prefix='{HOST_PREFIX}'
+		if [ $host_prefix == '' ]; then
+			temp_indir={input}
+			temp_outdir={output}
+		else
+			temp_indir=$(mktemp -d); echo -e "##$(date)    Creating temporary input directory on local drive: $temp_indir \n"
+			temp_outdir=$(mktemp -d); echo -e "##$(date)    Creating temporary output directory on local drive: $temp_outdir \n"
+			rsync -arvP $host_prefix{input}/ $temp_indir
+		fi
+		multi_to_single_fast5 -i $temp_indir -s $temp_outdir -t {threads}
+		if [ $host_prefix != '' ]; then
+			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {output}\n"; rsync -arvP $temp_outdir/ {HOST_PREFIX}{output}
+			rm -rf $temp_indir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_indir \n"
+			rm -rf $temp_outdir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_outdir \n"
+		fi
 		"""
 
 if RESOURCE == 'CPU':
@@ -254,8 +278,10 @@ rule deepbinner_classification:
 		classification = os.path.join(outdir, "demultiplex/deepbinner/{run}/classification")
 	singularity: deepbinner_container
 	threads: OMP_NUM_THREADS
+	log: os.path.join(SNAKEMAKE_LOG, "deepbinner_classification_{run}.log")
 	shell:
 		"""
+		exec > >(tee "{log}") 2>&1
 		deepbinner classify --{PRESET} {OMP_NUM_THREADS_OPT} {DEEPBINNER_ADDITION} {input} > {output.classification}
 		"""
 
@@ -269,8 +295,10 @@ rule deepbinner_bin:
 		out_dir = os.path.join(outdir, "demultiplex/deepbinner/{run}"),
 		fastq = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/{run}.fastq"))
 	singularity: deepbinner_container
+	log: os.path.join(SNAKEMAKE_LOG, "deepbinner_bin_{run}.log")
 	shell:
 		"""
+		exec > >(tee "{log}") 2>&1
 		cat {input.fastq}/fastq_runid_*.fastq > {params.fastq}
 		deepbinner bin --classes {input.classes} --reads {params.fastq} --out_dir {params.out_dir}
 		python3 {GET_FASTQ_PER_BARCODE} {params.out_dir}
@@ -311,8 +339,10 @@ rule minionqc_basecall:
 	singularity: guppy_container
 	# params:
 	# 	inpath = os.path.join(outdir, "basecall/{run}"),
+	log: os.path.join(SNAKEMAKE_LOG, "minionqc_basecall_{run}.log")
 	shell:
 		"""
+		exec > >(tee "{log}") 2>&1
 		MinIONQC.R -i {input} -q {QSCORE_CUTOFF} -s {SMALLFIGURES}
 		"""
 
@@ -324,8 +354,10 @@ rule multiqc_basecall:
 	params:
 		inpath = os.path.join(outdir, "basecall"),
 		outpath = os.path.join(outdir, "basecall/multiqc")
+	log: os.path.join(SNAKEMAKE_LOG, "multiqc_basecall.log")
 	shell:
 		"""
+		exec > >(tee "{log}") 2>&1
 		multiqc -f -v -d -dd 2 -o {params.outpath} {params.inpath}
 		touch {output}
 		"""
@@ -346,8 +378,10 @@ rule get_sequencing_summary_per_barcode:
 		sequencing_file = rules.guppy_basecalling.output.passed_summary,
 	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
+	log: os.path.join(SNAKEMAKE_LOG, "get_sequencing_summary_per_barcode_{demultiplexer}_{run}.log")
 	shell:
 		"""
+		exec > >(tee "{log}") 2>&1
 		Rscript {GET_SUMMARY_PER_BARCODE} {params.sequencing_file} {params.barcoding_path}
 		touch {output}
 		"""
@@ -364,13 +398,23 @@ rule minionqc_demultiplex:
 	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	threads: PROCESSORS
+	log: os.path.join(SNAKEMAKE_LOG, "minionqc_demultiplex_{demultiplexer}_{run}.log")
 	shell:
 		"""
+		exec > >(tee "{log}") 2>&1
 		MinIONQC.R -i {params.inpath} -q {QSCORE_CUTOFF} -s {SMALLFIGURES} -p {threads}
 		rm -rf {params.combinedQC}
 		touch {output}
 		"""
+###
 
+# def summary_per_barcode(wildcards):
+# 	checkpoint_output = checkpoints.demultiplexing_guppy_sequencing_summary.get(**wildcards).output[0]
+#     barcodes=glob_wildcards(os.path.join(os.path.dirname(checkpoint_output), '{barcode}/sequencing_summary.txt')).barcode)
+# 	summaryFilesList=[os.path.dirname(checkpoint_output) + "/{bc}/sequencing_summary.txt".format(bc = barcode) for barcode in barcodes]
+# 	return(summaryFilesList)
+
+###
 
 rule multiqc_demultiplex:
 	input:
@@ -381,8 +425,10 @@ rule multiqc_demultiplex:
 	params:
 		inpath = rules.minionqc_demultiplex.params.inpath,
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc")
+	log: os.path.join(SNAKEMAKE_LOG, "multiqc_demultiplex_{demultiplexer}_{run}.log")
 	shell:
 		"""
+		exec > >(tee "{log}") 2>&1
 		multiqc -f -v -d -dd 2 -o {params.outpath} {params.inpath}
 		"""
 
@@ -401,8 +447,10 @@ rule get_multi_fast5_per_barcode:
 	singularity: deepbinner_container
 	params:
 		path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
+	log: os.path.join(SNAKEMAKE_LOG, "get_multi_fast5_per_barcode_{demultiplexer}_{run}.log")
 	shell:
 		"""
+		exec > >(tee "{log}") 2>&1
 		python3 {FAST5_SUBSET} {input.fast5} {params.path}
 		touch {output.check}
 		"""
