@@ -6,7 +6,7 @@ params:
    rmd: "report_demultiplex.Rmd"
 output: html_document
 ---
-The report is used to compare demultiplexing results 
+The report provides plots in order to compare demultiplexing results from different runs, and from different demultiplexer (guppy and deepbinner).
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -16,8 +16,8 @@ library(ggplot2)
 
 
 ```{r input dataframe}
-indir = "/home/baotram/tal/workflow/test/demultiplex"
-# indir = snakemake@params
+# indir = "/data3/projects/xanthopore/baotram/test/results_scratch_1303/demultiplex"
+indir = snakemake@params$indir
 mqc = list.files(indir, "multiqc_minionqc.txt", recursive = T, full.names = T)
 
 raw_df <- data.frame()
@@ -37,6 +37,7 @@ colnames(add_df) <- c("demultiplex", "run", "barcode")
 df <- data.frame(raw_df, add_df)
 ```
 
+# Total gigabases
 
 ```{r plot of total.gigabases}
 ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplex)) +
@@ -46,6 +47,7 @@ ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplex)) +
   theme(axis.text.x=element_text(angle=90,hjust=1))
 ```
 
+# Mediean length
 
 ```{r plot of median.length}
 ggplot(df, aes(x=barcode, y=median.length, fill=demultiplex)) +
@@ -54,6 +56,8 @@ ggplot(df, aes(x=barcode, y=median.length, fill=demultiplex)) +
   theme_light() +
   theme(axis.text.x=element_text(angle=90,hjust=1))
 ```
+
+# Total reads
 
 ```{r plot of total.reads}
 ggplot(df, aes(x=barcode, y=total.reads, fill=demultiplex)) +
