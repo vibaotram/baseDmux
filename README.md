@@ -28,7 +28,11 @@ git clone git@github.com:vibaotram/baseDmux.git
 
 ### Usage
 
+<<<<<<< HEAD
 #### 1. Edit [config.yaml](./config.yaml) file
+=======
+#### 1. Edit [config.yaml](.config.yaml) file
+>>>>>>> f169727e649b85090191d50deae7187874380685
 
 
 #### 2. Run the workflow
@@ -61,5 +65,9 @@ snakemake --use-singularity --use-conda  --report path/to/report_basecall.html
 
 **Demultiplexing report**
 ```
+<<<<<<< HEAD
 snakemake --use-singularity --use-conda  report_demultiplex
+=======
+snakemake --use-singularity --use-conda  report_ demultiplex
+>>>>>>> f169727e649b85090191d50deae7187874380685
 ```
