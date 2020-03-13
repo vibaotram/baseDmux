@@ -163,8 +163,8 @@ if nasID and not os.path.isdir(ssh_dir):
 
 rule finish:
 	input:
-		# expand(os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), run=run), # BASECALLING QC
-		# expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer=demultiplexer, run=run), # DEMULTIPLEXING QC
+		expand(os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), run=run), # BASECALLING QC
+		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer=demultiplexer, run=run), # DEMULTIPLEXING QC
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer=demultiplexer, run=run),
 		expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
 		# os.path.join(outdir, "report/demultiplex_report.html")
@@ -344,11 +344,13 @@ def guppy_demultiplexing_output():
 ############## FOR BASECALLING
 
 
+
 rule minionqc_basecall:
 	input: rules.guppy_basecalling.output.summary
 	output:
 		summary = os.path.join(outdir, "basecall/{run}/summary.yaml"),
-		# fig = report(expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig), caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
+		fig = report([os.path.dirname(rules.guppy_basecalling.output.summary) + "/{fig}.png".format(fig=fig) for fig in fig], caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
+		# fig = report(os.path.join(outdir, "basecall/{run}", "{fig}.png".format(fig=fig)), caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
 	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	# params:
@@ -448,7 +450,6 @@ rule multiqc_demultiplex:
 		"""
 		exec > >(tee "{log}") 2>&1
 		multiqc -f -v -d -dd 2 -o {params.outpath} {params.inpath}
-		mkdir {output.report}
 		"""
 
 
@@ -477,11 +478,11 @@ rule get_multi_fast5_per_barcode:
 
 
 
-rule report_basecall:
-	input: rules.multiqc_basecall.output
-	output: report(os.path.join(outdir, "basecall/{run}/{fig}.png"), caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
-	shell:
-		"touch {output}"
+# rule report_basecall:
+# 	input: rules.multiqc_basecall.output
+# 	output: report(os.path.join(outdir, "basecall/{run}/{fig}.png"), caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
+# 	shell:
+# 		"touch {output}"
 
 
 
