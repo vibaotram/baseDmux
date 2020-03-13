@@ -1,0 +1,64 @@
+---
+title: "Demultiplex report"
+# author: "Tram"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+params:
+   rmd: "report_demultiplex.Rmd"
+output: html_document
+---
+The report is used to compare demultiplexing results 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(stringr)
+library(ggplot2)
+```
+
+
+```{r input dataframe}
+indir = "/home/baotram/tal/workflow/test/demultiplex"
+# indir = snakemake@params
+mqc = list.files(indir, "multiqc_minionqc.txt", recursive = T, full.names = T)
+
+raw_df <- data.frame()
+for (i in 1:length(mqc)) {
+  f <- read.table(mqc[i], header = T, sep = "\t")
+  raw_df <- rbind(raw_df, f)
+}
+
+# list_df <- lapply(mqc, function(x) read.table(x, header = T, sep = "\t"))
+# names(list_df) <- mqc
+# raw_df <- dplyr::bind_rows(list_df, .id = "path_to_file")
+```
+
+```{r add cols}
+add_df <- str_split_fixed(raw_df$Sample, " \\| ", 3)
+colnames(add_df) <- c("demultiplex", "run", "barcode")
+df <- data.frame(raw_df, add_df)
+```
+
+
+```{r plot of total.gigabases}
+ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplex)) +
+  geom_col(position = position_dodge()) +
+  facet_grid(run~., scales = "fixed") +
+  theme_light() +
+  theme(axis.text.x=element_text(angle=90,hjust=1))
+```
+
+
+```{r plot of median.length}
+ggplot(df, aes(x=barcode, y=median.length, fill=demultiplex)) +
+  geom_col(position = position_dodge()) +
+  facet_grid(run~., scales = "fixed") +
+  theme_light() +
+  theme(axis.text.x=element_text(angle=90,hjust=1))
+```
+
+```{r plot of total.reads}
+ggplot(df, aes(x=barcode, y=total.reads, fill=demultiplex)) +
+  geom_col(position = position_dodge()) +
+  facet_grid(run~., scales = "fixed") +
+  theme_light() +
+  theme(axis.text.x=element_text(angle=90,hjust=1))
+```
