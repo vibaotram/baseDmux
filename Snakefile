@@ -4,26 +4,21 @@ import getpass
 
 report: "report/workflow.rst"
 
-configfile:"config.yaml"
+configfile: "config.yaml"
 
 
 indir = config['INDIR']
 
 outdir = config['0UTDIR']
 
-run, = glob_wildcards(os.path.join(indir, "{run}/fast5"))
+run, = glob_wildcards(os.path.join(indir, "{run}/fast5/"))
 
 demultiplexer = config['DEMULTIPLEXER']
 
 # THREADS = config['THREADS']
 
-##############################
-## make slurm logs directory
-SLURM_LOG = os.path.join(outdir, "logs/slurm")
-# os.system(f"mkdir -p {SLURM_LOG}")
-os.makedirs(SLURM_LOG, exist_ok=True)
 
-SNAKEMAKE_LOG = os.path.join(outdir, "logs/snakemake")
+
 ##############################
 ## guppy_basecaller parameters
 
@@ -141,6 +136,23 @@ else:
 	# TEMP_INDIR = indir
 	# TEMP_OUTDIR = outdir
 
+##############################
+## make slurm logs directory
+SLURM_LOG = os.path.join(outdir, "logs/slurm")
+# os.system(f"mkdir -p {SLURM_LOG}")
+os.makedirs(SLURM_LOG, exist_ok=True)
+
+SNAKEMAKE_LOG = os.path.join(outdir, "logs/snakemake")
+
+##############################
+## slurm ssh
+ssh_dir = os.path.join(os.getcwd(), ".ssh")
+if nasID and not os.path.isdir(ssh_dir):
+	user_ssh = os.path.join('/home', user, '.ssh')
+	cp_ssh = ' '.join(('rsync -avrP', user_ssh, os.getcwd()))
+	os.system(cp_ssh)
+
+
 
 # shell.prefix("exec > >(tee "{log}") 2>&1; ")
 
@@ -151,10 +163,11 @@ else:
 
 rule finish:
 	input:
-		expand(os.path.join(outdir, "basecall/multiqc_{run}.done"), run=run), # BASECALLING QC
-		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer=demultiplexer, run=run), # DEMULTIPLEXING QC
+		# expand(os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), run=run), # BASECALLING QC
+		# expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer=demultiplexer, run=run), # DEMULTIPLEXING QC
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer=demultiplexer, run=run),
-		#expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
+		expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
+		# os.path.join(outdir, "report/demultiplex_report.html")
 		#expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/report.done"), demultiplexer=demultiplexer, run=run),
 
 
@@ -270,7 +283,7 @@ rule multi_to_single_fast5:
 if RESOURCE == 'CPU':
 	OMP_NUM_THREADS_OPT = ''
 if RESOURCE == 'GPU':
-	OMP_NUM_THREADS_OPT = f"--omp_num_threads {OMP_NUM_THREADS}"
+	OMP_NUM_THREADS_OPT = f'--omp_num_threads {OMP_NUM_THREADS}'
 
 rule deepbinner_classification:
 	input: rules.multi_to_single_fast5.output
@@ -334,7 +347,8 @@ def guppy_demultiplexing_output():
 rule minionqc_basecall:
 	input: rules.guppy_basecalling.output.summary
 	output:
-		summary = os.path.join(outdir, "basecall/{run}/summary.yaml")
+		summary = os.path.join(outdir, "basecall/{run}/summary.yaml"),
+		# fig = report(expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig), caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
 	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	# params:
@@ -347,8 +361,10 @@ rule minionqc_basecall:
 		"""
 
 rule multiqc_basecall:
-	input: expand(rules.minionqc_basecall.output.summary, run=run)
-	output: expand(os.path.join(outdir, "basecall/multiqc_{run}.done"), run=run)
+	input:
+		expand(rules.minionqc_basecall.output.summary, run=run),
+		# inpath = os.path.join(outdir, "basecall")
+	output: os.path.join(outdir, "basecall/multiqc/multiqc_report.html")
 	singularity: guppy_container
 	conda: 'conda/conda_multiqc.yaml'
 	params:
@@ -419,7 +435,9 @@ rule minionqc_demultiplex:
 rule multiqc_demultiplex:
 	input:
 		rules.minionqc_demultiplex.output
-	output: os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html")
+	output:
+		os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"),
+		# report = directory(os.path.join(outdir, "report"))
 	singularity: guppy_container
 	conda: 'conda/conda_multiqc.yaml'
 	params:
@@ -430,6 +448,7 @@ rule multiqc_demultiplex:
 		"""
 		exec > >(tee "{log}") 2>&1
 		multiqc -f -v -d -dd 2 -o {params.outpath} {params.inpath}
+		mkdir {output.report}
 		"""
 
 
@@ -463,6 +482,20 @@ rule report_basecall:
 	output: report(os.path.join(outdir, "basecall/{run}/{fig}.png"), caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
 	shell:
 		"touch {output}"
+
+
+
+rule report_demultiplex:
+	output: os.path.join(outdir, "report/demultiplex_report.html")
+	params:
+		indir = os.path.join(outdir, "demultiplex")
+	singularity: guppy_container
+	conda: 'conda/conda_minionqc.yaml'
+	script:
+		"report/report_demultiplex.Rmd"
+
+
+
 
 ##############################
 ############### SOMETHING ELSE
