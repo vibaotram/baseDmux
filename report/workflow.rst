@@ -1,6 +1,6 @@
-
-# baseDmux WORKFLOW REPORT
-
+========================
+baseDmux WORKFLOW REPORT
+========================
 
 
 Basecalling was performed by GUPPY on {{ snakemake.config['RESOURCE'] }}.

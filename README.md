@@ -3,8 +3,9 @@
 
 The workflow will be (not now) available in local computer as well as cluster environment.
 
-### Full Workflow
-![Full workflow: BASEcalling by GUPPY + DeMUltipleXing by both GUPPY and Deepbinner.](./dag/full_dag.svg)
+### Full workflow
+#### BASEcalling by GUPPY + DeMUltipleXing by both GUPPY and Deepbinner####
+![](./dag/full_dag.svg)
 
 
 ### Requirements
@@ -39,15 +40,13 @@ git clone git@github.com:vibaotram/baseDmux.git
 snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv "
 ```
 
-**On cluster:** (slurm)
+**On cluster mode:** (slurm)
 
 ```
-snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " \
+snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " --latency-wait 60 \
 --cluster-config cluster.json \
---cluster "sbatch --job-name {cluster.jobname} \
--p {cluster.partition} -A {cluster.account}\
---output {cluster.output} \
---error {cluster.error}"
+--cluster "sbatch --job-name {cluster.job-name} \
+-p {cluster.partition} -A {cluster.account} --cpus-per-task {cluster.cpus-per-task} --output={cluster.output} --error={cluster.error}"
 ```
 
 
@@ -56,7 +55,7 @@ snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args 
 **Snakemake report including basecall results**
 
 ```
-snakemake --use-singularity --use-conda  --report path/to/report_basecall.html
+snakemake --report outdir/report/snakemake_report.html
 ```
 
 **Demultiplexing report**
