@@ -20,13 +20,14 @@ library(ggplot2)
 indir = snakemake@params$indir
 mqc = list.files(indir, "multiqc_minionqc.txt", recursive = T, full.names = T)
 
-raw_df <- data.frame()
-for (i in 1:length(mqc)) {
-  f <- read.table(mqc[i], header = T, sep = "\t")
-  raw_df <- rbind(raw_df, f)
-}
+# raw_df <- data.frame()
+# for (i in 1:length(mqc)) {
+#   f <- read.table(mqc[i], header = T, sep = "\t")
+#   raw_df <- rbind(raw_df, f)
+# }
 
-# list_df <- lapply(mqc, function(x) read.table(x, header = T, sep = "\t"))
+list_df <- lapply(mqc, function(x) read.table(x, header = T, sep = "\t"))
+raw_df <- do.call(rbind, list_df)
 # names(list_df) <- mqc
 # raw_df <- dplyr::bind_rows(list_df, .id = "path_to_file")
 ```
