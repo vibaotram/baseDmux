@@ -9,9 +9,14 @@ configfile: "config.yaml"
 
 indir = config['INDIR']
 
-outdir = config['0UTDIR']
+outdir = config['OUTDIR']
 
-run, = glob_wildcards(os.path.join(indir, "{run}/fast5/"))
+fast5_files = glob.glob(os.path.join(indir, "*/fast5"))
+run = []
+for f in fast5_files:
+	run.append(os.path.basename(os.path.dirname(f)))
+
+# run, = glob_wildcards(os.path.join(indir, "{run}/fast5/"))
 
 demultiplexer = config['DEMULTIPLEXER']
 
@@ -184,11 +189,12 @@ rule guppy_basecalling:
 		summary = os.path.join(outdir, "basecall/{run}/sequencing_summary.txt"),
 		passed_summary = os.path.join(outdir, "basecall/{run}/passed_sequencing_summary.txt"),
 		# fastq = os.path.join(outdir, "basecall/{run}/{run}.fastq"),
-		fastq = directory(os.path.join(outdir, "basecall/{run}/pass")),
-		fast5 = directory(os.path.join(outdir, "basecall/{run}/passed_fast5"))
+		fastq = temp(directory(os.path.join(outdir, "basecall/{run}/pass"))),
+		fast5 = temp(directory(os.path.join(outdir, "basecall/{run}/passed_fast5"))),
+		fail = temp(directory(os.path.join(outdir, "basecall/{run}/fail")))
 	params:
 		outpath = os.path.join(outdir, "basecall/{run}"),
-		fast5_name = "{run}_",
+		# fast5_name = "{run}_",
 		log = "guppy_basecalling_{run}.log"
 	threads: BASECALLER_THREADS
 	singularity: guppy_container
@@ -201,8 +207,8 @@ rule guppy_basecalling:
 			temp_indir={input}
 			temp_outdir={params.outpath}
 		else
-			temp_indir=$(mktemp -d); echo -e "##$(date)    Creating temporary input directory on local drive: $temp_indir \n"
-			temp_outdir=$(mktemp -d); echo -e "##$(date)    Creating temporary output directory on local drive: $temp_outdir \n"
+			temp_indir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary input directory on local drive: $temp_indir \n"
+			temp_outdir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary output directory on local drive: $temp_outdir \n"
 			rsync -arvP $host_prefix{input}/ $temp_indir
 		fi
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
@@ -211,7 +217,7 @@ rule guppy_basecalling:
 		# rm -rf {params.outpath}/pass/fastq_runid_*.fastq
 		grep 'read_id' $temp_outdir/sequencing_summary.txt > $temp_outdir/passed_sequencing_summary.txt
 		grep 'TRUE' $temp_outdir/sequencing_summary.txt >> $temp_outdir/passed_sequencing_summary.txt
-		echo "Filtering passed reads in fast5 files \n"; fast5_subset --input $temp_indir --save_path $temp_outdir/passed_fast5 --read_id_list $temp_outdir/passed_sequencing_summary.txt --filename_base {params.fast5_name}
+		echo "Filtering passed reads in fast5 files \n"; fast5_subset --input $temp_indir --save_path $temp_outdir/passed_fast5 --read_id_list $temp_outdir/passed_sequencing_summary.txt --filename_base {wildcards.run}_
 		if [ $host_prefix != '' ]; then
 			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {params.outpath}\n"; rsync -arvP $temp_outdir/ {HOST_PREFIX}{params.outpath}
 			rm -rf $temp_indir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_indir \n"
@@ -268,8 +274,8 @@ rule multi_to_single_fast5:
 			temp_indir={input}
 			temp_outdir={output}
 		else
-			temp_indir=$(mktemp -d); echo -e "##$(date)    Creating temporary input directory on local drive: $temp_indir \n"
-			temp_outdir=$(mktemp -d); echo -e "##$(date)    Creating temporary output directory on local drive: $temp_outdir \n"
+			temp_indir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary input directory on local drive: $temp_indir \n"
+			temp_outdir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary output directory on local drive: $temp_outdir \n"
 			rsync -arvP $host_prefix{input}/ $temp_indir
 		fi
 		multi_to_single_fast5 -i $temp_indir -s $temp_outdir -t {threads}
@@ -305,7 +311,7 @@ rule deepbinner_bin:
 	input:
 		classes = rules.deepbinner_classification.output.classification,
 		fastq = rules.guppy_basecalling.output.fastq
-	output: os.path.join(outdir, "demultiplex/deepbinner/{run}/fastq_per_barcode.done")
+	output: temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/fastq_per_barcode.done"))
 	params:
 		out_dir = os.path.join(outdir, "demultiplex/deepbinner/{run}"),
 		fastq = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/{run}.fastq")),
@@ -395,7 +401,7 @@ rule get_sequencing_summary_per_barcode:
 		deepbinner_bin_output(),
 		deepbinner_classification_output(),
 		guppy_demultiplexing_output()
-	output: os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/get_summary.done")
+	output: temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/get_summary.done"))
 	params:
 		barcoding_path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
 		sequencing_file = rules.guppy_basecalling.output.passed_summary,
@@ -414,7 +420,7 @@ rule get_sequencing_summary_per_barcode:
 rule minionqc_demultiplex:
 	input:
 		rules.get_sequencing_summary_per_barcode.output
-	output: os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done")
+	output: temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done"))
 	params:
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc"),
 		inpath = rules.get_sequencing_summary_per_barcode.params.barcoding_path,
