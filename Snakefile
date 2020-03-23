@@ -36,14 +36,14 @@ FLOWCELL = config['FLOWCELL']
 # QSCORE_FILTERING = config['BASECALLER']['QSCORE_FILTERING']
 MIN_QSCORE = config['GUPPY_BASECALLER']['MIN_QSCORE']
 
-CPU_THREADS_PER_CALLER = config['GUPPY_BASECALLER']['CPU_PER_CALLER']
+CPU_THREADS_PER_CALLER = config['GUPPY_BASECALLER']['CPU_THREADS_PER_CALLER']
 NUM_CALLERS = config['GUPPY_BASECALLER']['NUM_CALLERS']
 
 BASECALLER_ADDITION = config['GUPPY_BASECALLER']['ADDITION']
 
 # CUDA = config['BASECALLER']['CUDA']
 
-GPU_RUNNERS_PER_DEVICE = config['GUPPY_BASECALLER']['GPU_PER_DEVICE']
+GPU_RUNNERS_PER_DEVICE = config['GUPPY_BASECALLER']['GPU_RUNNERS_PER_DEVICE']
 NUM_GPUS = config['NUM_GPUS']
 
 # adjust parameters and variales based on guppy_basecaller option 'qscore_filtering'
@@ -92,7 +92,6 @@ fig = ["channel_summary", "flowcell_overview", "gb_per_channel_overview", "lengt
 PRESET = config['DEEPBINNER_CLASSIFY']['PRESET']
 OMP_NUM_THREADS = config['DEEPBINNER_CLASSIFY']['OMP_NUM_THREADS']
 DEEPBINNER_ADDITION = config['DEEPBINNER_CLASSIFY']['ADDITION']
-
 API_THREADS = config['ONT_FAST5_API']['THREADS']
 
 
@@ -203,7 +202,7 @@ rule guppy_basecalling:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		host_prefix='{HOST_PREFIX}'
-		if [ $host_prefix == '' ]; then
+		if [ -z $host_prefix ]; then
 			temp_indir={input}
 			temp_outdir={params.outpath}
 		else
@@ -270,7 +269,7 @@ rule multi_to_single_fast5:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		host_prefix='{HOST_PREFIX}'
-		if [ $host_prefix == '' ]; then
+		if [ -z $host_prefix ]; then
 			temp_indir={input}
 			temp_outdir={output}
 		else
@@ -415,12 +414,29 @@ rule get_sequencing_summary_per_barcode:
 		Rscript {GET_SUMMARY_PER_BARCODE} {params.sequencing_file} {params.barcoding_path}
 		touch {output}
 		"""
+###
 
+# def summary_per_barcode(wildcards):
+# 	checkpoint_output = checkpoints.demultiplexing_guppy_sequencing_summary.get(**wildcards).output[0]
+#     barcodes=glob_wildcards(os.path.join(os.path.dirname(checkpoint_output), '{barcode}/sequencing_summary.txt')).barcode)
+# 	summaryFilesList=[os.path.dirname(checkpoint_output) + "/{bc}/sequencing_summary.txt".format(bc = barcode) for barcode in barcodes]
+# 	return(summaryFilesList)
+
+###
+
+
+## for snakemake report only
+figpath = glob.glob(os.path.join(outdir, "demultiplex/**/*.png"), recursive = True)
+figname = []
+for f in figpath:
+	figname.append(os.path.join(f.rsplit("/", 2)[-2], f.rsplit("/", 2)[-1]))
 
 rule minionqc_demultiplex:
 	input:
 		rules.get_sequencing_summary_per_barcode.output
-	output: temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done"))
+	output:
+		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done")),
+		fig = report([os.path.join(outdir, "demultiplex/{demultiplexer}/{run}") + "/{figname}".format(figname=figname) for figname in figname], caption = "report/demultiplex_minionqc.rst", category = "minionqc_demultiplex")
 	params:
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc"),
 		inpath = rules.get_sequencing_summary_per_barcode.params.barcoding_path,
@@ -434,21 +450,12 @@ rule minionqc_demultiplex:
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		MinIONQC.R -i {params.inpath} -q {QSCORE_CUTOFF} -s {SMALLFIGURES} -p {threads}
 		rm -rf {params.combinedQC}
-		touch {output}
+		touch {output.check}
 		"""
-###
-
-# def summary_per_barcode(wildcards):
-# 	checkpoint_output = checkpoints.demultiplexing_guppy_sequencing_summary.get(**wildcards).output[0]
-#     barcodes=glob_wildcards(os.path.join(os.path.dirname(checkpoint_output), '{barcode}/sequencing_summary.txt')).barcode)
-# 	summaryFilesList=[os.path.dirname(checkpoint_output) + "/{bc}/sequencing_summary.txt".format(bc = barcode) for barcode in barcodes]
-# 	return(summaryFilesList)
-
-###
 
 rule multiqc_demultiplex:
 	input:
-		rules.minionqc_demultiplex.output
+		rules.minionqc_demultiplex.output.check
 	output:
 		os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"),
 		# report = directory(os.path.join(outdir, "report"))
