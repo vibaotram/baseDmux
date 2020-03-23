@@ -16,8 +16,8 @@ library(ggplot2)
 
 
 ```{r input dataframe}
-indir = "/home/baotram/tal/workflow/test/demultiplex"
-# indir = snakemake@params$indir
+# indir = "/home/baotram/tal/workflow/test/demultiplex"
+indir = snakemake@params$indir
 mqc = list.files(indir, "multiqc_minionqc.txt", recursive = T, full.names = T)
 
 # raw_df <- data.frame()
@@ -50,7 +50,7 @@ ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplex)) +
   theme(axis.text.x=element_text(angle=90,hjust=1))
 ```
 
-# Medean length
+# Median length
 
 ```{r plot of median.length}
 ggplot(df, aes(x=barcode, y=median.length, fill=demultiplex)) +
