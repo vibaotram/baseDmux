@@ -42,7 +42,7 @@ df <- data.frame(raw_df, add_df)
 
 # Total gigabases
 
-```{r plot of total.gigabases}
+```{r plot of total.gigabases, fig.width= 10, fig.height= 6}
 ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplex)) +
   geom_col(position = position_dodge()) +
   facet_wrap(vars(run), scales = "fixed", ncol=3) +
@@ -52,7 +52,7 @@ ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplex)) +
 
 # Median length
 
-```{r plot of median.length}
+```{r plot of median.length, fig.width= 10, fig.height= 6}
 ggplot(df, aes(x=barcode, y=median.length, fill=demultiplex)) +
   geom_col(position = position_dodge()) +
   facet_wrap(vars(run), scales = "fixed", ncol=3) +
@@ -62,7 +62,7 @@ ggplot(df, aes(x=barcode, y=median.length, fill=demultiplex)) +
 
 # Total reads
 
-```{r plot of total.reads}
+```{r plot of total.reads, fig.width= 10, fig.height= 6}
 ggplot(df, aes(x=barcode, y=total.reads, fill=demultiplex)) +
   geom_col(position = position_dodge()) +
   facet_wrap(vars(run), scales = "fixed", ncol=3) +
