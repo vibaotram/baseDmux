@@ -24,8 +24,8 @@ for file in summary:
     fast5_subset_cmd = "fast5_subset --input {} --save_path {} --read_id_list {} --filename_base \"{}_\"".format(fast5, save_path, id_list, barcode)
     exit_code = os.system(fast5_subset_cmd)
     if exit_code == 0:
-        print("multi_reads_fast5 files created and stored in /fast5 folder for %s.", % barcode)
+        print("multi_reads_fast5 files created and stored in /fast5 folder for {}.".format(barcode))
     else:
-        sys.exit(1)
+        sys.exit("fast5_subset error at {}".format(barcode))
 
 print(len(summary), "/fast5 folders created for corresponding barcodes.")
