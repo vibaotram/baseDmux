@@ -187,10 +187,10 @@ rule guppy_basecalling:
 	output:
 		summary = os.path.join(outdir, "basecall/{run}/sequencing_summary.txt"),
 		passed_summary = os.path.join(outdir, "basecall/{run}/passed_sequencing_summary.txt"),
-		# fastq = os.path.join(outdir, "basecall/{run}/{run}.fastq"),
-		fastq = temp(directory(os.path.join(outdir, "basecall/{run}/pass"))),
+		# fastq = temp(os.path.join(outdir, "basecall/{run}/{run}.fastq")),
+		fastq = directory(os.path.join(outdir, "basecall/{run}/pass")),
 		fast5 = temp(directory(os.path.join(outdir, "basecall/{run}/passed_fast5"))),
-		fail = temp(directory(os.path.join(outdir, "basecall/{run}/fail")))
+		# fail = temp(directory(os.path.join(outdir, "basecall/{run}/fail")))
 	params:
 		outpath = os.path.join(outdir, "basecall/{run}"),
 		# fast5_name = "{run}_",
@@ -217,8 +217,9 @@ rule guppy_basecalling:
 		grep 'read_id' $temp_outdir/sequencing_summary.txt > $temp_outdir/passed_sequencing_summary.txt
 		grep 'TRUE' $temp_outdir/sequencing_summary.txt >> $temp_outdir/passed_sequencing_summary.txt
 		echo "Filtering passed reads in fast5 files \n"; fast5_subset --input $temp_indir --save_path $temp_outdir/passed_fast5 --read_id_list $temp_outdir/passed_sequencing_summary.txt --filename_base {wildcards.run}_
+		rm -rf $temp_outdir/fail; echo -e "##$(date)    Removed fail reads from $temp_indir \n"
 		if [ $host_prefix != '' ]; then
-			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {params.outpath}\n"; rsync -arvP $temp_outdir/ {HOST_PREFIX}{params.outpath}
+			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {params.outpath}\n"; rsync -arvP --chmod 755 $temp_outdir/ {HOST_PREFIX}{params.outpath}
 			rm -rf $temp_indir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_indir \n"
 			rm -rf $temp_outdir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_outdir \n"
 		fi
@@ -247,7 +248,7 @@ rule guppy_demultiplexing:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
-		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} --trim_barcodes --compress_fastq {ADDITION}
+		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} --trim_barcodes {ADDITION} # --compress_fastq
 		Rscript {RENAME_FASTQ_GUPPY_BARCODER} {params.outpath}
 		"""
 
@@ -279,7 +280,7 @@ rule multi_to_single_fast5:
 		fi
 		multi_to_single_fast5 -i $temp_indir -s $temp_outdir -t {threads}
 		if [ $host_prefix != '' ]; then
-			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {output}\n"; rsync -arvP $temp_outdir/ {HOST_PREFIX}{output}
+			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {output}\n"; rsync -arvP --chmod 755 $temp_outdir/ {HOST_PREFIX}{output}
 			rm -rf $temp_indir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_indir \n"
 			rm -rf $temp_outdir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_outdir \n"
 		fi
@@ -335,11 +336,11 @@ def deepbinner_bin_output():
 	else:
 		return()
 
-def deepbinner_classification_output():
-	if "deepbinner" in demultiplexer:
-		return(rules.deepbinner_classification.output)
-	else:
-		return()
+# def deepbinner_classification_output():
+# 	if "deepbinner" in demultiplexer:
+# 		return(rules.deepbinner_classification.output)
+# 	else:
+# 		return()
 
 def guppy_demultiplexing_output():
 	if "guppy" in demultiplexer:
@@ -387,7 +388,6 @@ rule multiqc_basecall:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		multiqc -f -v -d -dd 2 -o {params.outpath} {params.inpath}
-		touch {output}
 		"""
 
 ##############################
@@ -398,7 +398,7 @@ rule multiqc_basecall:
 rule get_sequencing_summary_per_barcode:
 	input:
 		deepbinner_bin_output(),
-		deepbinner_classification_output(),
+		# deepbinner_classification_output(),
 		guppy_demultiplexing_output()
 	output: temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/get_summary.done"))
 	params:
@@ -436,7 +436,7 @@ rule minionqc_demultiplex:
 		rules.get_sequencing_summary_per_barcode.output
 	output:
 		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done")),
-		fig = report([os.path.join(outdir, "demultiplex/{demultiplexer}/{run}") + "/{figname}".format(figname=figname) for figname in figname], caption = "report/demultiplex_minionqc.rst", category = "minionqc_demultiplex")
+		# fig = report([os.path.join(outdir, "demultiplex/{demultiplexer}/{run}") + "/{figname}".format(figname=figname) for figname in figname], caption = "report/demultiplex_minionqc.rst", category = "minionqc_demultiplex")
 	params:
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc"),
 		inpath = rules.get_sequencing_summary_per_barcode.params.barcoding_path,
@@ -483,7 +483,7 @@ rule get_multi_fast5_per_barcode:
 		summary = rules.get_sequencing_summary_per_barcode.output,
 		fast5 = rules.guppy_basecalling.output.fast5
 	output:
-		check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done")
+		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"))
 	singularity: deepbinner_container
 	params:
 		path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
@@ -519,7 +519,17 @@ rule report_demultiplex:
 		"report/report_demultiplex.Rmd"
 
 
-
+rule get_reads_per_genome:
+	input:
+		indir = outdir,
+		barcode_by_genome = config['GET_READS_PER_GENOME']['BARCODE_BY_GENOME'],
+	output: directory(os.path.join(outdir, "reads_per_genome"))
+	params:
+		transfering = config['GET_READS_PER_GENOME']['TRANSFERING']
+	singularity: guppy_container
+	conda: 'conda/conda_minionqc.yaml'
+	shell:
+		"Rscript script/get_reads_per_genome.R -b {input.indir} -o {output} -d {input.barcode_by_genome} --{params.transfering}"
 
 ##############################
 ############### SOMETHING ELSE
