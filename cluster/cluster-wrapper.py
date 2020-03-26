@@ -35,8 +35,10 @@ os.makedirs(logdir, exist_ok=True)
 
 resources = config_properties['RESOURCE']
 
-if resources == 'GPU' and rule in ['guppy_demultiplexing', 'guppy_demultiplexing', 'deepbinner_classification']:
+if resources == 'GPU' and rule in ['guppy_basecalling', 'guppy_demultiplexing']:
     partition = '--partition gpu --account gpu_group'
+elif rule == 'multi_to_single_fast5':
+    partition = '--partition highmem --account bioinfo'
 else:
     partition = '--partition normal --account bioinfo'
 
