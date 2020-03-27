@@ -91,60 +91,64 @@ if (!all(stdColnames %in% colnames(dict))) {
 
 # search for original file paths
 barcode_folder <- file.path(baseDmux_outdir, "demultiplex", dict$Demultiplexer, dict$Run_ID, dict$ONT_Barcode)
-ori_fast5 <- file.path(barcode_folder, "fast5")
-# fastq <- list.files(barcode_folder, pattern = "barcode\\d*.fastq.gz", full.names = T, recursive = T)
-ori_fastq <- file.path(barcode_folder, paste0(dict$ONT_Barcode, ".fastq.gz"))
+dict$ori_fast5 <- file.path(barcode_folder, "fast5")
+fastq <- list.files(barcode_folder, pattern = "barcode\\d*.fastq.gz", full.names = T, recursive = T)
+dict$ori_fastq <- file.path(barcode_folder, paste0(dict$ONT_Barcode, ".fastq.gz"))
 
 # create destination folders
-strain_dir <- sapply(dict$Genome_ID, function(x) file.path(outdir, x))
-dest_fast5_dir <- file.path(strain_dir, "fast5")
-dest_fastq_dir <- file.path(strain_dir, "fastq")
+# strain_dir <- sapply(dict$Genome_ID, function(x) file.path(outdir, x))
+dict$dest_fast5 <- sapply(dict$Genome_ID, function(x) file.path(outdir, "fast5", x))
 
-for (i in unique(c(dest_fast5_dir, dest_fastq_dir))) {
+dest_fastq_dir <- file.path(outdir, "fastq")
+dest_fastq_name <- paste0(dict$Genome_ID, ".fastq.gz")
+dict$dest_fastq <- file.path(dest_fastq_dir, dest_fastq_name)
+
+for (i in unique(c(dict$dest_fast5, dest_fastq_dir))) {
   dir.create(i, recursive = T, showWarnings = F)
 }
 
-# transfer files
-dict <- data.frame(dict, ori_fast5, ori_fastq, dest_fast5_dir, dest_fastq_dir)
+write.csv(as.matrix(dict), file.path(outdir, "reads_per_genome.csv"), quote = F, row.names = F)
+# dict <- data.frame(dict, ori_fast5, ori_fastq, dest_fast5_dir, dest_fastq_dir)
 
 
-file_to_cmd <- function(file, demultiplexer, runID, filedir) {
-  filename <- basename(file)
-  dest_file_name <- paste(demultiplexer, runID, filename, sep = "_")
-  dest_file <- file.path(filedir, dest_file_name)
-  transfer_file <- paste(cmd, file, dest_file)
-  exit_code = system(transfer_file)
-  return(exit_code)
+for (i in unique(dict$Genome_ID)) {
+  ori_dir = dict[dict$Genome_ID == i, "ori_fast5"]
+  n_fast5 = 0
+  for (o in ori_dir) {
+    ori_files <- list.files(as.character(o), pattern = ".*.fast5", full.names = T, recursive = T)
+    for (os in ori_files) {
+      dest_name <- lapply(os, function(x) paste(dict[dict$ori_fast5 == o, "Demultiplexer"], dict[dict$ori_fast5 == o, "Run_ID"], basename(x), sep = "_"))
+      dest_file <- paste(dict[dict$ori_fast5 == o, "dest_fast5"], dest_name, sep = "/")
+      transfer_file <- paste(cmd, os, dest_file, sep = " ")
+      system(transfer_file)
+    }
+    n_fast5 <- n_fast5 + length(ori_files)
+  }
+  message(paste("\n# [", date(), "]\t", n_fast5, "fast5 files", transfer_mode, unique(dict[dict$Genome_ID == i, "dest_fast5"]), "\n"))
+  }
+
+
+# transfer fastq files
+n_fastq = 0
+for (i in unique(dict$Genome_ID)) {
+  ori_file = dict[dict$Genome_ID == i, "ori_fastq"]
+  dest_file = file.path(dest_fastq_dir, paste0(i, ".fastq.gz"))
+  transfer_file = paste("zcat", do.call(paste, as.list(ori_file)), "| gzip >", dest_file)
+  message(paste("\n# [", date(), "]\t Concatenating compressed fastq file for", i))
+  system(transfer_file)
+  n_fastq <- n_fastq + length(ori_file) - length(ori_file[file.exists(as.character(ori_file)) == FALSE])
 }
 
-n_fast5 = 0
-n_fastq = 0
-for (i in 1:nrow(dict)) {
-  fast5_files <- list.files(as.character(dict$ori_fast5[i]), pattern = ".*.fast5", full.names = T, recursive = T)
-  exit_fast5 <- file_to_cmd(fast5_files, dict$Demultiplexer[i], dict$Run_ID[i], dict$dest_fast5_dir[i])
-  if (exit_fast5 == 0) {
-    n_fast5 <- n_fast5 + 1
-  }
-  fastq_files <- as.character(dict$ori_fastq[i])
-  exit_fastq <- file_to_cmd(fastq_files, dict$Demultiplexer[i], dict$Run_ID[i], dict$dest_fastq_dir[i])
-  if (exit_fastq == 0) {
-    n_fastq <- n_fastq + 1
-  }
-
-    }
-
-# report number of files transfered
-message(paste("\n#", n_fast5, "fast5 files", transfer_mode, "to", outdir))
-message(paste("\n#", n_fastq, "fastq files", transfer_mode, "to", outdir, "\n"))
+message(paste("\n#", n_fastq, "fastq files copied to", dest_fastq_dir, "\n"))
 
 # Rscript /home/baotram/tal/workflow/script/get_reads_per_genome.R \
-# -b /home/baotram/tal/workflow/test/ \
-# -o /home/baotram/tal/workflow/test/Cul_input \
-# -d /home/baotram/tal/workflow/test/reads/seqdataByGenome.tsv \
+# -b /home/baotram/tal/workflow/test \
+# -o /home/baotram/tal/workflow/test/Cul_input1 \
+# -d /home/baotram/tal/workflow/test/reads/barcodeByGenome_sample.tsv \
 # -R
 
 # baseDmux_outdir = "/home/baotram/tal/workflow/test"
-# barcodeByGenome = "/home/baotram/tal/workflow/test/reads/seqdataByGenome.tsv"
+# barcodeByGenome = "/home/baotram/tal/workflow/test/reads/barcodeByGenome_sample.tsv"
 # outdir = "/home/baotram/tal/workflow/test/Cul_input"
 # copy = FALSE
 # move = FALSE
