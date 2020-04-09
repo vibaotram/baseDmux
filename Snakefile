@@ -67,6 +67,14 @@ if RESOURCE == 'GPU':
 	BASECALLER_OPT = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}"
 	BASECALLER_THREADS = NUM_CALLERS
 
+
+KEEP_FAIL_READS = config['GUPPY_BASECALLER']['KEEP_FAIL_READS']
+def fail():
+	if KEEP_FAIL_READS:
+		return(directory(os.path.join(outdir, "basecall/{run}/fail")))
+	else:
+		return()
+
 ##############################
 ## guppy_barcoder parameters
 
@@ -190,7 +198,7 @@ rule guppy_basecalling:
 		# fastq = temp(os.path.join(outdir, "basecall/{run}/{run}.fastq")),
 		fastq = directory(os.path.join(outdir, "basecall/{run}/pass")),
 		fast5 = temp(directory(os.path.join(outdir, "basecall/{run}/passed_fast5"))),
-		# fail = temp(directory(os.path.join(outdir, "basecall/{run}/fail")))
+		fail = fail()
 	params:
 		outpath = os.path.join(outdir, "basecall/{run}"),
 		# fast5_name = "{run}_",
@@ -212,14 +220,15 @@ rule guppy_basecalling:
 		fi
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		guppy_basecaller -i $temp_indir -s $temp_outdir {BASECALLER_OPT}
-		# cat {params.outpath}/pass/fastq_runid_*.fastq > {output.fastq}
+		cat $temp_outdir/pass/fastq_runid_*.fastq | gzip > $temp_outdir/{wildcards.run}.fastq.gz
 		# rm -rf {params.outpath}/pass/fastq_runid_*.fastq
 		grep 'read_id' $temp_outdir/sequencing_summary.txt > $temp_outdir/passed_sequencing_summary.txt
 		grep 'TRUE' $temp_outdir/sequencing_summary.txt >> $temp_outdir/passed_sequencing_summary.txt
 		echo "Filtering passed reads in fast5 files \n"; fast5_subset --input $temp_indir --save_path $temp_outdir/passed_fast5 --read_id_list $temp_outdir/passed_sequencing_summary.txt --filename_base {wildcards.run}_
-		rm -rf $temp_outdir/fail; echo -e "##$(date)    Removed fail reads from $temp_indir \n"
-		if [ $host_prefix != '' ]; then
-			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {params.outpath}\n"; rsync -arvP --chmod 755 $temp_outdir/ {HOST_PREFIX}{params.outpath}
+		$tobe_saved='{output.fail}'
+		[ -z $tobe_saved ] && rm -rf $temp_outdir/fail; echo -e "##$(date)    Removed fail reads from $temp_indir \n"
+		if [ ! -z $host_prefix ]; then
+			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {params.outpath}\n"; rsync -arvP --chmod 755 $temp_outdir/ $host_prefix{params.outpath}
 			rm -rf $temp_indir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_indir \n"
 			rm -rf $temp_outdir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_outdir \n"
 		fi
@@ -279,8 +288,8 @@ rule multi_to_single_fast5:
 			rsync -arvP $host_prefix{input}/ $temp_indir
 		fi
 		multi_to_single_fast5 -i $temp_indir -s $temp_outdir -t {threads}
-		if [ $host_prefix != '' ]; then
-			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {output}\n"; rsync -arvP --chmod 755 $temp_outdir/ {HOST_PREFIX}{output}
+		if [ ! -z $host_prefix ]; then
+			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {output}\n"; rsync -arvP --chmod 755 $temp_outdir/ $host_prefix{output}
 			rm -rf $temp_indir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_indir \n"
 			rm -rf $temp_outdir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_outdir \n"
 		fi
@@ -523,13 +532,17 @@ rule get_reads_per_genome:
 	input:
 		indir = outdir,
 		barcode_by_genome = config['GET_READS_PER_GENOME']['BARCODE_BY_GENOME'],
-	output: directory(os.path.join(outdir, "reads_per_genome"))
+	output:
+		fast5 = directory(os.path.join(outdir, "reads_per_genome/fast5")),
+		fastq = directory(os.path.join(outdir, "reads_per_genome/fastq")),
+		csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
+		output = directory(os.path.join(outdir, "reads_per_genome")),
 		transfering = config['GET_READS_PER_GENOME']['TRANSFERING']
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
 	shell:
-		"Rscript script/get_reads_per_genome.R -b {input.indir} -o {output} -d {input.barcode_by_genome} --{params.transfering}"
+		"Rscript script/get_reads_per_genome.R -b {input.indir} -o {params.output} -d {input.barcode_by_genome} --{params.transfering}"
 
 ##############################
 ############### SOMETHING ELSE

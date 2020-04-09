@@ -28,13 +28,15 @@ echo -e "## [$(date) - baseDmux]\t Ready to execute snakemake workflow"
 # --cluster "sbatch --job-name {cluster.job-name} \
 # -p {cluster.partition} -A {cluster.account} --cpus-per-task {cluster.cpus-per-task} --output={cluster.output} --error={cluster.error}"
 
-snakemake --nolock --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " --latency-wait 60 \
---cluster "python3 cluster/cluster-wrapper.py" && \
+snakemake --nolock --use-singularity --singularity-args "--nv " --use-conda --cores -p --verbose \
+--latency-wait 60 --keep-going --restart-times 2 --rerun-incomplete \
+--cluster "./cluster/slurm_wrapper.py" \
+--cluster-status "./cluster/cluster-status.py" && \
 echo -e "## [$(date) - baseDmux]\t Snakemake workflow finished"  && \
-echo -e "## [$(date) - baseDmux]\t Creating report for demultiplexing report"  && \
+echo -e "## [$(date) - baseDmux]\t Creating report for demultiplexing"  && \
 snakemake --use-singularity --use-conda -p --verbose report_demultiplex && \
 echo -e "## [$(date) - baseDmux]\t Creating snakemake report"  && \
 snakemake --report $(python3 script/report_dir.py)/snakemake_report.html && \
-echo -e "## [$(date) - baseDmux]\t Creating folder containing fastq and fast5 for each genome" && \
+echo -e "## [$(date) - baseDmux]\t Creating a folder containing fastq and fast5 for each genome" && \
 snakemake --use-singularity --use-conda -p --verbose get_reads_per_genome && \
 echo -e "## [$(date) - baseDmux]\t Finished!"

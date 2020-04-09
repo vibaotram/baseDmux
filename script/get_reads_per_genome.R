@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 # input: output directory of baseDmux, table annotating demultiplex, runid, barcodeid of genomes/strains
-# output: folders for each genome containing corresponding fast5 and fastq 
+# output: folders for each genome containing corresponding fast5 and fastq
 
 #### Loading required packages #####
 suppressPackageStartupMessages(library("optparse"))
@@ -124,7 +124,7 @@ for (i in unique(dict$Genome_ID)) {
     }
     n_fast5 <- n_fast5 + length(ori_files)
   }
-  message(paste("\n# [", date(), "]\t", n_fast5, "fast5 files", transfer_mode, unique(dict[dict$Genome_ID == i, "dest_fast5"]), "\n"))
+  message(paste("\n# [", date(), "]\t", n_fast5, "fast5 files", transfer_mode, "to",unique(dict[dict$Genome_ID == i, "dest_fast5"]), "\n"))
   }
 
 
@@ -133,8 +133,12 @@ n_fastq = 0
 for (i in unique(dict$Genome_ID)) {
   ori_file = dict[dict$Genome_ID == i, "ori_fastq"]
   dest_file = file.path(dest_fastq_dir, paste0(i, ".fastq.gz"))
-  transfer_file = paste("zcat", do.call(paste, as.list(ori_file)), "| gzip >", dest_file)
-  message(paste("\n# [", date(), "]\t Concatenating compressed fastq file for", i))
+  if (ori_file == 1) {
+    transfer_file = paste("rsync -avP", ori_file, dest_file, sep = " ")
+  } else {
+    transfer_file = paste("zcat", do.call(paste, as.list(ori_file)), "| gzip >", dest_file)
+  }
+  message(paste("\n# [", date(), "]\t Preparing compressed fastq file for", i))
   system(transfer_file)
   n_fastq <- n_fastq + length(ori_file) - length(ori_file[file.exists(as.character(ori_file)) == FALSE])
 }

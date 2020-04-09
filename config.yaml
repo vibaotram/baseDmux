@@ -3,9 +3,9 @@
 
 ##############################
 ##### input/output directory
-INDIR: "/home/baotram/tal/workflow/test/reads" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads", "/data3/projects/xanthopore/baotram/test/reads", "/data3/projects/xoogenomes/ONT_BAI3-talC_mutants/TalC_Muts_20190129/TalC_Muts"
-OUTDIR: "/home/baotram/tal/workflow/test" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results", "/data3/projects/xanthopore/baotram/test/results_scratch_1303"
-NASID: '' # host name, if indir and outdir in NAS but workdir is not
+INDIR: "/data3/projects/xoogenomes/ONT_BAI3-talC_mutants/TalC_Muts_20190129/TalC_Muts" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads", "/data3/projects/xanthopore/baotram/test/reads", "/data3/projects/xoogenomes/ONT_BAI3-talC_mutants/TalC_Muts_20190129/TalC_Muts"
+OUTDIR: "data3/projects/xanthopore/baotram/test/results_scratch_1303" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results", "/data3/projects/xanthopore/baotram/test/results_scratch_1303"
+NASID: 'NAS3' # host name, if indir and outdir in NAS but workdir is not
 
 
 ##############################
@@ -28,6 +28,7 @@ GUPPY_BASECALLER:
     'CPU_THREADS_PER_CALLER': 12 # number of CPU threads to create for each caller to use
     'GPU_RUNNERS_PER_DEVICE': 4 # number of neural network runners to create per CUDA device ## GPU mode only
     'ADDITION': '--hp_correct true' # additional params that do not affect output format ## provide parameters with arguments ## do NOT use --compress_fastq, because next steps use uncompressed fastq
+    'KEEP_FAIL_READS': False # True/False
 
 
 ##############################

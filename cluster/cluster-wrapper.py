@@ -7,6 +7,7 @@ import os
 import sys
 from snakemake.utils import read_job_properties
 from snakemake import load_configfile
+# import subprocess
 
 jobscript = sys.argv[-1]
 config = 'config.yaml'
@@ -35,7 +36,18 @@ os.makedirs(logdir, exist_ok=True)
 
 resources = config_properties['RESOURCE']
 
-if resources == 'GPU' and rule in ['guppy_basecalling', 'guppy_demultiplexing']:
+# indir = config_properties['INDIR']
+# fast5 = glob.glob(os.path.join(indir, '*', 'fast5/'), recursive = True)
+#
+# mem = 0
+# for f in fast5:
+#     fmem = subprocess.check_output(["du", "-sh", "-B", "G", f])
+#     mem += int(fmem.decode('UTF-8').split('G')[0])
+# mem
+
+
+
+if resources == 'GPU' and rule in ['guppy_basecalling', 'guppy_demultiplexing', 'deepbinner_classification']:
     partition = '--partition gpu --account gpu_group'
 elif rule == 'multi_to_single_fast5':
     partition = '--partition highmem --account bioinfo'
@@ -43,7 +55,20 @@ else:
     partition = '--partition normal --account bioinfo'
 
 
-cmdline = f'sbatch --job-name {rule} {partition} --cpus-per-task {cpus_per_task} --output {logdir}/{log}_%j --error {logdir}/{log}_%j {jobscript}'
+# cmdline = f'sbatch --job-name {rule} {partition} --cpus-per-task {cpus_per_task} --output {logdir}/{log}_%j --error {logdir}/{log}_%j {jobscript}'
+
+sbatch = f'sbatch --job-name {rule} {partition} --cpus-per-task {cpus_per_task} --ntasks 1 --output {logdir}/{log}_%j --error {logdir}/{log}_%j'
+
+# jobscript.replace("\n", "\necho -e\"sbatch parameters:\n\"{}\"\"".format(sbatch), 1)
+with open(jobscript, "r") as j:
+    scripts = j.readlines()
+
+scripts.insert(1, "echo -e \"# sbatch parameters: \"{}\"\"\n".format(sbatch))
+
+with open(jobscript, "w") as j:
+    j.writelines(scripts)
+
+cmdline = " ".join([sbatch, jobscript])
 # sbatch --job-name {cluster.job-name} --partition {cluster.partition} --account {cluster.account} --cpus-per-task {cluster.cpus-per-task} --output {cluster.output} --error {cluster.error}
 
 os.system(cmdline)
