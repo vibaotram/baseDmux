@@ -46,18 +46,6 @@ BASECALLER_ADDITION = config['GUPPY_BASECALLER']['ADDITION']
 GPU_RUNNERS_PER_DEVICE = config['GUPPY_BASECALLER']['GPU_RUNNERS_PER_DEVICE']
 NUM_GPUS = config['NUM_GPUS']
 
-# adjust parameters and variales based on guppy_basecaller option 'qscore_filtering'
-# if QSCORE_FILTERING == 'true':
-# 	FILTERING_OPT = '--qscore_filtering --fast5_out'
-# 	FASTQ = 'pass/fastq_runid_*.fastq'
-# 	FAST5 = os.path.join(outdir, "basecall/{run}/workspace"),
-# 	FAST5_OUTPUT = directory(FAST5)
-# if QSCORE_FILTERING == 'false':
-# 	FILTERING_OPT = ''
-# 	FASTQ = 'fastq_runid_*.fastq'
-# 	FAST5 = os.path.join(indir, "{run}/fast5"),
-# 	FAST5_OUTPUT = []
-
 
 # adjust guppy_basecaller parameters based on RESOURCE
 if RESOURCE == 'CPU':
@@ -75,6 +63,7 @@ def fail():
 	else:
 		return()
 
+
 ##############################
 ## guppy_barcoder parameters
 
@@ -86,6 +75,8 @@ if RESOURCE == 'CPU':
 	DEVICE = ''
 if RESOURCE == 'GPU':
 	DEVICE = "--device $CUDA"
+
+
 ##############################
 ## MinIONQC parameters
 
@@ -93,6 +84,7 @@ QSCORE_CUTOFF = config['MINIONQC']['QSCORE_CUTOFF']
 SMALLFIGURES = config['MINIONQC']['SMALLFIGURES']
 PROCESSORS = config['MINIONQC']['PROCESSORS']
 fig = ["channel_summary", "flowcell_overview", "gb_per_channel_overview", "length_by_hour", "length_histogram", "length_vs_q", "q_by_hour", "q_histogram", "reads_per_hour", "yield_by_length", "yield_over_time"]
+
 
 ##############################
 ## deepbinner classify parameters
@@ -104,13 +96,12 @@ API_THREADS = config['ONT_FAST5_API']['THREADS']
 
 
 ##############################
-## use different containers for guppy and deepbinner if no single container for all pakages is specified
-
+## use different containers for guppy and deepbinner depending on resources
 
 if RESOURCE == 'CPU':
-	guppy_container = 'shub://vibaotram/singularity-container:cpu-guppy3.4-conda-api'
+	guppy_container = 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api'
 elif RESOURCE == 'GPU':
-	guppy_container = 'shub://vibaotram/singularity-container:guppy3.4gpu-conda-api'
+	guppy_container = 'shub://vibaotram/singularity-container:guppy3.6.0gpu-conda-api'
 
 deepbinner_container = 'shub://vibaotram/singularity-container:deepbinner-api'
 
@@ -129,31 +120,20 @@ RENAME_FASTQ_GUPPY_BARCODER = 'script/rename_fastq_guppy_barcoder.R'
 ##############################
 ## cluster variables
 
-# snakemake_dir = os.getcwd()
-
-# user = subprocess.check_output("whoami")
-# user = user.decode('UTF-8').strip('\n')
 
 user = getpass.getuser()
 
 nasID = config['NASID']
 if nasID:
 	HOST_PREFIX = user + '@' + nasID + ':'
-	# TEMPDIR = '`mktemp -d`'
-	# TEMP_INDIR = '$tempdir/indir'
-	# TEMP_OUTDIR = '$tempdir/outdir'
 else:
 	HOST_PREFIX = ''
-	# TEMPDIR = '\'\''
-	# TEMP_INDIR = indir
-	# TEMP_OUTDIR = outdir
 
 ##############################
 ## make slurm logs directory
-SLURM_LOG = os.path.join(outdir, "log/slurm")
-# os.system(f"mkdir -p {SLURM_LOG}")
-os.makedirs(SLURM_LOG, exist_ok=True)
-
+# SLURM_LOG = os.path.join(outdir, "log/slurm")
+# os.makedirs(SLURM_LOG, exist_ok=True)
+#
 SNAKEMAKE_LOG = os.path.join(outdir, "log/snakemake")
 os.makedirs(SNAKEMAKE_LOG, exist_ok=True)
 
@@ -297,7 +277,7 @@ rule multi_to_single_fast5:
 
 if RESOURCE == 'CPU':
 	OMP_NUM_THREADS_OPT = ''
-if RESOURCE == 'GPU':
+elif RESOURCE == 'GPU':
 	OMP_NUM_THREADS_OPT = '--omp_num_threads %s' % OMP_NUM_THREADS
 
 rule deepbinner_classification:
@@ -368,7 +348,6 @@ rule minionqc_basecall:
 	output:
 		summary = os.path.join(outdir, "basecall/{run}/summary.yaml"),
 		fig = report([os.path.join(outdir, "basecall/{run}") + "/{fig}.png".format(fig=fig) for fig in fig], caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
-		# fig = report(os.path.join(outdir, "basecall/{run}", "{fig}.png".format(fig=fig)), caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
 	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	params:
@@ -504,16 +483,6 @@ rule get_multi_fast5_per_barcode:
 		python3 {FAST5_SUBSET} {input.fast5} {params.path}
 		touch {output.check}
 		"""
-
-
-
-
-# rule report_basecall:
-# 	input: rules.multiqc_basecall.output
-# 	output: report(os.path.join(outdir, "basecall/{run}/{fig}.png"), caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
-# 	shell:
-# 		"touch {output}"
-
 
 
 rule report_demultiplex:

@@ -1,35 +1,36 @@
 {
     "__default__" :
     {
-        "account" : "bioinfo",
-        "cpus-per-task" : "{threads}",
-        "gpus" : 0,
-        "partition" : "short",
-        "job-name": "{rule}_{wildcards}",
-        "output": "{SLURM_LOG}/{params.log}_%j",
-        "error": "{SLURM_LOG}/{params.log}_%j",
+        "account" : "--acount bioinfo",
+        "cpus-per-task" : "--cpus-per-task {threads}",
+        "gpus" : "--gpus 0",
+        "partition" : "--partition short",
+        "job-name": "--job-name {rule}_{wildcards}",
+        "output": "-output {SLURM_LOG}/{params.log}_%j",
+        "error": "--error {SLURM_LOG}/{params.log}_%j",
+        "ntasks": "--ntasks 1",
         "mail-user" : "",
-        "mail-type" : "ALL",
+        "mail-type" : "",
     },
 
     "guppy_basecalling" :
     {
-        "partition" : "gpu",
-        "account" : "gpu_group",
-        "gpus" : "{NUM_GPUS}",
+        "partition" : "--partition gpu",
+        "account" : "--acount gpu_group",
+        "gpus" : "--gpus {NUM_GPUS}",
     },
 
     "guppy_demultiplexing" :
     {
-        "partition" : "gpu",
-        "account" : "gpu_group",
-        "gpus" : "{NUM_GPUS}",
+        "partition" : "--partition gpu",
+        "account" : "--acount gpu_group",
+        "gpus" : "--gpus {NUM_GPUS}",
     },
 
     "deepbinner_classification" :
     {
-        "partition" : "gpu",
-        "account" : "gpu_group",
+        "partition" : "--partition gpu",
+        "account" : "--acount gpu_group",
     },
 
 }
