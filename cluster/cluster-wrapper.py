@@ -62,11 +62,11 @@ else: # if not
 
     sbatch_params = ' '.join([job_name, partition, cpus_per_task, ntasks, output, error])
 
-dep_jobid = re.match('\d+', sys.argv[1])
-if not dep_jobid:
+dep_jobid = sys.argv[1:-1]
+if not any(re.match('\d+', j) for j in dep_jobid): # "normal"-submit
     dependencies = ''
-else:
-    dependencies = ' --dependency=afterok:' + sys.argv[1]
+else: # if immediate-submit
+    dependencies = ' --dependency=afterok:' + ':'.join(dep_jobid)
 # sbatch = f'sbatch --parsable --job-name {rule} {partition} --cpus-per-task {cpus_per_task} --ntasks 1 --output {logdir}/{log}_%j --error {logdir}/{log}_%j'
 
 sbatch = 'sbatch --parsable ' + sbatch_params + dependencies
