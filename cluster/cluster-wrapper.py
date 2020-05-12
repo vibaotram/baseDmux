@@ -15,8 +15,7 @@ config = 'config.yaml'
 
 job_properties = read_job_properties(jobscript)
 
-
-if len(jobscript['cluster'].values()) > 0: # if using cluster config
+if len(job_properties['cluster']) > 0: # if using cluster config
     sbatch_params = []
     for k in jobscript['cluster'].keys():
         sbatch_params.append(k)
@@ -35,9 +34,13 @@ else: # if not
     outdir = config_properties['OUTDIR']
     logdir = os.path.join(outdir, 'log/slurm')
     os.makedirs(logdir, exist_ok=True)
-    log = job_properties['params']['log']
+    try:
+        log = os.path.basename(job_properties['log'][0])
+    except IndexError:
+        log = rule
     output = f'--output {logdir}/{log}_%j'
     error = f'--error {logdir}/{log}_%j'
+
 
     # resources = config_properties['RESOURCE']
     # indir = config_properties['INDIR']
@@ -49,7 +52,7 @@ else: # if not
     #     mem += int(fmem.decode('UTF-8').split('G')[0])
     # mem
 
-
+    resources = config_properties['RESOURCE']
     if resources == 'GPU' and rule in ['guppy_basecalling', 'guppy_demultiplexing', 'deepbinner_classification']:
         partition = '--partition gpu --account gpu_group'
     elif rule == 'multi_to_single_fast5':
@@ -59,28 +62,29 @@ else: # if not
 
     sbatch_params = ' '.join([job_name, partition, cpus_per_task, ntasks, output, error])
 
-
+dep_jobid = re.match('\d+', sys.argv[1])
+if not dep_jobid:
+    dependencies = ''
+else:
+    dependencies = ' --dependency=afterok:' + sys.argv[1]
 # sbatch = f'sbatch --parsable --job-name {rule} {partition} --cpus-per-task {cpus_per_task} --ntasks 1 --output {logdir}/{log}_%j --error {logdir}/{log}_%j'
 
-sbatch = 'sbatch --parsable ' + sbatch_params
+sbatch = 'sbatch --parsable ' + sbatch_params + dependencies
 
 # jobscript.replace("\n", "\necho -e\"sbatch parameters:\n\"{}\"\"".format(sbatch), 1)
 with open(jobscript, "r") as j:
     scripts = j.readlines()
 
-scripts.insert(1, "echo -e \"# sbatch parameters: \"{}\"\"\n".format(sbatch))
-scripts.insert(2, "echo -e \"# Job running on node: $SLURM_JOB_NODELIST\"\n")
+scripts.insert(1, "echo -e \"## [ $(date) ] sbatch parameters: \"{}\"\"\n".format(sbatch))
+scripts.insert(2, "echo -e \"## [ $(date) ] Job running on node: $SLURM_JOB_NODELIST\"\n")
+scripts.insert(3, "echo -e \"\n\"")
 
 with open(jobscript, "w") as j:
     j.writelines(scripts)
 
-dep_jobid = re.match('\d+', sys.argv[1])
-if not dep_jobid:
-    dependencies = ''
-else:
-    dependencies = f'--dependency=afterok:{dep_jobid}'
 
-cmdline = " ".join([sbatch, dependencies, jobscript])
+
+cmdline = " ".join([sbatch, jobscript])
 # sbatch --job-name {cluster.job-name} --partition {cluster.partition} --account {cluster.account} --cpus-per-task {cluster.cpus-per-task} --output {cluster.output} --error {cluster.error}
 
 os.system(cmdline)
