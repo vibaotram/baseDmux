@@ -1,7 +1,7 @@
 {
     "__default__" :
     {
-        "account" : "--acount bioinfo",
+        "account" : "--account bioinfo",
         "cpus-per-task" : "--cpus-per-task {threads}",
         "gpus" : "--gpus 0",
         "partition" : "--partition short",
@@ -16,21 +16,21 @@
     "guppy_basecalling" :
     {
         "partition" : "--partition gpu",
-        "account" : "--acount gpu_group",
+        "account" : "--account gpu_group",
         "gpus" : "--gpus {NUM_GPUS}",
     },
 
     "guppy_demultiplexing" :
     {
         "partition" : "--partition gpu",
-        "account" : "--acount gpu_group",
+        "account" : "--account gpu_group",
         "gpus" : "--gpus {NUM_GPUS}",
     },
 
     "deepbinner_classification" :
     {
         "partition" : "--partition gpu",
-        "account" : "--acount gpu_group",
+        "account" : "--account gpu_group",
     },
 
 }

@@ -7,6 +7,7 @@ import os
 import sys
 from snakemake.utils import read_job_properties
 from snakemake import load_configfile
+import re
 # import subprocess
 
 jobscript = sys.argv[-1]
@@ -15,7 +16,7 @@ config = 'config.yaml'
 job_properties = read_job_properties(jobscript)
 
 
-if length(jobscript['cluster'] > 0): # if using cluster config
+if len(jobscript['cluster'].values()) > 0: # if using cluster config
     sbatch_params = []
     for k in jobscript['cluster'].keys():
         sbatch_params.append(k)
@@ -68,11 +69,18 @@ with open(jobscript, "r") as j:
     scripts = j.readlines()
 
 scripts.insert(1, "echo -e \"# sbatch parameters: \"{}\"\"\n".format(sbatch))
+scripts.insert(2, "echo -e \"# Job running on node: $SLURM_JOB_NODELIST\"\n")
 
 with open(jobscript, "w") as j:
     j.writelines(scripts)
 
-cmdline = " ".join([sbatch, jobscript])
+dep_jobid = re.match('\d+', sys.argv[1])
+if not dep_jobid:
+    dependencies = ''
+else:
+    dependencies = f'--dependency=afterok:{dep_jobid}'
+
+cmdline = " ".join([sbatch, dependencies, jobscript])
 # sbatch --job-name {cluster.job-name} --partition {cluster.partition} --account {cluster.account} --cpus-per-task {cluster.cpus-per-task} --output {cluster.output} --error {cluster.error}
 
 os.system(cmdline)
