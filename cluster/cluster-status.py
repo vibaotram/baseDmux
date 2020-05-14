@@ -11,9 +11,9 @@ import sys
 
 jobid = sys.argv[-1]
 
-status = str(subprocess.check_output("sacct -j %s --format State --noheader | head -1 | awk '{print $1}'" % jobid, shell=True).strip())
+status = str(subprocess.check_output("sacct -j %s --format State --noheader | head -1 | awk '{print $1}'" % jobid, shell=True).strip().decode('UTF-8'))
 
-failed = ["BOOT_FAIL", "CANCELLED", "DEADLINE", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY", "PREEMPTED", "STOPPED", " SUSPENDED", "TIMEOUT"]
+failed = ["BOOT_FAIL", "CANCELLED", "DEADLINE", "FAILED", "NODE_FAIL", "OUT_OF_MEMORY", "PREEMPTED", "STOPPED", "SUSPENDED", "TIMEOUT"]
 
 if status == "COMPLETED":
   print("success")
