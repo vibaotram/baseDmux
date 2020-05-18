@@ -36,11 +36,11 @@ else: # if not
     os.makedirs(logdir, exist_ok=True)
     try:
         log = os.path.basename(job_properties['log'][0])
-        log = os.path.splitext(log)[0]
+        # log = os.path.splitext(log)[0]
     except IndexError:
         log = rule
-    output = f'--output {logdir}/{log}.o_%j'
-    error = f'--error {logdir}/{log}.e_%j'
+    output = f'--output {logdir}/{log}_%j'
+    error = f'--error {logdir}/{log}_%j'
 
 
     # resources = config_properties['RESOURCE']
@@ -76,8 +76,8 @@ sbatch = 'sbatch --parsable ' + sbatch_params + dependencies
 with open(jobscript, "r") as j:
     scripts = j.readlines()
 
-scripts.insert(1, "echo -e \"# sbatch parameters: \"{}\"\"".format(sbatch))
-scripts.insert(2, "echo -e \"# Job running on node: $SLURM_JOB_NODELIST\"")
+scripts.insert(1, "echo -e \"# sbatch parameters: \"{}\"\\n\"".format(sbatch))
+scripts.insert(2, "echo -e \"# Job running on node: $SLURM_JOB_NODELIST\\n\"")
 
 with open(jobscript, "w") as j:
     j.writelines(scripts)

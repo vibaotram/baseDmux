@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''
-modified from :
+modified from:
 https://snakemake.readthedocs.io/en/stable/tutorial/additional_features.html#using-cluster-status
 and
 https://github.com/Snakemake-Profiles/slurm/blob/master/%7B%7Bcookiecutter.profile_name%7D%7D/slurm-status.py

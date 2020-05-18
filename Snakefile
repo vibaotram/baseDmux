@@ -1,6 +1,7 @@
 import os
 import glob
 import getpass
+import pandas as pd
 
 report: "report/workflow.rst"
 
@@ -20,88 +21,137 @@ for f in fast5_files:
 
 demultiplexer = config['DEMULTIPLEXER']
 
-# THREADS = config['THREADS']
-
-
+# helper function
+def by_cond(cond, yes, no, cond_ext = '', no_ext = ''): # it's working but needs to be improved ...
+	if not cond_ext:
+		cond_ext = not cond
+	if cond:
+		return yes
+	elif cond_ext:
+		if no: # why do I have to do this condition ...
+			return no
+		else:
+			return()
+	else:
+		return no_ext
 
 ##############################
 ## guppy_basecaller parameters
-
 RESOURCE = config['RESOURCE']
+if RESOURCE not in ['CPU', 'GPU']:
+	raise AttributeError('config[RESOURCE] is invalid')
 
 KIT = config['KIT']
 
 FLOWCELL = config['FLOWCELL']
 
 # QSCORE_FILTERING = config['BASECALLER']['QSCORE_FILTERING']
-MIN_QSCORE = config['GUPPY_BASECALLER']['MIN_QSCORE']
+MIN_QSCORE = config['RULE_GUPPY_BASECALLING']['MIN_QSCORE']
 
-CPU_THREADS_PER_CALLER = config['GUPPY_BASECALLER']['CPU_THREADS_PER_CALLER']
-NUM_CALLERS = config['GUPPY_BASECALLER']['NUM_CALLERS']
+CPU_THREADS_PER_CALLER = config['RULE_GUPPY_BASECALLING']['CPU_THREADS_PER_CALLER']
+NUM_CALLERS = config['RULE_GUPPY_BASECALLING']['NUM_CALLERS']
 
-BASECALLER_ADDITION = config['GUPPY_BASECALLER']['ADDITION']
+BASECALLER_ADDITION = config['RULE_GUPPY_BASECALLING']['ADDITION']
 
 # CUDA = config['BASECALLER']['CUDA']
 
-GPU_RUNNERS_PER_DEVICE = config['GUPPY_BASECALLER']['GPU_RUNNERS_PER_DEVICE']
+GPU_RUNNERS_PER_DEVICE = config['RULE_GUPPY_BASECALLING']['GPU_RUNNERS_PER_DEVICE']
 NUM_GPUS = config['NUM_GPUS']
 
 
 # adjust guppy_basecaller parameters based on RESOURCE
-if RESOURCE == 'CPU':
-	BASECALLER_OPT = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}"
-	BASECALLER_THREADS = NUM_CALLERS*CPU_THREADS_PER_CALLER
-if RESOURCE == 'GPU':
-	BASECALLER_OPT = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}"
-	BASECALLER_THREADS = NUM_CALLERS
+BASECALLER_OPT = by_cond(
+cond = RESOURCE == 'CPU',
+yes = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}",
+no = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}",
+cond_ext = RESOURCE == 'GPU'
+)
+
+BASECALLER_THREADS = by_cond(
+cond = RESOURCE == 'CPU',
+yes = NUM_CALLERS*CPU_THREADS_PER_CALLER,
+no = NUM_CALLERS,
+cond_ext = RESOURCE == 'GPU'
+)
+
+# if RESOURCE == 'CPU':
+# 	BASECALLER_OPT = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}"
+# 	BASECALLER_THREADS = NUM_CALLERS*CPU_THREADS_PER_CALLER
+# if RESOURCE == 'GPU':
+# 	BASECALLER_OPT = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}"
+# 	BASECALLER_THREADS = NUM_CALLERS
 
 
-KEEP_FAIL_READS = config['GUPPY_BASECALLER']['KEEP_FAIL_READS']
-def fail():
-	if KEEP_FAIL_READS:
-		return(directory(os.path.join(outdir, "basecall/{run}/fail")))
-	else:
-		return()
+KEEP_FAIL_READS = config['RULE_GUPPY_BASECALLING']['KEEP_FAIL_READS']
+# def fail():
+# 	KEEP_FAIL_READS = config['RULE_GUPPY_BASECALLING']['KEEP_FAIL_READS']
+# 	if KEEP_FAIL_READS:
+# 		return(directory(os.path.join(outdir, "basecall/{run}/fail")))
+# 	else:
+# 		return()
 
+FAST5_COMPRESSION = config['RULE_GUPPY_BASECALLING']['FAST5_COMPRESSION']
 
 ##############################
 ## guppy_barcoder parameters
+BARCODER_CONFIG = config['RULE_GUPPY_DEMULTIPLEXING']['CONFIG']
+WORKER_THREADS = config['RULE_GUPPY_DEMULTIPLEXING']['WORKER_THREADS']
+ADDITION = config['RULE_GUPPY_DEMULTIPLEXING']['ADDITION']
 
-BARCODER_CONFIG = config['GUPPY_BARCODER']['CONFIG']
-WORKER_THREADS = config['GUPPY_BARCODER']['WORKER_THREADS']
-ADDITION = config['GUPPY_BARCODER']['ADDITION']
+####
 
-if RESOURCE == 'CPU':
-	DEVICE = ''
-if RESOURCE == 'GPU':
-	DEVICE = "--device $CUDA"
+DEVICE = by_cond(RESOURCE == 'CPU', None, f'--device $CUDA')
+
 
 
 ##############################
 ## MinIONQC parameters
 
-QSCORE_CUTOFF = config['MINIONQC']['QSCORE_CUTOFF']
-SMALLFIGURES = config['MINIONQC']['SMALLFIGURES']
-PROCESSORS = config['MINIONQC']['PROCESSORS']
+QSCORE_CUTOFF = config['RULE_MINIONQC_']['QSCORE_CUTOFF']
+SMALLFIGURES = config['RULE_MINIONQC_']['SMALLFIGURES']
+PROCESSORS = config['RULE_MINIONQC_']['PROCESSORS']
 fig = ["channel_summary", "flowcell_overview", "gb_per_channel_overview", "length_by_hour", "length_histogram", "length_vs_q", "q_by_hour", "q_histogram", "reads_per_hour", "yield_by_length", "yield_over_time"]
 
 
 ##############################
 ## deepbinner classify parameters
 
-PRESET = config['DEEPBINNER_CLASSIFY']['PRESET']
-OMP_NUM_THREADS = config['DEEPBINNER_CLASSIFY']['OMP_NUM_THREADS']
-DEEPBINNER_ADDITION = config['DEEPBINNER_CLASSIFY']['ADDITION']
-API_THREADS = config['ONT_FAST5_API']['THREADS']
+PRESET = config['RULE_DEEPBINNER_CLASSIFICATION']['PRESET']
+OMP_NUM_THREADS = config['RULE_DEEPBINNER_CLASSIFICATION']['OMP_NUM_THREADS']
+DEEPBINNER_ADDITION = config['RULE_DEEPBINNER_CLASSIFICATION']['ADDITION']
+API_THREADS = config['RULE_MULTI_TO_SINGLE_FAST5']['THREADS']
+
+
+##############################
+## get_reads_per_genome
+
+TRANSFERING = config['RULE_GET_READS_PER_GENOME']['TRANSFERING']
+BARCODE_BY_GENOME = config['RULE_GET_READS_PER_GENOME']['BARCODE_BY_GENOME']
+
+# if BARCODE_BY_GENOME:
+# 	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"], squeeze = True)
+# else:
+# 	genome = ''
+
+if os.path.isfile(BARCODE_BY_GENOME):
+	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"], squeeze = True)
+else:
+	genome = ''
+
+
+##############################
+## reports
+DEMULTIPLEX_REPORT = config['REPORTS']['DEMULTIPLEX_REPORT']
 
 
 ##############################
 ## use different containers for guppy and deepbinner depending on resources
 
-if RESOURCE == 'CPU':
-	guppy_container = 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api'
-elif RESOURCE == 'GPU':
-	guppy_container = 'shub://vibaotram/singularity-container:guppy3.6.0gpu-conda-api'
+guppy_container = by_cond(RESOURCE == 'CPU', 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api', 'shub://vibaotram/singularity-container:guppy3.6.0gpu-conda-api', cond_ext = 'GPU')
+# if RESOURCE == 'CPU':
+# 	guppy_container = 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api'
+# elif RESOURCE == 'GPU':
+# 	guppy_container = 'shub://vibaotram/singularity-container:guppy3.6.0gpu-conda-api'
 
 deepbinner_container = 'shub://vibaotram/singularity-container:deepbinner-api'
 
@@ -124,16 +174,17 @@ RENAME_FASTQ_GUPPY_BARCODER = 'script/rename_fastq_guppy_barcoder.R'
 user = getpass.getuser()
 
 nasID = config['NASID']
-if nasID:
-	HOST_PREFIX = user + '@' + nasID + ':'
-else:
-	HOST_PREFIX = ''
+HOST_PREFIX = by_cond(nasID, user + '@' + nasID + ':', '')
+# if nasID:
+# 	HOST_PREFIX = user + '@' + nasID + ':'
+# else:
+# 	HOST_PREFIX = ''
 
 ##############################
 ## make slurm logs directory
-# SLURM_LOG = os.path.join(outdir, "log/slurm")
-# os.makedirs(SLURM_LOG, exist_ok=True)
-#
+SLURM_LOG = os.path.join(outdir, "log/slurm")
+os.makedirs(SLURM_LOG, exist_ok=True)
+
 SNAKEMAKE_LOG = os.path.join(outdir, "log/snakemake")
 os.makedirs(SNAKEMAKE_LOG, exist_ok=True)
 
@@ -147,7 +198,7 @@ if nasID and not os.path.isdir(ssh_dir):
 
 
 
-# shell.prefix("exec > >(tee "{log}") 2>&1; ")
+# shell.prefix("exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1; ")
 
 ##############################
 ##############################
@@ -155,9 +206,11 @@ if nasID and not os.path.isdir(ssh_dir):
 
 rule finish:
 	input:
-		[expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer=demultiplexer, run=run), # DEMULTIPLEXING QC
+		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer=demultiplexer, run=run), # DEMULTIPLEXING QC
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer=demultiplexer, run=run),
-		os.path.join(outdir, "basecall/multiqc/multiqc_report.html")], # BASECALLING QC
+		os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), # BASECALLING QC
+		by_cond(DEMULTIPLEX_REPORT, os.path.join(outdir, "report/demultiplex_report.html"), ''),
+		by_cond(BARCODE_BY_GENOME, [expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)], '')
 		# expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
 		# os.path.join(outdir, "report/demultiplex_report.html")
 		#expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/report.done"), demultiplexer=demultiplexer, run=run),
@@ -170,7 +223,7 @@ rule finish:
 ################## BASECALLING
 ##################### BY GUPPY
 
-
+KEEP_FAIL_READS = False
 rule guppy_basecalling:
 	message: "GUPPY basecalling running on {RESOURCE}"
 	input: os.path.join(indir, "{run}/fast5")
@@ -181,17 +234,18 @@ rule guppy_basecalling:
 		fastq = directory(os.path.join(outdir, "basecall/{run}/pass")),
 		fast5 = temp(directory(os.path.join(outdir, "basecall/{run}/passed_fast5"))),
 		# fast5 = directory(os.path.join(outdir, "basecall/{run}/passed_fast5")),
-		fail = fail()
+		fail = by_cond(cond = KEEP_FAIL_READS, yes = directory(os.path.join(outdir, "basecall/{run}/fail")), no = '')
 	params:
 		outpath = os.path.join(outdir, "basecall/{run}"),
+		compression = FAST5_COMPRESSION,
 		# fast5_name = "{run}_",
-	log: os.path.join(SNAKEMAKE_LOG, "guppy_basecalling_{run}.log")
+		log = "guppy_basecalling_{run}.log"
 	threads: BASECALLER_THREADS
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
 	shell:
 		"""
-		exec > >(tee "{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
 		host_prefix='{HOST_PREFIX}'
 		if [ -z $host_prefix ]; then
 			temp_indir={input}
@@ -207,7 +261,8 @@ rule guppy_basecalling:
 		# rm -rf {params.outpath}/pass/fastq_runid_*.fastq
 		grep 'read_id' $temp_outdir/sequencing_summary.txt > $temp_outdir/passed_sequencing_summary.txt
 		grep 'TRUE' $temp_outdir/sequencing_summary.txt >> $temp_outdir/passed_sequencing_summary.txt
-		echo "Filtering passed reads in fast5 files \n"; fast5_subset --input $temp_indir --save_path $temp_outdir/passed_fast5 --read_id_list $temp_outdir/passed_sequencing_summary.txt --filename_base {wildcards.run}_
+		echo "Filtering passed reads in fast5 files \n"
+		fast5_subset --input $temp_indir --save_path $temp_outdir/passed_fast5 --read_id_list $temp_outdir/passed_sequencing_summary.txt --filename_base {wildcards.run}_ --threads {threads} --compression {params.compression}
 		tobe_saved={output.fail}
 		if [ -z $tobe_saved ]; then
 			rm -rf $temp_outdir/fail; echo -e "##$(date)    Removed fail reads from $temp_indir \n"
@@ -234,13 +289,13 @@ rule guppy_demultiplexing:
 		# inpath = rules.guppy_basecalling.params.outpath,
 		outpath = os.path.join(outdir, "demultiplex/guppy/{run}"),
 		# config = config['DEMULTIPLEXING_CONFIG'],
-	log: os.path.join(SNAKEMAKE_LOG, "guppy_demultiplexing_{run}.log")
+		log = "guppy_demultiplexing_{run}.log"
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
 	threads: WORKER_THREADS
 	shell:
 		"""
-		exec > >(tee "{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} --trim_barcodes {ADDITION} # --compress_fastq
 		Rscript {RENAME_FASTQ_GUPPY_BARCODER} {params.outpath}
@@ -261,10 +316,10 @@ rule multi_to_single_fast5:
 	threads: API_THREADS
 	singularity: deepbinner_container
 	params:
-	log: os.path.join(SNAKEMAKE_LOG, "multi_to_single_fast5_{run}.log")
+		log = "multi_to_single_fast5_{run}.log"
 	shell:
 		"""
-		exec > >(tee "{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
 		host_prefix='{HOST_PREFIX}'
 		if [ -z $host_prefix ]; then
 			temp_indir={input}
@@ -282,10 +337,11 @@ rule multi_to_single_fast5:
 		fi
 		"""
 
-if RESOURCE == 'CPU':
-	OMP_NUM_THREADS_OPT = ''
-elif RESOURCE == 'GPU':
-	OMP_NUM_THREADS_OPT = '--omp_num_threads %s' % OMP_NUM_THREADS
+OMP_NUM_THREADS_OPT = by_cond(RESOURCE == 'CPU', '', '--omp_num_threads %s' % OMP_NUM_THREADS)
+# if RESOURCE == 'CPU':
+# 	OMP_NUM_THREADS_OPT = ''
+# elif RESOURCE == 'GPU':
+# 	OMP_NUM_THREADS_OPT = '--omp_num_threads %s' % OMP_NUM_THREADS
 
 rule deepbinner_classification:
 	message: "DEEPBINNER classify running on {RESOURCE}"
@@ -295,10 +351,10 @@ rule deepbinner_classification:
 	singularity: deepbinner_container
 	threads: OMP_NUM_THREADS
 	params:
-	log: os.path.join(SNAKEMAKE_LOG, "deepbinner_classification_{run}.log")
+		log = "deepbinner_classification_{run}.log"
 	shell:
 		"""
-		exec > >(tee "{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
 		deepbinner classify --{PRESET} {OMP_NUM_THREADS_OPT} {DEEPBINNER_ADDITION} {input} > {output.classification}
 		"""
 
@@ -313,12 +369,12 @@ rule deepbinner_bin:
 	params:
 		out_dir = os.path.join(outdir, "demultiplex/deepbinner/{run}"),
 		fastq = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/{run}.fastq")),
-	log: os.path.join(SNAKEMAKE_LOG, "deepbinner_bin_{run}.log")
+		log = "deepbinner_bin_{run}.log"
 	singularity: deepbinner_container
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
 		cat {input.fastq}/fastq_runid_*.fastq > {params.fastq}
 		deepbinner bin --classes {input.classes} --reads {params.fastq} --out_dir {params.out_dir}
 		python3 {GET_FASTQ_PER_BARCODE} {params.out_dir}
@@ -328,62 +384,71 @@ rule deepbinner_bin:
 ##############################
 ## determine which demultiplexer to be executed
 
-def deepbinner_bin_output():
-	if "deepbinner" in demultiplexer:
-		return(rules.deepbinner_bin.output)
-	else:
-		return()
+# def deepbinner_bin_output():
+# 	if "deepbinner" in demultiplexer:
+# 		return(rules.deepbinner_bin.output)
+# 	else:
+# 		return()
 
+DEEPBINNER_BIN_OUTPUT = by_cond(cond = "deepbinner" in demultiplexer, yes = rules.deepbinner_bin.output, no = '')
 # def deepbinner_classification_output():
 # 	if "deepbinner" in demultiplexer:
 # 		return(rules.deepbinner_classification.output)
 # 	else:
 # 		return()
 
-def guppy_demultiplexing_output():
-	if "guppy" in demultiplexer:
-		return(rules.guppy_demultiplexing.output)
-	else:
-		return()
+# def guppy_demultiplexing_output():
+# 	if "guppy" in demultiplexer:
+# 		return(rules.guppy_demultiplexing.output)
+# 	else:
+# 		return()
 
+GUPPY_DEMULTIPLEXING_OUTPUT = by_cond("guppy" in demultiplexer, rules.guppy_demultiplexing.output, '')
 ##############################
 ############# MINIONQC/MULTIQC
 ############## FOR BASECALLING
 
 
+MINIONQC_BASECALL_FIG = [os.path.join(outdir, "basecall/{run}") + "/{fig}.png".format(fig=fig) for fig in fig]
+REPORT_MINIONQC_BASECALL = config['REPORTS']['SNAKEMAKE_REPORT']['MINIONQC_BASECALL']
 
 rule minionqc_basecall:
 	input: rules.guppy_basecalling.output.summary
 	output:
 		summary = os.path.join(outdir, "basecall/{run}/summary.yaml"),
-		fig = report([os.path.join(outdir, "basecall/{run}") + "/{fig}.png".format(fig=fig) for fig in fig], caption = "report/basecall_minionqc.rst", category = "minionqc_basecall")
+		fig = by_cond(REPORT_MINIONQC_BASECALL, report(MINIONQC_BASECALL_FIG, caption = "report/basecall_minionqc.rst", category = "minionqc_basecall"), MINIONQC_BASECALL_FIG)
 	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	params:
 	# 	inpath = os.path.join(outdir, "basecall/{run}"),
-	log: os.path.join(SNAKEMAKE_LOG, "minionqc_basecall_{run}.log")
+		log = "minionqc_basecall_{run}.log"
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
 		MinIONQC.R -i {input} -q {QSCORE_CUTOFF} -s {SMALLFIGURES}
 		"""
+
+MULTIQC_BASECALL_OUTPUT = os.path.join(outdir, "basecall/multiqc/multiqc_report.html")
+REPORT_MULTIQC_BASECALL = config['REPORTS']['SNAKEMAKE_REPORT']['MULTIQC_BASECALL']
 
 rule multiqc_basecall:
 	input:
 		expand(rules.minionqc_basecall.output.summary, run=run),
 		# inpath = os.path.join(outdir, "basecall")
-	output: os.path.join(outdir, "basecall/multiqc/multiqc_report.html")
+	output:
+		# os.path.join(outdir, "basecall/multiqc/multiqc_report.html")
+		by_cond(REPORT_MULTIQC_BASECALL, report(MULTIQC_BASECALL_OUTPUT, category = "multiqc_basecall"), MULTIQC_BASECALL_OUTPUT)
 	singularity: guppy_container
 	conda: 'conda/conda_multiqc.yaml'
 	params:
 		inpath = os.path.join(outdir, "basecall"),
 		outpath = os.path.join(outdir, "basecall/multiqc"),
-	log: os.path.join(SNAKEMAKE_LOG, "multiqc_basecall.log")
+		log = "multiqc_basecall.log"
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
 		multiqc -f -v -d -dd 2 -o {params.outpath} {params.inpath}
 		"""
 
@@ -394,22 +459,24 @@ rule multiqc_basecall:
 
 rule get_sequencing_summary_per_barcode:
 	input:
-		deepbinner_bin_output(),
+		# deepbinner_bin_output(),
+		DEEPBINNER_BIN_OUTPUT,
 		# deepbinner_classification_output(),
-		guppy_demultiplexing_output()
+		# guppy_demultiplexing_output()
+		GUPPY_DEMULTIPLEXING_OUTPUT
 	output:
 		temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/get_summary.done"))
 		# os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/get_summary.done")
 	params:
 		barcoding_path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
 		sequencing_file = rules.guppy_basecalling.output.passed_summary,
-	log: os.path.join(SNAKEMAKE_LOG, "get_sequencing_summary_per_barcode_{demultiplexer}_{run}.log")
+		log = "get_sequencing_summary_per_barcode_{demultiplexer}_{run}.log"
 	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
 		Rscript {GET_SUMMARY_PER_BARCODE} {params.sequencing_file} {params.barcoding_path}
 		touch {output}
 		"""
@@ -430,45 +497,51 @@ figname = []
 for f in figpath:
 	figname.append(os.path.join(f.rsplit("/", 2)[-2], f.rsplit("/", 2)[-1]))
 
+MINIONQC_DEMULTIPLEX_FIG = [os.path.join(outdir, "demultiplex/{demultiplexer}/{run}") + "/{figname}".format(figname=figname) for figname in figname]
+REPORT_MINIONQC_DEMULTIPLEX = config['REPORTS']['SNAKEMAKE_REPORT']['MINIONQC_DEMULTIPLEX']
+
 rule minionqc_demultiplex:
 	input:
 		rules.get_sequencing_summary_per_barcode.output
 	output:
 		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done")),
 		# check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done"),
-		# fig = report([os.path.join(outdir, "demultiplex/{demultiplexer}/{run}") + "/{figname}".format(figname=figname) for figname in figname], caption = "report/demultiplex_minionqc.rst", category = "minionqc_demultiplex")
+		fig = by_cond(REPORT_MINIONQC_DEMULTIPLEX, report(MINIONQC_DEMULTIPLEX_FIG, caption = "report/demultiplex_minionqc.rst", category = "minionqc_demultiplex"), MINIONQC_DEMULTIPLEX_FIG)
 	params:
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc"),
 		inpath = rules.get_sequencing_summary_per_barcode.params.barcoding_path,
 		combinedQC = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/combinedQC"),
-	log: os.path.join(SNAKEMAKE_LOG, "minionqc_demultiplex_{demultiplexer}_{run}.log")
+		log = "minionqc_demultiplex_{demultiplexer}_{run}.log"
 	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	threads: PROCESSORS
 	shell:
 		"""
-		exec > >(tee "{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
 		MinIONQC.R -i {params.inpath} -q {QSCORE_CUTOFF} -s {SMALLFIGURES} -p {threads}
 		rm -rf {params.combinedQC}
 		touch {output.check}
 		"""
 
+MULTIQC_DEMULTIPLEX_OUTPUT = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html")
+REPORT_MULTIQC_DEMULTIPLEX = config['REPORTS']['SNAKEMAKE_REPORT']['MULTIQC_DEMULTIPLEX']
+
 rule multiqc_demultiplex:
 	input:
 		rules.minionqc_demultiplex.output.check
 	output:
-		os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"),
+		by_cond(REPORT_MULTIQC_DEMULTIPLEX, report(MULTIQC_DEMULTIPLEX_OUTPUT, category = "multiqc_demultiplex"), MULTIQC_DEMULTIPLEX_OUTPUT),
 		# report = directory(os.path.join(outdir, "report"))
 	singularity: guppy_container
 	conda: 'conda/conda_multiqc.yaml'
 	params:
 		inpath = rules.minionqc_demultiplex.params.inpath,
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc"),
-	log: os.path.join(SNAKEMAKE_LOG, "multiqc_demultiplex_{demultiplexer}_{run}.log")
+		log = "multiqc_demultiplex_{demultiplexer}_{run}.log"
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
 		multiqc -f -v -d -dd 2 -o {params.outpath} {params.inpath}
 		"""
 
@@ -488,18 +561,20 @@ rule get_multi_fast5_per_barcode:
 	singularity: deepbinner_container
 	params:
 		path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
-	log: os.path.join(SNAKEMAKE_LOG, "get_multi_fast5_per_barcode_{demultiplexer}_{run}.log")
+		log = "get_multi_fast5_per_barcode_{demultiplexer}_{run}.log"
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
 		python3 {FAST5_SUBSET} {input.fast5} {params.path}
 		touch {output.check}
 		"""
 
 
+REPORT_DEMULTIPLEX_OUTPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules.multiqc_demultiplex.output, demultiplexer = demultiplexer, run = run), no = '')
+
 rule report_demultiplex:
-	# input: rules.multiqc_basecall.output
+	input: REPORT_DEMULTIPLEX_OUTPUT
 	message: " Reporting demultiplex results"
 	output: os.path.join(outdir, "report/demultiplex_report.html")
 	params:
@@ -510,21 +585,28 @@ rule report_demultiplex:
 		"report/report_demultiplex.Rmd"
 
 
+##############################
+################# SUBSET READS
+#################### BY GENOME
+
+GET_READS_PER_GENOME_INPUT = [expand(rules.get_sequencing_summary_per_barcode.input, demultiplexer = demultiplexer, run = run),
+                              expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = demultiplexer, run = run)]
+
 rule get_reads_per_genome:
 	input:
 		# indir = outdir,
-		barcode_by_genome = config['GET_READS_PER_GENOME']['BARCODE_BY_GENOME'],
+		barcode_by_genome = by_cond(BARCODE_BY_GENOME, GET_READS_PER_GENOME_INPUT, ''),
 	output:
-		fast5 = directory(os.path.join(outdir, "reads_per_genome/fast5")),
-		fastq = directory(os.path.join(outdir, "reads_per_genome/fastq")),
-		csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
+		fast5 = directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)),
+		fastq = expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome),
+		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
-		output = directory(os.path.join(outdir, "reads_per_genome")),
-		transfering = config['GET_READS_PER_GENOME']['TRANSFERING']
+		outpath = directory(os.path.join(outdir, "reads_per_genome")),
+		transfering = TRANSFERING
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
 	shell:
-		"Rscript script/get_reads_per_genome.R -b {outdir} -o {params.output} -d {input.barcode_by_genome} --{params.transfering}"
+		"Rscript script/get_reads_per_genome.R -b {outdir} -o {params.outpath} -d {input.barcode_by_genome} --{params.transfering}"
 
 ##############################
 ############### SOMETHING ELSE
@@ -567,10 +649,10 @@ rule help:
 ##############################
 ##################### HANDLERS
 
-#onstart:
-#	print("Basecalling will be performed by Guppy on", RESOURCE)
-#	print("Demultiplexing will be performed by",)
-#	for d in demultiplexer: print("\t-", d)
+# onstart:
+# 	print("Basecalling will be performed by Guppy on", RESOURCE)
+# 	print("Demultiplexing will be performed by",)
+# 	for d in demultiplexer: print("\t-", d)
 
 
 #onsuccess:

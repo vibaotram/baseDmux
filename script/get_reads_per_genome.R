@@ -134,7 +134,7 @@ for (i in unique(dict$Genome_ID)) {
   ori_file = dict[dict$Genome_ID == i, "ori_fastq"]
   dest_file = file.path(dest_fastq_dir, paste0(i, ".fastq.gz"))
   if (ori_file == 1) {
-    transfer_file = paste("rsync -avP", ori_file, dest_file, sep = " ")
+    transfer_file = paste(cmd, ori_file, dest_file, sep = " ")
   } else {
     transfer_file = paste("zcat", do.call(paste, as.list(ori_file)), "| gzip >", dest_file)
   }

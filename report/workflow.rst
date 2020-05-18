@@ -2,11 +2,13 @@
 baseDmux WORKFLOW REPORT
 ========================
 
+Samples:
+  - snakemake.wildcards
 
-Basecalling was performed by GUPPY on {{ snakemake.config['RESOURCE'] }}.
+Sequencing informations:
+  - Kit: {{ snakemake.config['KIT'] }}
+  - Flowcell: {{ snakemake.config['FLOWCELL'] }}
 
+Basecalling was performed by guppy 3.6.0 on {{ snakemake.config['RESOURCE'] }}.
 
 Demultiplexing was performed by {{ snakemake.config['DEMULTIPLEXER']|join(" and ") }}.
-
-
-The report contains results of MinIONQC for basecalling.

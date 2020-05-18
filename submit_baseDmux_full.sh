@@ -23,15 +23,18 @@ snakemake --unlock
 
 echo -e "## [$(date) - baseDmux]\t Ready to execute snakemake workflow"
 
-# snakemake --nolock --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " --latency-wait 60 \
-# --cluster-config cluster/cluster.json \
-# --cluster "sbatch --job-name {cluster.job-name} \
-# -p {cluster.partition} -A {cluster.account} --cpus-per-task {cluster.cpus-per-task} --output={cluster.output} --error={cluster.error}"
+
+# snakemake --nolock --use-singularity --singularity-args "--nv " --use-conda --cores -p --verbose \
+# --latency-wait 60 --keep-going --restart-times 2 --rerun-incomplete \
+# --cluster "python3 cluster/slurm_wrapper.py {dependencies}" \
+# --cluster-status "python3 cluster//slurm_status.py" \
+# --immediate-submit --notemp
+
 
 snakemake --nolock --use-singularity --singularity-args "--nv " --use-conda --cores -p --verbose \
 --latency-wait 60 --keep-going --restart-times 2 --rerun-incomplete \
---cluster "./cluster/slurm_wrapper.py" \
---cluster-status "./cluster/cluster-status.py" && \
+--cluster "python3 cluster/slurm_wrapper.py" \
+--cluster-status "python3 cluster/slurm_status.py" && \
 echo -e "## [$(date) - baseDmux]\t Snakemake workflow finished"  && \
 echo -e "## [$(date) - baseDmux]\t Creating report for demultiplexing"  && \
 snakemake --use-singularity --use-conda -p --verbose report_demultiplex && \
