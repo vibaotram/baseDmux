@@ -134,7 +134,7 @@ BARCODE_BY_GENOME = config['RULE_GET_READS_PER_GENOME']['BARCODE_BY_GENOME']
 # 	genome = ''
 
 if os.path.isfile(BARCODE_BY_GENOME):
-	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"], squeeze = True)
+	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"], squeeze = True).unique()
 else:
 	genome = ''
 
@@ -214,13 +214,12 @@ rule finish:
 		# expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
 		# os.path.join(outdir, "report/demultiplex_report.html")
 		#expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/report.done"), demultiplexer=demultiplexer, run=run),
-	
+
 
 ##############################
 ################## BASECALLING
 ##################### BY GUPPY
 
-KEEP_FAIL_READS = False
 rule guppy_basecalling:
 	message: "GUPPY basecalling running on {RESOURCE}"
 	input: os.path.join(indir, "{run}/fast5")
