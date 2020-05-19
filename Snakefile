@@ -214,10 +214,7 @@ rule finish:
 		# expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
 		# os.path.join(outdir, "report/demultiplex_report.html")
 		#expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/report.done"), demultiplexer=demultiplexer, run=run),
-	run:
-		"""
-		print("baseDmux workflow successfully finished!")
-		"""
+	
 
 ##############################
 ################## BASECALLING

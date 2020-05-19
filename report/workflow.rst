@@ -2,8 +2,6 @@
 baseDmux WORKFLOW REPORT
 ========================
 
-Samples:
-  - snakemake.wildcards
 
 Sequencing informations:
   - Kit: {{ snakemake.config['KIT'] }}
