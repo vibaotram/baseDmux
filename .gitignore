@@ -1,0 +1,17 @@
+test/*
+.conda/*
+.cache/*
+.snakemake/*
+.config/*
+.ssh/*
+.theano/*
+.conda/*
+.git/*
+.idea/*
+.keras/*
+backup-snakefile
+container/*
+.R*
+workflow.Rproj
+test-cluster/*
+*.html
