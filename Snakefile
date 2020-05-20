@@ -28,10 +28,7 @@ def by_cond(cond, yes, no, cond_ext = '', no_ext = ''): # it's working but needs
 	if cond:
 		return yes
 	elif cond_ext:
-		if no: # why do I have to do this condition ...
-			return no
-		else:
-			return()
+		return no
 	else:
 		return no_ext
 
@@ -52,18 +49,17 @@ CPU_THREADS_PER_CALLER = config['RULE_GUPPY_BASECALLING']['CPU_THREADS_PER_CALLE
 NUM_CALLERS = config['RULE_GUPPY_BASECALLING']['NUM_CALLERS']
 
 BASECALLER_ADDITION = config['RULE_GUPPY_BASECALLING']['ADDITION']
-
+CONFIG = by_cond("--config" in BASECALLER_ADDITION, '', f"--flowcell {FLOWCELL} --kit {KIT}")
 # CUDA = config['BASECALLER']['CUDA']
 
 GPU_RUNNERS_PER_DEVICE = config['RULE_GUPPY_BASECALLING']['GPU_RUNNERS_PER_DEVICE']
 NUM_GPUS = config['NUM_GPUS']
 
-
 # adjust guppy_basecaller parameters based on RESOURCE
 BASECALLER_OPT = by_cond(
 cond = RESOURCE == 'CPU',
-yes = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}",
-no = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}",
+yes = f"{CONFIG} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}",
+no = f"{CONFIG} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}",
 cond_ext = RESOURCE == 'GPU'
 )
 
@@ -230,7 +226,7 @@ rule guppy_basecalling:
 		fastq = directory(os.path.join(outdir, "basecall/{run}/pass")),
 		fast5 = temp(directory(os.path.join(outdir, "basecall/{run}/passed_fast5"))),
 		# fast5 = directory(os.path.join(outdir, "basecall/{run}/passed_fast5")),
-		fail = by_cond(cond = KEEP_FAIL_READS, yes = directory(os.path.join(outdir, "basecall/{run}/fail")), no = '')
+		fail = by_cond(cond = KEEP_FAIL_READS, yes = directory(os.path.join(outdir, "basecall/{run}/fail")), no = ())
 	params:
 		outpath = os.path.join(outdir, "basecall/{run}"),
 		compression = FAST5_COMPRESSION,

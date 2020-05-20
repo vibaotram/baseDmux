@@ -18,7 +18,7 @@ job_properties = read_job_properties(jobscript)
 if len(job_properties['cluster']) > 0: # if using cluster config
     sbatch_params = ''
     for k in job_properties['cluster'].values():
-        sbatch_params += k
+        sbatch_params += k + ' '
 else: # if not
     config_properties = load_configfile(config)
 
