@@ -205,8 +205,8 @@ rule finish:
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer=demultiplexer, run=run), # DEMULTIPLEXING QC
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer=demultiplexer, run=run),
 		os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), # BASECALLING QC
-		by_cond(DEMULTIPLEX_REPORT, os.path.join(outdir, "report/demultiplex_report.html"), ''),
-		by_cond(BARCODE_BY_GENOME, [expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)], '')
+		by_cond(DEMULTIPLEX_REPORT, os.path.join(outdir, "report/demultiplex_report.html"), ()),
+		by_cond(BARCODE_BY_GENOME, [expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)], ())
 		# expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
 		# os.path.join(outdir, "report/demultiplex_report.html")
 		#expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/report.done"), demultiplexer=demultiplexer, run=run),
@@ -382,7 +382,7 @@ rule deepbinner_bin:
 # 	else:
 # 		return()
 
-DEEPBINNER_BIN_OUTPUT = by_cond(cond = "deepbinner" in demultiplexer, yes = rules.deepbinner_bin.output, no = '')
+DEEPBINNER_BIN_OUTPUT = by_cond(cond = "deepbinner" in demultiplexer, yes = rules.deepbinner_bin.output, no = ())
 # def deepbinner_classification_output():
 # 	if "deepbinner" in demultiplexer:
 # 		return(rules.deepbinner_classification.output)
@@ -395,7 +395,7 @@ DEEPBINNER_BIN_OUTPUT = by_cond(cond = "deepbinner" in demultiplexer, yes = rule
 # 	else:
 # 		return()
 
-GUPPY_DEMULTIPLEXING_OUTPUT = by_cond("guppy" in demultiplexer, rules.guppy_demultiplexing.output, '')
+GUPPY_DEMULTIPLEXING_OUTPUT = by_cond("guppy" in demultiplexer, rules.guppy_demultiplexing.output, ())
 ##############################
 ############# MINIONQC/MULTIQC
 ############## FOR BASECALLING
