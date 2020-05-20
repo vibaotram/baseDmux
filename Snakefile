@@ -31,7 +31,7 @@ def by_cond(cond, yes, no, cond_ext = '', no_ext = ''): # it's working but needs
 		if no: # why do I have to do this condition ...
 			return no
 		else:
-			return()
+			return
 	else:
 		return no_ext
 
@@ -241,7 +241,7 @@ rule guppy_basecalling:
 	conda: 'conda/conda_minionqc.yaml'
 	shell:
 		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		host_prefix='{HOST_PREFIX}'
 		if [ -z $host_prefix ]; then
 			temp_indir={input}
@@ -291,7 +291,7 @@ rule guppy_demultiplexing:
 	threads: WORKER_THREADS
 	shell:
 		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} --trim_barcodes {ADDITION} # --compress_fastq
 		Rscript {RENAME_FASTQ_GUPPY_BARCODER} {params.outpath}
@@ -315,7 +315,7 @@ rule multi_to_single_fast5:
 		log = "multi_to_single_fast5_{run}.log"
 	shell:
 		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		host_prefix='{HOST_PREFIX}'
 		if [ -z $host_prefix ]; then
 			temp_indir={input}
@@ -350,7 +350,7 @@ rule deepbinner_classification:
 		log = "deepbinner_classification_{run}.log"
 	shell:
 		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		deepbinner classify --{PRESET} {OMP_NUM_THREADS_OPT} {DEEPBINNER_ADDITION} {input} > {output.classification}
 		"""
 
@@ -370,7 +370,7 @@ rule deepbinner_bin:
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		cat {input.fastq}/fastq_runid_*.fastq > {params.fastq}
 		deepbinner bin --classes {input.classes} --reads {params.fastq} --out_dir {params.out_dir}
 		python3 {GET_FASTQ_PER_BARCODE} {params.out_dir}
@@ -421,7 +421,7 @@ rule minionqc_basecall:
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		MinIONQC.R -i {input} -q {QSCORE_CUTOFF} -s {SMALLFIGURES}
 		"""
 
@@ -444,7 +444,7 @@ rule multiqc_basecall:
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		multiqc -f -v -d -dd 2 -o {params.outpath} {params.inpath}
 		"""
 
@@ -472,7 +472,7 @@ rule get_sequencing_summary_per_barcode:
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		Rscript {GET_SUMMARY_PER_BARCODE} {params.sequencing_file} {params.barcoding_path}
 		touch {output}
 		"""
@@ -513,7 +513,7 @@ rule minionqc_demultiplex:
 	threads: PROCESSORS
 	shell:
 		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		MinIONQC.R -i {params.inpath} -q {QSCORE_CUTOFF} -s {SMALLFIGURES} -p {threads}
 		rm -rf {params.combinedQC}
 		touch {output.check}
@@ -537,7 +537,7 @@ rule multiqc_demultiplex:
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		multiqc -f -v -d -dd 2 -o {params.outpath} {params.inpath}
 		"""
 
@@ -561,7 +561,7 @@ rule get_multi_fast5_per_barcode:
 	threads: 1
 	shell:
 		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{log}") 2>&1
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		python3 {FAST5_SUBSET} {input.fast5} {params.path}
 		touch {output.check}
 		"""
