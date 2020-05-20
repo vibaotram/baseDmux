@@ -31,7 +31,7 @@ def by_cond(cond, yes, no, cond_ext = '', no_ext = ''): # it's working but needs
 		if no: # why do I have to do this condition ...
 			return no
 		else:
-			return
+			return()
 	else:
 		return no_ext
 
