@@ -1,7 +1,0 @@
-channels:
-    - bioconda
-    - conda-forge
-    - defaults
-dependencies:
-    - mkl-service = 2.3.0
-    - deepbinner = 0.1.2

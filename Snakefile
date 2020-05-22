@@ -56,19 +56,15 @@ GPU_RUNNERS_PER_DEVICE = config['RULE_GUPPY_BASECALLING']['GPU_RUNNERS_PER_DEVIC
 NUM_GPUS = config['NUM_GPUS']
 
 # adjust guppy_basecaller parameters based on RESOURCE
-BASECALLER_OPT = by_cond(
-cond = RESOURCE == 'CPU',
-yes = f"{CONFIG} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}",
-no = f"{CONFIG} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}",
-cond_ext = RESOURCE == 'GPU'
-)
+BASECALLER_OPT = by_cond(cond = RESOURCE == 'CPU',
+						 yes = f"{CONFIG} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}",
+						 no = f"{CONFIG} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}",
+						 cond_ext = RESOURCE == 'GPU')
 
-BASECALLER_THREADS = by_cond(
-cond = RESOURCE == 'CPU',
-yes = NUM_CALLERS*CPU_THREADS_PER_CALLER,
-no = NUM_CALLERS,
-cond_ext = RESOURCE == 'GPU'
-)
+BASECALLER_THREADS = by_cond(cond = RESOURCE == 'CPU',
+							 yes = NUM_CALLERS*CPU_THREADS_PER_CALLER,
+							 no = NUM_CALLERS,
+							 cond_ext = RESOURCE == 'GPU')
 
 # if RESOURCE == 'CPU':
 # 	BASECALLER_OPT = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}"
@@ -87,6 +83,8 @@ KEEP_FAIL_READS = config['RULE_GUPPY_BASECALLING']['KEEP_FAIL_READS']
 # 		return()
 
 FAST5_COMPRESSION = config['RULE_GUPPY_BASECALLING']['FAST5_COMPRESSION']
+
+KEEP_LOG_FILES = config['RULE_GUPPY_BASECALLING']['KEEP_LOG_FILES']
 
 ##############################
 ## guppy_barcoder parameters
@@ -216,6 +214,7 @@ rule finish:
 ################## BASECALLING
 ##################### BY GUPPY
 
+
 rule guppy_basecalling:
 	message: "GUPPY basecalling running on {RESOURCE}"
 	input: os.path.join(indir, "{run}/fast5")
@@ -230,6 +229,7 @@ rule guppy_basecalling:
 	params:
 		outpath = os.path.join(outdir, "basecall/{run}"),
 		compression = FAST5_COMPRESSION,
+		keep_log_files = by_cond(KEEP_LOG_FILES, 'true', 'false'),
 		# fast5_name = "{run}_",
 		log = "guppy_basecalling_{run}.log"
 	threads: BASECALLER_THREADS
@@ -249,7 +249,8 @@ rule guppy_basecalling:
 		fi
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		guppy_basecaller -i $temp_indir -s $temp_outdir {BASECALLER_OPT}
-		cat $temp_outdir/pass/fastq_runid_*.fastq | gzip > $temp_outdir/{wildcards.run}.fastq.gz
+		echo -e "\nConcatenating passed fastq files into {wildcards.run}.fastq.gz \n"
+		cat $temp_outdir/pass/fastq_runid_*.fastq | gzip > $temp_outdir/{wildcards.run}.fastq.gz && echo -e "Compressing done.\n"
 		# rm -rf {params.outpath}/pass/fastq_runid_*.fastq
 		grep 'read_id' $temp_outdir/sequencing_summary.txt > $temp_outdir/passed_sequencing_summary.txt
 		grep 'TRUE' $temp_outdir/sequencing_summary.txt >> $temp_outdir/passed_sequencing_summary.txt
@@ -257,12 +258,15 @@ rule guppy_basecalling:
 		fast5_subset --input $temp_indir --save_path $temp_outdir/passed_fast5 --read_id_list $temp_outdir/passed_sequencing_summary.txt --filename_base {wildcards.run}_ --threads {threads} --compression {params.compression}
 		tobe_saved={output.fail}
 		if [ -z $tobe_saved ]; then
-			rm -rf $temp_outdir/fail; echo -e "##$(date)    Removed fail reads from $temp_indir \n"
+			rm -rf $temp_outdir/fail && echo -e "##$(date)    Removed failed reads from $temp_outdir \n"
+		fi
+		if ! {params.keep_log_files} ; then
+			rm -rf $temp_outdir/guppy_basecaller_log*.log && echo -e "##$(date)    Removed guppy_basecaller log files from $temp_outdir \n"
 		fi
 		if [ ! -z $host_prefix ]; then
 			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {params.outpath}\n"; rsync -arvP --chmod 755 $temp_outdir/ $host_prefix{params.outpath}
-			rm -rf $temp_indir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_indir \n"
-			rm -rf $temp_outdir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_outdir \n"
+			rm -rf $temp_indir; echo -e "##$(date)    Removed temporary input directory on local drive: $temp_indir \n"
+			rm -rf $temp_outdir; echo -e "##$(date)    Removed temporary input directory on local drive: $temp_outdir \n"
 		fi
 		"""
 
@@ -303,7 +307,7 @@ rule guppy_demultiplexing:
 rule multi_to_single_fast5:
 	input: rules.guppy_basecalling.output.fast5
 	output:
-		temp(directory(os.path.join(outdir, "demultiplex/deepbinner/{run}/singlefast5")))
+		directory(os.path.join(outdir, "demultiplex/deepbinner/{run}/singlefast5"))
 		# directory(os.path.join(outdir, "demultiplex/deepbinner/{run}/singlefast5"))
 	threads: API_THREADS
 	singularity: deepbinner_container
@@ -408,7 +412,7 @@ rule minionqc_basecall:
 	input: rules.guppy_basecalling.output.summary
 	output:
 		summary = os.path.join(outdir, "basecall/{run}/summary.yaml"),
-		fig = by_cond(REPORT_MINIONQC_BASECALL, report(MINIONQC_BASECALL_FIG, caption = "report/basecall_minionqc.rst", category = "minionqc_basecall"), MINIONQC_BASECALL_FIG)
+		fig = by_cond(REPORT_MINIONQC_BASECALL, report(MINIONQC_BASECALL_FIG, caption = "report/basecall_minionqc.rst", category = "minionqc_basecall"), ())
 	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	params:
@@ -498,7 +502,7 @@ rule minionqc_demultiplex:
 	output:
 		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done")),
 		# check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done"),
-		fig = by_cond(REPORT_MINIONQC_DEMULTIPLEX, report(MINIONQC_DEMULTIPLEX_FIG, caption = "report/demultiplex_minionqc.rst", category = "minionqc_demultiplex"), MINIONQC_DEMULTIPLEX_FIG)
+		fig = by_cond(REPORT_MINIONQC_DEMULTIPLEX, report(MINIONQC_DEMULTIPLEX_FIG, caption = "report/demultiplex_minionqc.rst", category = "minionqc_demultiplex"), ())
 	params:
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc"),
 		inpath = rules.get_sequencing_summary_per_barcode.params.barcoding_path,
@@ -563,7 +567,7 @@ rule get_multi_fast5_per_barcode:
 		"""
 
 
-REPORT_DEMULTIPLEX_OUTPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules.multiqc_demultiplex.output, demultiplexer = demultiplexer, run = run), no = '')
+REPORT_DEMULTIPLEX_OUTPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules.multiqc_demultiplex.output, demultiplexer = demultiplexer, run = run), no = ())
 
 rule report_demultiplex:
 	input: REPORT_DEMULTIPLEX_OUTPUT
@@ -587,18 +591,23 @@ GET_READS_PER_GENOME_INPUT = [expand(rules.get_sequencing_summary_per_barcode.in
 rule get_reads_per_genome:
 	input:
 		# indir = outdir,
-		barcode_by_genome = by_cond(BARCODE_BY_GENOME, GET_READS_PER_GENOME_INPUT, ''),
+		by_cond(BARCODE_BY_GENOME, GET_READS_PER_GENOME_INPUT, ()),
 	output:
 		fast5 = directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)),
 		fastq = expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome),
 		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),
-		transfering = TRANSFERING
+		barcode_by_genome = BARCODE_BY_GENOME,
+		transfering = TRANSFERING,
+		log = "get_reads_per_genome.log"
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
 	shell:
-		"Rscript script/get_reads_per_genome.R -b {outdir} -o {params.outpath} -d {input.barcode_by_genome} --{params.transfering}"
+		"""
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
+		Rscript script/get_reads_per_genome.R -b {outdir} -o {params.outpath} -d {params.barcode_by_genome} --{params.transfering}
+		"""
 
 ##############################
 ############### SOMETHING ELSE
