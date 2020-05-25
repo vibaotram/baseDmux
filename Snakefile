@@ -576,7 +576,7 @@ rule report_demultiplex:
 	params:
 		indir = os.path.join(outdir, "demultiplex")
 	singularity: guppy_container
-	conda: 'conda/conda_minionqc.yaml'
+	conda: 'conda/conda_rmarkdown.yaml'
 	script:
 		"report/report_demultiplex.Rmd"
 

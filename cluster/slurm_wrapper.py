@@ -35,7 +35,7 @@ else: # if not
     logdir = os.path.join(outdir, 'log/slurm')
     os.makedirs(logdir, exist_ok=True)
     try:
-        log = os.path.basename(job_properties['log'][0])
+        log = job_properties['params']['log']
         # log = os.path.splitext(log)[0]
     except IndexError:
         log = rule
@@ -76,8 +76,9 @@ sbatch = 'sbatch --parsable ' + sbatch_params + dependencies
 with open(jobscript, "r") as j:
     scripts = j.readlines()
 
-scripts.insert(1, "echo -e \"# sbatch parameters: \"{}\"\\n\"".format(sbatch))
-scripts.insert(2, "echo -e \"# Job running on node: $SLURM_JOB_NODELIST\\n\"")
+scripts.insert(1, "echo -e \"# sbatch parameters: \"{}\"\"\n".format(sbatch))
+scripts.insert(2, "echo -e \"# Job running on node: $SLURM_JOB_NODELIST\"\n")
+
 
 with open(jobscript, "w") as j:
     j.writelines(scripts)
