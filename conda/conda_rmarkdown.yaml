@@ -8,3 +8,4 @@ dependencies:
     - r-base=3.5.0
     - r-essentials=3.5.0=r350_0
     - mkl-service=2.3.0
+    - xorg-libxrender=0.9.10
