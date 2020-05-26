@@ -339,6 +339,13 @@ OMP_NUM_THREADS_OPT = by_cond(RESOURCE == 'CPU', '', '--omp_num_threads %s' % OM
 # elif RESOURCE == 'GPU':
 # 	OMP_NUM_THREADS_OPT = '--omp_num_threads %s' % OMP_NUM_THREADS
 
+## THE DEEPBINNER CONTAINER CANNOT USE A GPU SO IT WILL ALWAYS RUN ON CPU EVEN IF RESOURCE IS GPU
+## BESIDE, ON ITROP WE WILL ALWAYS HAVE RESOURCE = 'GPU'
+## SO I DO NOT UNDERSTAND THE POINT OF OMP_NUM_THREADS_OPT
+## IS TENSORFLOW INSTALLED TOGETHER WITH DEEPBINNER?
+## NO SLURM LOG FOR DEEPBINNER
+## THE SLURM LOG FILES ARE NOT NAMED AS THEY WERE IN THE VERSION THAT WORKED, WHY?
+
 rule deepbinner_classification:
 	message: "DEEPBINNER classify running on {RESOURCE}"
 	input: rules.multi_to_single_fast5.output
@@ -364,7 +371,7 @@ rule deepbinner_bin:
 		# os.path.join(outdir, "demultiplex/deepbinner/{run}/fastq_per_barcode.done")
 	params:
 		out_dir = os.path.join(outdir, "demultiplex/deepbinner/{run}"),
-		fastq = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/{run}.fastq")),
+		fastq = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/{run}.fastq")), ## THIS HAS NO EFFECT BECAUSE EVEN WHEN SUCCESFUL THE FILE IS STILL THERE.
 		log = "deepbinner_bin_{run}.log"
 	singularity: deepbinner_container
 	threads: 1
