@@ -16,3 +16,4 @@ workflow.Rproj
 test-cluster/*
 *.html
 *.log
+config-test.yaml
