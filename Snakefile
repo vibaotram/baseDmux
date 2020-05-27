@@ -5,7 +5,7 @@ import pandas as pd
 
 report: "report/workflow.rst"
 
-configfile: "config.yaml"
+#configfile: "config.yaml"
 
 
 indir = config['INDIR']
@@ -222,12 +222,16 @@ rule guppy_basecalling:
 		summary = os.path.join(outdir, "basecall/{run}/sequencing_summary.txt"),
 		passed_summary = os.path.join(outdir, "basecall/{run}/passed_sequencing_summary.txt"),
 		# fastq = temp(os.path.join(outdir, "basecall/{run}/{run}.fastq")),
-		fastq = directory(os.path.join(outdir, "basecall/{run}/pass")),
+		fastq = temp(directory(os.path.join(outdir, "basecall/{run}/pass"))),
+		compressed_fastq = os.path.join(outdir, "basecall/{run}.fastq.gz"),
 		fast5 = temp(directory(os.path.join(outdir, "basecall/{run}/passed_fast5"))),
 		# fast5 = directory(os.path.join(outdir, "basecall/{run}/passed_fast5")),
 		fail = by_cond(cond = KEEP_FAIL_READS, yes = directory(os.path.join(outdir, "basecall/{run}/fail")), no = ())
 	params:
+		summary = lambda wildcards, output: os.path.basename(output.summary),
+		passed_summary = lambda wildcards, output: os.path.basename(output.passed_summary),
 		outpath = os.path.join(outdir, "basecall/{run}"),
+		compressed_fastq = lambda wildcards, output: os.path.basename(output.compressed_fastq),
 		compression = FAST5_COMPRESSION,
 		keep_log_files = by_cond(KEEP_LOG_FILES, 'true', 'false'),
 		# fast5_name = "{run}_",
@@ -243,30 +247,30 @@ rule guppy_basecalling:
 			temp_indir={input}
 			temp_outdir={params.outpath}
 		else
-			temp_indir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary input directory on local drive: $temp_indir \n"
-			temp_outdir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary output directory on local drive: $temp_outdir \n"
+			temp_indir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary input directory on local drive: $temp_indir \\n"
+			temp_outdir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary output directory on local drive: $temp_outdir \\n"
 			rsync -arvP $host_prefix{input}/ $temp_indir
 		fi
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		guppy_basecaller -i $temp_indir -s $temp_outdir {BASECALLER_OPT}
-		echo -e "\nConcatenating passed fastq files into {wildcards.run}.fastq.gz \n"
-		cat $temp_outdir/pass/fastq_runid_*.fastq | gzip > $temp_outdir/{wildcards.run}.fastq.gz && echo -e "Compressing done.\n"
+		echo -e "\\nConcatenating passed fastq files into {params.compressed_fastq} \\n"
+		cat $temp_outdir/pass/fastq_runid_*.fastq | gzip > $temp_outdir/{params.compressed_fastq} && echo -e "Compressing done.\\n"
 		# rm -rf {params.outpath}/pass/fastq_runid_*.fastq
-		grep 'read_id' $temp_outdir/sequencing_summary.txt > $temp_outdir/passed_sequencing_summary.txt
-		grep 'TRUE' $temp_outdir/sequencing_summary.txt >> $temp_outdir/passed_sequencing_summary.txt
-		echo "Filtering passed reads in fast5 files \n"
+		grep 'read_id' $temp_outdir/{params.summary} > $temp_outdir/{params.passed_summary}
+		grep 'TRUE' $temp_outdir/{params.summary} >> $temp_outdir/{params.passed_summary}
+		echo -e "Filtering passed reads in fast5 files \\n"
 		fast5_subset --input $temp_indir --save_path $temp_outdir/passed_fast5 --read_id_list $temp_outdir/passed_sequencing_summary.txt --filename_base {wildcards.run}_ --threads {threads} --compression {params.compression}
 		tobe_saved={output.fail}
 		if [ -z $tobe_saved ]; then
-			rm -rf $temp_outdir/fail && echo -e "##$(date)    Removed failed reads from $temp_outdir \n"
+			rm -rf $temp_outdir/fail && echo -e "##$(date)    Removed failed reads from $temp_outdir \\n"
 		fi
 		if ! {params.keep_log_files} ; then
-			rm -rf $temp_outdir/guppy_basecaller_log*.log && echo -e "##$(date)    Removed guppy_basecaller log files from $temp_outdir \n"
+			rm -rf $temp_outdir/guppy_basecaller_log*.log && echo -e "##$(date)    Removed guppy_basecaller log files from $temp_outdir \\n"
 		fi
 		if [ ! -z $host_prefix ]; then
-			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {params.outpath}\n"; rsync -arvP --chmod 755 $temp_outdir/ $host_prefix{params.outpath}
-			rm -rf $temp_indir; echo -e "##$(date)    Removed temporary input directory on local drive: $temp_indir \n"
-			rm -rf $temp_outdir; echo -e "##$(date)    Removed temporary input directory on local drive: $temp_outdir \n"
+			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {params.outpath}\\n"; rsync -arvP --chmod 755 $temp_outdir/ $host_prefix{params.outpath}
+			rm -rf $temp_indir; echo -e "##$(date)    Removed temporary input directory on local drive: $temp_indir \\n"
+			rm -rf $temp_outdir; echo -e "##$(date)    Removed temporary input directory on local drive: $temp_outdir \\n"
 		fi
 		"""
 
@@ -321,15 +325,15 @@ rule multi_to_single_fast5:
 			temp_indir={input}
 			temp_outdir={output}
 		else
-			temp_indir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary input directory on local drive: $temp_indir \n"
-			temp_outdir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary output directory on local drive: $temp_outdir \n"
+			temp_indir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary input directory on local drive: $temp_indir \\n"
+			temp_outdir=$(mktemp -dp /scratch); echo -e "##$(date)    Creating temporary output directory on local drive: $temp_outdir \\n"
 			rsync -arvP $host_prefix{input}/ $temp_indir
 		fi
 		multi_to_single_fast5 -i $temp_indir -s $temp_outdir -t {threads}
 		if [ ! -z $host_prefix ]; then
-			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {output}\n"; rsync -arvP --chmod 755 $temp_outdir/ $host_prefix{output}
-			rm -rf $temp_indir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_indir \n"
-			rm -rf $temp_outdir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_outdir \n"
+			echo -e "##$(date)    Transfering temporary output directory $temp_outdir to host directory {output}\\n"; rsync -arvP --chmod 755 $temp_outdir/ $host_prefix{output}
+			rm -rf $temp_indir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_indir \\n"
+			rm -rf $temp_outdir; echo -e "##$(date)    Removing temporary input directory on local drive: $temp_outdir \\n"
 		fi
 		"""
 
@@ -360,21 +364,21 @@ rule deepbinner_bin:
 		classes = rules.deepbinner_classification.output.classification,
 		fastq = rules.guppy_basecalling.output.fastq
 	output:
-		temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/fastq_per_barcode.done"))
+		# check = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/fastq_per_barcode.done")),
+		fastq = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/{run}.fastq")),
 		# os.path.join(outdir, "demultiplex/deepbinner/{run}/fastq_per_barcode.done")
 	params:
 		out_dir = os.path.join(outdir, "demultiplex/deepbinner/{run}"),
-		fastq = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/{run}.fastq")),
 		log = "deepbinner_bin_{run}.log"
 	singularity: deepbinner_container
 	threads: 1
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		cat {input.fastq}/fastq_runid_*.fastq > {params.fastq}
-		deepbinner bin --classes {input.classes} --reads {params.fastq} --out_dir {params.out_dir}
+		cat {input.fastq}/fastq_runid_*.fastq > {output.fastq}
+		deepbinner bin --classes {input.classes} --reads {output.fastq} --out_dir {params.out_dir}
 		python3 {GET_FASTQ_PER_BARCODE} {params.out_dir}
-		touch {output}
+		# touch {output}
 		"""
 
 ##############################
@@ -617,7 +621,7 @@ rule clean:
 	shell:
 		"""
 		rm -rf {outdir}
-		echo "#################\nremoved {outdir}\n#################"
+		echo "#################\\nremoved {outdir}\\n#################"
 		"""
 
 rule clean_basecall:
