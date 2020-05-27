@@ -6,7 +6,7 @@ params:
    rmd: "report_demultiplex.Rmd"
 output: html_document
 ---
-The report provides plots in order to compare demultiplexing results from different runs, and from different demultiplexer (guppy and deepbinner).
+The report provides plots in order to compare demultiplexing results from different runs, and from different demultiplexers (guppy and deepbinner).
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)

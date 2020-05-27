@@ -1,12 +1,11 @@
 # BASEcalling and DeMUltipleXing
 ## Snakemake workflow for ONT sequencing data
 
-The workflow is available in local computer as well as cluster environment.
+Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Multiqc + external report
 
-### Full workflow
-#### BASEcalling by GUPPY + DeMUltipleXing by optionally Guppy or Deepbinner or both
-![](./dag/full_dag.svg)
-
+<p align="center">
+  <img src="./dag/full_dag.svg" width="500" height="500">
+</p>
 
 ### Requirements
 - snakemake 5.x
@@ -45,8 +44,8 @@ Modify [cluster.json](./cluster.json) if needed (partition, log, mail, ...) befo
 ```
 snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " --latency-wait 60 \
 --cluster-config cluster.json \
---cluster "sbatch --job-name {cluster.job-name} \
--p {cluster.partition} -A {cluster.account} --cpus-per-task {cluster.cpus-per-task} --output={cluster.output} --error={cluster.error}"
+--cluster "sbatch {cluster.job-name} {cluster.partition} {cluster.account} \
+{cluster.gpus} {cluster.ntasks} {cluster.cpus-per-task} {cluster.output} {cluster.error}"
 ```
 
 **Note**:
@@ -54,59 +53,61 @@ snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args 
 - `--cores` allows using as many cores as decided in the [config.yaml](./config.yaml) and not more than number of environment available cores.
 - More information of snakemake usage --> https://snakemake.readthedocs.io
 
-#### 3. Create reports (optionally)
-
-**Snakemake report including basecall results**
-
-```
-snakemake --report outdir/report/snakemake_report.html
-```
-or
+#### 3. An alternative way to run the workflow on cluster:
+Use a wrapper script (`slurm_wrapper.py`) to parse job submission to cluster, instead of using cluster config.
+An additional script (`slurm_status.py`) can be used to pass job status properly to snakemake (snakemake does not interpret correctly some slurm job signals).
 
 ```
-snakmake --report $(python3 script/report_dir.py)/snakemake_report.html
+snakemake --nolock --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " --latency-wait 60 \
+--cluster "python3 cluster/slurm_wrapper.py" \
+--cluster-status "python3 cluster/slurm_status.py"
 ```
 
-`python3 script/report_dir.py` prints 'OUTDIR'/report with 'OUTDIR' is the outdir path specified in the [config.yaml](./config.yaml).
+**Note for future**: A snakemake profile can be added to the workflow to simplify the command-line, e.g. `snakemake --profile baseDmux`.
 
-
-**Demultiplexing report**
-```
-snakemake --use-singularity --use-conda report_demultiplex
-```
-
-
-#### 4. Alternative way to execute the workflow
-
-Requirement:
-
-- cluster mode
-- job scheduler: slurm workload manager
-- lazy to manually modify too many config files and shell conmmand lines, set up environment ...
-- being a member of Itrop IRD is an advantage
-
-
-After modifying [config.yaml](./config.yaml), run one of the two commands:
-
-- to get results with all reports
-
-```
-sbatch submit_baseDmux_full.sh
-```
-
-- to get results without reports
-
-```
-sbatch submit_baseDmux_main.sh
-```
-
+****
 ### Verbose (to be continued...)
+
+
+#### Rules
+- **Guppy basecalling**
+Run `guppy_basecaller` with filtering reads, then subset fast5 reads from passed reads list (`passed_sequencing_summary.txt`).
+
+- **Guppy demultiplexing**
+Run `guppy_barcoder` with passed fastq, then subset fastq to classified barcode folders based on `barcoding_summary.txt`.
+
+- **Multi to single fast5**
+Convert passed multi-read fast5 files to single-read fast5 file, preparing for deepbinner.
+
+- **Deepbinner classification**
+Run `deepbinner classify` with pass single-read fast5, output classification file.
+
+- **Deepbinner bin:**
+Classify passed fastq based on classification file, then subset fastq to barcode folders.
+
+- **Get sequencing summary per barcode**
+Subset `passed_sequencing_summary.txt` according to barcode ids, preparing for minionqc/multiqc of each barcode and subseting fast5 reads per barcode (get multi fast5 per barcode).
+
+- **Get multi fast5 per barcode**
+Filter fast5 for each corresponding barcode by the `sequencing_summary.txt` per barcode.
+
+- **MinIONQC and Multiqc**
+After basecalling, MinIONQC is performed for each run, and Multiqc reports all run collectively.
+On the other hand, after demultiplexing, MinIONQC runs for each barcode separately then Multiqc aggregates MinIONQC results of all barcodes.
+
+- **Demultiplex report (optional)**
+Compare demultiplexing results from different runs, and from different demultiplexers (guppy and/or deepbinner) by analyzing information of `multiqc_minionqc.txt`.
+
+- **Get reads per genome (optional)**
+Combine and concatenate fast5 and fastq from designed barcodes for genomes individually, according to `barcodeByGenome_sample.tsv`, preparing for further genome assembly.
+
+
 #### Tools
 
-- Guppy 3.4.3 GPU and CPU version (will be updated soon)
+- Guppy 3.6.0 GPU and CPU version
 - Deepbinner 0.2.0
 - MinIONQC
-- multiqc
+- Multiqc
 
 You can decide guppy and deepbinner running on GPU or CPU by specifying 'RESOURCE' in the [config.yaml](./config.yaml) file.
 
@@ -114,7 +115,10 @@ You can decide guppy and deepbinner running on GPU or CPU by specifying 'RESOURC
 
 The whole workflow runs inside [singularity images](https://github.com/vibaotram/singularity-container.git) (already implemented on the workflow). Depending on type of 'RESOURCE' (CPU/GPU), corresponding containers will be automatically selected and pulled.
 
-#### conda environment (already provided by the workflow)
+#### conda environment
+- minionqc
+- multiqc
+- rmarkdown
 
 #### Input and Output
 Input directory **must** follow the structure as below. 'fast5' directory containing fast5 files in each run is a MANDATORY for baseDmux to mark 'runid'.
