@@ -2,10 +2,18 @@ import os
 import glob
 import getpass
 import pandas as pd
+import sys
 
 report: "report/workflow.rst"
 
-#configfile: "config.yaml"
+request = sys.argv[:]
+if "--configfile" in request:
+	arg_index = request.index("--configfile")
+	cf = request[arg_index + 1]
+else:
+	cf = "config.yaml"
+
+configfile: cf
 
 
 indir = config['INDIR']
@@ -36,7 +44,9 @@ def by_cond(cond, yes, no, cond_ext = '', no_ext = ''): # it's working but needs
 ## guppy_basecaller parameters
 RESOURCE = config['RESOURCE']
 if RESOURCE not in ['CPU', 'GPU']:
-	raise AttributeError('config[RESOURCE] is invalid')
+	raise KeyError(f'{RESOURCE} in RESOURCE is invalid (configfile line 19)')
+else:
+	pass
 
 KIT = config['KIT']
 
@@ -127,16 +137,21 @@ BARCODE_BY_GENOME = config['RULE_GET_READS_PER_GENOME']['BARCODE_BY_GENOME']
 # else:
 # 	genome = ''
 
-if os.path.isfile(BARCODE_BY_GENOME):
-	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"], squeeze = True).unique()
-else:
-	genome = ''
+if not BARCODE_BY_GENOME:
+	genome = []
+	get_demultiplexer = []
+else :
+	if os.path.isfile(BARCODE_BY_GENOME):
+		genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"], squeeze = True).unique()
+		get_demultiplexer = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Demultiplexer"], squeeze = True).unique()
+	else:
+		raise FileNotFoundError(f'"{BARCODE_BY_GENOME}" in BARCODE_BY_GENOME does not exist (configfile line 74)')
 
+GET_READS_PER_GENOME_OUTPUT = [expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)]
 
 ##############################
 ## reports
 DEMULTIPLEX_REPORT = config['REPORTS']['DEMULTIPLEX_REPORT']
-
 
 ##############################
 ## use different containers for guppy and deepbinner depending on resources
@@ -200,11 +215,12 @@ if nasID and not os.path.isdir(ssh_dir):
 
 rule finish:
 	input:
-		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer=demultiplexer, run=run), # DEMULTIPLEXING QC
-		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer=demultiplexer, run=run),
+		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer = demultiplexer, run = run), # DEMULTIPLEXING QC
+		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer = demultiplexer, run = run),
 		os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), # BASECALLING QC
 		by_cond(DEMULTIPLEX_REPORT, os.path.join(outdir, "report/demultiplex_report.html"), ()),
-		by_cond(BARCODE_BY_GENOME, [expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)], ())
+		GET_READS_PER_GENOME_OUTPUT
+		# expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)
 		# expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
 		# os.path.join(outdir, "report/demultiplex_report.html")
 		#expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/report.done"), demultiplexer=demultiplexer, run=run),
@@ -284,7 +300,8 @@ rule guppy_demultiplexing:
 	message: "GUPPY demultiplexing running on {RESOURCE}"
 	input: rules.guppy_basecalling.output.fastq
 	output:
-		demux = os.path.join(outdir, "demultiplex/guppy/{run}/barcoding_summary.txt")
+		demux = os.path.join(outdir, "demultiplex/guppy/{run}/barcoding_summary.txt"),
+		check = temp(os.path.join(outdir, "demultiplex/guppy/{run}/demultiplex.done"))
 	params:
 		# inpath = rules.guppy_basecalling.params.outpath,
 		outpath = os.path.join(outdir, "demultiplex/guppy/{run}"),
@@ -299,6 +316,7 @@ rule guppy_demultiplexing:
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} --trim_barcodes {ADDITION} # --compress_fastq
 		Rscript {RENAME_FASTQ_GUPPY_BARCODER} {params.outpath}
+		touch {output.check}
 		"""
 
 
@@ -347,8 +365,7 @@ OMP_NUM_THREADS_OPT = by_cond(RESOURCE == 'CPU', '', '--omp_num_threads %s' % OM
 ## BESIDE, ON ITROP WE WILL ALWAYS HAVE RESOURCE = 'GPU'
 ## SO I DO NOT UNDERSTAND THE POINT OF OMP_NUM_THREADS_OPT
 ## IS TENSORFLOW INSTALLED TOGETHER WITH DEEPBINNER?
-## NO SLURM LOG FOR DEEPBINNER
-## THE SLURM LOG FILES ARE NOT NAMED AS THEY WERE IN THE VERSION THAT WORKED, WHY?
+
 
 rule deepbinner_classification:
 	message: "DEEPBINNER classify running on {RESOURCE}"
@@ -371,7 +388,7 @@ rule deepbinner_bin:
 		classes = rules.deepbinner_classification.output.classification,
 		fastq = rules.guppy_basecalling.output.fastq
 	output:
-		# check = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/fastq_per_barcode.done")),
+		check = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/demultiplex.done")),
 		fastq = temp(os.path.join(outdir, "demultiplex/deepbinner/{run}/{run}.fastq")),
 		# os.path.join(outdir, "demultiplex/deepbinner/{run}/fastq_per_barcode.done")
 	params:
@@ -385,7 +402,7 @@ rule deepbinner_bin:
 		cat {input.fastq}/fastq_runid_*.fastq > {output.fastq}
 		deepbinner bin --classes {input.classes} --reads {output.fastq} --out_dir {params.out_dir}
 		python3 {GET_FASTQ_PER_BARCODE} {params.out_dir}
-		# touch {output}
+		touch {output.check}
 		"""
 
 ##############################
@@ -466,11 +483,9 @@ rule multiqc_basecall:
 
 rule get_sequencing_summary_per_barcode:
 	input:
-		# deepbinner_bin_output(),
-		DEEPBINNER_BIN_OUTPUT,
-		# deepbinner_classification_output(),
-		# guppy_demultiplexing_output()
-		GUPPY_DEMULTIPLEXING_OUTPUT
+		# DEEPBINNER_BIN_OUTPUT,
+		# GUPPY_DEMULTIPLEXING_OUTPUT
+		os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done")
 	output:
 		temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/get_summary.done"))
 		# os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/get_summary.done")
@@ -569,11 +584,11 @@ rule get_multi_fast5_per_barcode:
 	params:
 		path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
 		log = "get_multi_fast5_per_barcode_{demultiplexer}_{run}.log"
-	threads: 1
+	threads: config['RULE_GET_MULTI_FAST5_PER_BARCODE']['THREADS']
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		python3 {FAST5_SUBSET} {input.fast5} {params.path}
+		python3 {FAST5_SUBSET} {input.fast5} {params.path} {threads}
 		touch {output.check}
 		"""
 
@@ -596,16 +611,18 @@ rule report_demultiplex:
 ################# SUBSET READS
 #################### BY GENOME
 
-GET_READS_PER_GENOME_INPUT = [expand(rules.get_sequencing_summary_per_barcode.input, demultiplexer = demultiplexer, run = run),
-                              expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = demultiplexer, run = run)]
+GET_READS_PER_GENOME_INPUT = [expand(rules.get_sequencing_summary_per_barcode.input, demultiplexer = get_demultiplexer, run = run),
+                              expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run)]
 
 rule get_reads_per_genome:
 	input:
 		# indir = outdir,
-		by_cond(BARCODE_BY_GENOME, GET_READS_PER_GENOME_INPUT, ()),
+		expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run),
+		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done"), demultiplexer = get_demultiplexer, run = run)
 	output:
-		fast5 = directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)),
-		fastq = expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome),
+		GET_READS_PER_GENOME_OUTPUT
+		# fast5 = directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)),
+		# fastq = expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome),
 		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),
@@ -651,6 +668,12 @@ rule help:
 	shell:
 		"""
 		cat README.md
+		"""
+
+rule test:
+	shell:
+		"""
+		echo "{cf}"
 		"""
 
 # rule add_slurm_logs:

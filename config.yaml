@@ -67,6 +67,8 @@ RULE_MINIONQC_:
     'SMALLFIGURES': "FALSE" # 'TRUE'/'FALSE'
     'PROCESSORS': 12
 
+RULE_GET_MULTI_FAST5_PER_BARCODE:
+    'THREADS': 12
 
 ##############################
 ##### get_reads_per_genome parameters
