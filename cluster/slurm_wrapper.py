@@ -55,11 +55,11 @@ else: # if not
 
     resources = config_properties['RESOURCE']
     if resources == 'GPU' and rule in ['guppy_basecalling', 'guppy_demultiplexing', 'deepbinner_classification']:
-        partition = '--partition gpu --account gpu_group'
+        partition = '--partition gpu --account gpu_group --mem-per-cpu 1G'
     elif rule == 'multi_to_single_fast5':
-        partition = '--partition highmem --account bioinfo'
+        partition = '--partition highmem --account bioinfo --mem-per-cpu 4G '
     else:
-        partition = '--partition normal --account bioinfo'
+        partition = '--partition normal --account bioinfo --mem-per-cpu 1G'
 
     sbatch_params = ' '.join([job_name, partition, cpus_per_task, ntasks, output, error])
 
