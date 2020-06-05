@@ -67,14 +67,14 @@ NUM_GPUS = config['NUM_GPUS']
 
 # adjust guppy_basecaller parameters based on RESOURCE
 BASECALLER_OPT = by_cond(cond = RESOURCE == 'CPU',
-						 yes = f"{CONFIG} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}",
-						 no = f"{CONFIG} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}",
-						 cond_ext = RESOURCE == 'GPU')
+                         yes = f"{CONFIG} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}",
+                         no = f"{CONFIG} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}",
+                         cond_ext = RESOURCE == 'GPU')
 
 BASECALLER_THREADS = by_cond(cond = RESOURCE == 'CPU',
-							 yes = NUM_CALLERS*CPU_THREADS_PER_CALLER,
-							 no = NUM_CALLERS,
-							 cond_ext = RESOURCE == 'GPU')
+                             yes = NUM_CALLERS*CPU_THREADS_PER_CALLER,
+                             no = NUM_CALLERS,
+                             cond_ext = RESOURCE == 'GPU')
 
 # if RESOURCE == 'CPU':
 # 	BASECALLER_OPT = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}"
@@ -147,7 +147,7 @@ else :
 	else:
 		raise FileNotFoundError(f'"{BARCODE_BY_GENOME}" in BARCODE_BY_GENOME does not exist (configfile line 74)')
 
-GET_READS_PER_GENOME_OUTPUT = [expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)]
+GET_READS_PER_GENOME_OUTPUT = [directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)]
 
 ##############################
 ## reports
@@ -219,7 +219,8 @@ rule finish:
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer = demultiplexer, run = run),
 		os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), # BASECALLING QC
 		by_cond(DEMULTIPLEX_REPORT, os.path.join(outdir, "report/demultiplex_report.html"), ()),
-		GET_READS_PER_GENOME_OUTPUT
+		expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome),
+		expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome),
 		# expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)
 		# expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
 		# os.path.join(outdir, "report/demultiplex_report.html")
@@ -239,7 +240,7 @@ rule guppy_basecalling:
 		passed_summary = os.path.join(outdir, "basecall/{run}/passed_sequencing_summary.txt"),
 		# fastq = temp(os.path.join(outdir, "basecall/{run}/{run}.fastq")),
 		fastq = temp(directory(os.path.join(outdir, "basecall/{run}/pass"))),
-		compressed_fastq = os.path.join(outdir, "basecall/{run}.fastq.gz"),
+		compressed_fastq = os.path.join(outdir, "basecall/{run}/{run}.fastq.gz"),
 		fast5 = temp(directory(os.path.join(outdir, "basecall/{run}/passed_fast5"))),
 		# fast5 = directory(os.path.join(outdir, "basecall/{run}/passed_fast5")),
 		fail = by_cond(cond = KEEP_FAIL_READS, yes = directory(os.path.join(outdir, "basecall/{run}/fail")), no = ())
@@ -600,7 +601,8 @@ rule report_demultiplex:
 	message: " Reporting demultiplex results"
 	output: os.path.join(outdir, "report/demultiplex_report.html")
 	params:
-		indir = os.path.join(outdir, "demultiplex")
+		indir = os.path.join(outdir, "demultiplex"),
+		log = "report_demultiplex.log"
 	singularity: guppy_container
 	conda: 'conda/conda_rmarkdown.yaml'
 	script:
