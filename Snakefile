@@ -111,7 +111,7 @@ DEVICE = by_cond(RESOURCE == 'CPU', None, f'--device $CUDA')
 ##############################
 ## MinIONQC parameters
 
-QSCORE_CUTOFF = config['RULE_MINIONQC_']['QSCORE_CUTOFF']
+#QSCORE_CUTOFF = config['RULE_MINIONQC_']['QSCORE_CUTOFF']
 SMALLFIGURES = config['RULE_MINIONQC_']['SMALLFIGURES']
 PROCESSORS = config['RULE_MINIONQC_']['PROCESSORS']
 fig = ["channel_summary", "flowcell_overview", "gb_per_channel_overview", "length_by_hour", "length_histogram", "length_vs_q", "q_by_hour", "q_histogram", "reads_per_hour", "yield_by_length", "yield_over_time"]
@@ -330,7 +330,7 @@ rule guppy_demultiplexing:
 rule multi_to_single_fast5:
 	input: rules.guppy_basecalling.output.fast5
 	output:
-		directory(os.path.join(outdir, "demultiplex/deepbinner/{run}/singlefast5"))
+		temp(directory(os.path.join(outdir, "demultiplex/deepbinner/{run}/singlefast5")))
 		# directory(os.path.join(outdir, "demultiplex/deepbinner/{run}/singlefast5"))
 	threads: API_THREADS
 	singularity: deepbinner_container
@@ -451,7 +451,7 @@ rule minionqc_basecall:
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		MinIONQC.R -i {input} -q {QSCORE_CUTOFF} -s {SMALLFIGURES}
+		MinIONQC.R -i {input} -q {MIN_QSCORE} -s {SMALLFIGURES}
 		"""
 
 MULTIQC_BASECALL_OUTPUT = os.path.join(outdir, "basecall/multiqc/multiqc_report.html")
@@ -541,7 +541,7 @@ rule minionqc_demultiplex:
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		MinIONQC.R -i {params.inpath} -q {QSCORE_CUTOFF} -s {SMALLFIGURES} -p {threads}
+		MinIONQC.R -i {params.inpath} -q {MIN_QSCORE} -s {SMALLFIGURES} -p {threads}
 		rm -rf {params.combinedQC}
 		touch {output.check}
 		"""
@@ -700,4 +700,3 @@ rule test:
 
 #onerror:
 #	print("OMG ... error ... error ... again")
-

@@ -30,8 +30,10 @@ RULE_GUPPY_BASECALLING:
     'ADDITION': "--calib_detect --chunks_per_caller 10000" # additional params that do not affect output format ## provide parameters with arguments ## do NOT use --compress_fastq, because next steps use uncompressed fastq
     'KEEP_LOG_FILES': False # True/False
     'KEEP_FAIL_READS': False # True/False
-    'FAST5_COMPRESSION': "vbz" # "vbz"/"vbz_legacy_v0"/"gzip" ## compression algorithm by fast5_subset (ont_fast5_api) to reduce file size and improve read/write performance
+    'FAST5_COMPRESSION': "gzip" # "vbz"/"vbz_legacy_v0"/"gzip" ## compression algorithm by fast5_subset (ont_fast5_api) to reduce file size and improve read/write performance
 
+RULE_GET_MULTI_FAST5_PER_BARCODE:
+    'THREADS': 12
 
 ##############################
 ##### choose types of demultiplexer
@@ -63,20 +65,19 @@ RULE_DEEPBINNER_CLASSIFICATION:
 ##############################
 ##### MinIONQC parameters
 RULE_MINIONQC_:
-    'QSCORE_CUTOFF': 7
     'SMALLFIGURES': "FALSE" # 'TRUE'/'FALSE'
     'PROCESSORS': 12
 
-RULE_GET_MULTI_FAST5_PER_BARCODE:
-    'THREADS': 12
 
 ##############################
 ##### get_reads_per_genome parameters
 RULE_GET_READS_PER_GENOME:
-    'BARCODE_BY_GENOME': "barcodeByGenome_sample.tsv"
+    'BARCODE_BY_GENOME': "barcodeByGenome_sample.tsv" # it can be blank then this rule will not be excecuted ## information table for subseting fast5 and fastq to genome folder ## if "guppy"/"deepbinner" is specified in "Demultiplexer" on the table, this demultiplexer will still be used for demultiplexing even it is not included by 'DEMULTIPLEXER'
     'TRANSFERING': "copy" # "copy"/"move"/"symlink"
 
 
+##############################
+##### reports
 REPORTS:
     'SNAKEMAKE_REPORT':
         'MINIONQC_BASECALL': True
