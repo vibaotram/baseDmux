@@ -114,15 +114,15 @@ write.csv(as.matrix(dict), file.path(outdir, "reads_per_genome.csv"), quote = F,
 for (i in unique(dict$Genome_ID)) {
   ori_dir = dict[dict$Genome_ID == i, "ori_fast5"]
   for (o in ori_dir) {
-    ori_files <- list.files(as.character(o), pattern = ".*.fast5", full.names = T, recursive = T)
+    ori_files <- list.files(as.character(o), pattern = ".*\\.fast5", full.names = T, recursive = T)
     for (os in ori_files) {
       dest_name <- lapply(os, function(x) paste(dict[dict$ori_fast5 == o, "Demultiplexer"], dict[dict$ori_fast5 == o, "Run_ID"], basename(x), sep = "_"))
       dest_file <- paste(dict[dict$ori_fast5 == o, "dest_fast5"], dest_name, sep = "/")
       transfer_file <- paste(cmd, os, dest_file, sep = " ")
       system(transfer_file)
     }
+    message(paste("\n# [", date(), "]\t", length(ori_files), "fast5 files", transfer_mode, "to", unique(dict[dict$Genome_ID == i, "dest_fast5"]), "\n"))
   }
-  message(paste("\n# [", date(), "]\t", length(ori_files), "fast5 files", transfer_mode, "to",unique(dict[dict$Genome_ID == i, "dest_fast5"]), "\n"))
   }
 
 
@@ -138,9 +138,9 @@ for (i in unique(dict$Genome_ID)) {
   }
   message(paste("\n# [", date(), "]\t Preparing compressed fastq file for", i))
   system(transfer_file)
+  message(paste("\n#", length(ori_file), "fastq file(s) copied to", dest_file, "\n"))
 }
 
-message(paste("\n#", length(ori_file), "fastq files copied to", dest_fastq_dir, "\n"))
 
 # Rscript /home/baotram/tal/workflow/script/get_reads_per_genome.R \
 # -b /home/baotram/tal/workflow/test \
