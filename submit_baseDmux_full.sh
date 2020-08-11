@@ -22,24 +22,22 @@ module load system/singularity/3.3.0
 snakemake --unlock
 
 echo -e "## [$(date) - baseDmux]\t Ready to execute snakemake workflow"
+### 2 ways to excecute baseDmux on cluster mode:
 
 
+## immediate submit
 # snakemake --nolock --use-singularity --singularity-args "--nv " --use-conda --cores -p --verbose \
 # --latency-wait 60 --keep-going --restart-times 2 --rerun-incomplete \
 # --cluster "python3 cluster/slurm_wrapper.py {dependencies}" \
-# --cluster-status "python3 cluster//slurm_status.py" \
-# --immediate-submit --notemp
+# --cluster-status "python3 cluster/slurm_status.py" \
+# --immediate-submit --notemp && \
 
-
+# normal submit
 snakemake --nolock --use-singularity --singularity-args "--nv " --use-conda --cores -p --verbose \
 --latency-wait 60 --keep-going --restart-times 2 --rerun-incomplete \
 --cluster "python3 cluster/slurm_wrapper.py" \
 --cluster-status "python3 cluster/slurm_status.py" && \
 echo -e "## [$(date) - baseDmux]\t Snakemake workflow finished"  && \
-echo -e "## [$(date) - baseDmux]\t Creating report for demultiplexing"  && \
-snakemake --use-singularity --use-conda -p --verbose report_demultiplex && \
 echo -e "## [$(date) - baseDmux]\t Creating snakemake report"  && \
-snakemake --report $(python3 script/report_dir.py)/snakemake_report.html && \
-echo -e "## [$(date) - baseDmux]\t Creating a folder containing fastq and fast5 for each genome" && \
-snakemake --use-singularity --use-conda -p --verbose get_reads_per_genome && \
+script/snakemake_report.py && \
 echo -e "## [$(date) - baseDmux]\t Finished!"

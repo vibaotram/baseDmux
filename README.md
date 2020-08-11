@@ -55,6 +55,7 @@ snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args 
 
 #### 3. An alternative way to run the workflow on cluster:
 Use a wrapper script (`slurm_wrapper.py`) to parse job submission to cluster, instead of using cluster config.
+
 An additional script (`slurm_status.py`) can be used to pass job status properly to snakemake (snakemake does not interpret correctly some slurm job signals).
 
 ```
@@ -64,6 +65,14 @@ snakemake --nolock --use-singularity --use-conda --cores -p --verbose --singular
 ```
 
 **Note for future**: A snakemake profile can be added to the workflow to simplify the command-line, e.g. `snakemake --profile baseDmux`.
+
+#### 4. Other widgets:
+
+`snakemake help`: print README
+
+`snakemake clean`: delete output directory
+
+`script/snakemake_report.py`: create snakemake report
 
 ****
 ### Verbose (to be continued...)
@@ -82,7 +91,7 @@ Convert passed multi-read fast5 files to single-read fast5 file, preparing for d
 - **Deepbinner classification**
 Run `deepbinner classify` with pass single-read fast5, output classification file.
 
-- **Deepbinner bin:**
+- **Deepbinner bin**
 Classify passed fastq based on classification file, then subset fastq to barcode folders.
 
 - **Get sequencing summary per barcode**

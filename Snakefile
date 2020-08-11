@@ -76,21 +76,9 @@ BASECALLER_THREADS = by_cond(cond = RESOURCE == 'CPU',
                              no = NUM_CALLERS,
                              cond_ext = RESOURCE == 'GPU')
 
-# if RESOURCE == 'CPU':
-# 	BASECALLER_OPT = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}"
-# 	BASECALLER_THREADS = NUM_CALLERS*CPU_THREADS_PER_CALLER
-# if RESOURCE == 'GPU':
-# 	BASECALLER_OPT = f"--flowcell {FLOWCELL} --kit {KIT} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}"
-# 	BASECALLER_THREADS = NUM_CALLERS
 
 
 KEEP_FAIL_READS = config['RULE_GUPPY_BASECALLING']['KEEP_FAIL_READS']
-# def fail():
-# 	KEEP_FAIL_READS = config['RULE_GUPPY_BASECALLING']['KEEP_FAIL_READS']
-# 	if KEEP_FAIL_READS:
-# 		return(directory(os.path.join(outdir, "basecall/{run}/fail")))
-# 	else:
-# 		return()
 
 FAST5_COMPRESSION = config['RULE_GUPPY_BASECALLING']['FAST5_COMPRESSION']
 
@@ -132,10 +120,6 @@ API_THREADS = config['RULE_MULTI_TO_SINGLE_FAST5']['THREADS']
 TRANSFERING = config['RULE_GET_READS_PER_GENOME']['TRANSFERING']
 BARCODE_BY_GENOME = config['RULE_GET_READS_PER_GENOME']['BARCODE_BY_GENOME']
 
-# if BARCODE_BY_GENOME:
-# 	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"], squeeze = True)
-# else:
-# 	genome = ''
 
 if not BARCODE_BY_GENOME:
 	genome = []
@@ -157,10 +141,6 @@ DEMULTIPLEX_REPORT = config['REPORTS']['DEMULTIPLEX_REPORT']
 ## use different containers for guppy and deepbinner depending on resources
 
 guppy_container = by_cond(RESOURCE == 'CPU', 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api', 'shub://vibaotram/singularity-container:guppy3.6.0gpu-conda-api', cond_ext = 'GPU')
-# if RESOURCE == 'CPU':
-# 	guppy_container = 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api'
-# elif RESOURCE == 'GPU':
-# 	guppy_container = 'shub://vibaotram/singularity-container:guppy3.6.0gpu-conda-api'
 
 deepbinner_container = 'shub://vibaotram/singularity-container:deepbinner-api'
 
@@ -184,10 +164,6 @@ user = getpass.getuser()
 
 nasID = config['NASID']
 HOST_PREFIX = by_cond(nasID, user + '@' + nasID + ':', '')
-# if nasID:
-# 	HOST_PREFIX = user + '@' + nasID + ':'
-# else:
-# 	HOST_PREFIX = ''
 
 ##############################
 ## make slurm logs directory
@@ -357,10 +333,6 @@ rule multi_to_single_fast5:
 		"""
 
 OMP_NUM_THREADS_OPT = by_cond(RESOURCE == 'CPU', '', '--omp_num_threads %s' % OMP_NUM_THREADS)
-# if RESOURCE == 'CPU':
-# 	OMP_NUM_THREADS_OPT = ''
-# elif RESOURCE == 'GPU':
-# 	OMP_NUM_THREADS_OPT = '--omp_num_threads %s' % OMP_NUM_THREADS
 
 ## THE DEEPBINNER CONTAINER CANNOT USE A GPU SO IT WILL ALWAYS RUN ON CPU EVEN IF RESOURCE IS GPU
 ## BESIDE, ON ITROP WE WILL ALWAYS HAVE RESOURCE = 'GPU'
@@ -409,26 +381,12 @@ rule deepbinner_bin:
 ##############################
 ## determine which demultiplexer to be executed
 
-# def deepbinner_bin_output():
-# 	if "deepbinner" in demultiplexer:
-# 		return(rules.deepbinner_bin.output)
-# 	else:
-# 		return()
 
 DEEPBINNER_BIN_OUTPUT = by_cond(cond = "deepbinner" in demultiplexer, yes = rules.deepbinner_bin.output, no = ())
-# def deepbinner_classification_output():
-# 	if "deepbinner" in demultiplexer:
-# 		return(rules.deepbinner_classification.output)
-# 	else:
-# 		return()
-
-# def guppy_demultiplexing_output():
-# 	if "guppy" in demultiplexer:
-# 		return(rules.guppy_demultiplexing.output)
-# 	else:
-# 		return()
 
 GUPPY_DEMULTIPLEXING_OUTPUT = by_cond("guppy" in demultiplexer, rules.guppy_demultiplexing.output, ())
+
+
 ##############################
 ############# MINIONQC/MULTIQC
 ############## FOR BASECALLING
