@@ -4,15 +4,14 @@ import getpass
 import pandas as pd
 import sys
 
+
 report: "report/workflow.rst"
 
-request = sys.argv[:]
-if "--configfile" in request:
-	arg_index = request.index("--configfile")
-	cf = request[arg_index + 1]
+cf = workflow.overwrite_configfiles
+if cf:
+	cf = cf[-1]
 else:
 	cf = "config.yaml"
-
 configfile: cf
 
 
@@ -140,7 +139,7 @@ DEMULTIPLEX_REPORT = config['REPORTS']['DEMULTIPLEX_REPORT']
 ##############################
 ## use different containers for guppy and deepbinner depending on resources
 
-guppy_container = by_cond(RESOURCE == 'CPU', 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api', 'shub://vibaotram/singularity-container:guppy3.6.0gpu-conda-api', cond_ext = 'GPU')
+guppy_container = by_cond(RESOURCE == 'CPU', 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api', 'shub://vibaotram/singularity-container:guppy4.0.14gpu-conda-api', cond_ext = 'GPU')
 
 deepbinner_container = 'shub://vibaotram/singularity-container:deepbinner-api'
 

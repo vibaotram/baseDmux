@@ -3,8 +3,8 @@
 
 ##############################
 ##### input/output directory
-INDIR: "/data3/projects/xoogenomes/ONT_BAI3-talC_mutants/TalC_Muts_20190129/TalC_Muts" #"/scratch/baotram/test/reads", "/home/baotram/tal/workflow/test/reads", "/data3/projects/xanthopore/baotram/test/reads", "/data3/projects/xoogenomes/ONT_BAI3-talC_mutants/TalC_Muts_20190129/TalC_Muts"
-OUTDIR: "/data3/projects/xanthopore/baotram/test/results_scratch_1303" # "/scratch/baotram/test/results", "/home/baotram/tal/workflow/test/results", "/data3/projects/xanthopore/baotram/test/results_scratch_1303"
+INDIR: "/data3/projects/xanthopore/baotram/test/reads"
+OUTDIR: "/home/baotram/tal/workflow/test/results"
 NASID: "" # host name, if indir and outdir in NAS but workdir is not
 
 
