@@ -604,7 +604,7 @@ rule clean:
 	shell:
 		"""
 		rm -rf {outdir}
-		echo "#################\\nremoved {outdir}\\n#################"
+		echo "#################  removed {outdir}  #################"
 		"""
 
 rule clean_basecall:
