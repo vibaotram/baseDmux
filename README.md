@@ -113,7 +113,7 @@ Combine and concatenate fast5 and fastq from designed barcodes for genomes indiv
 
 #### Tools
 
-- Guppy 3.6.0 GPU and CPU version
+- Guppy 4.0.14 GPU and 3.6.0 CPU version
 - Deepbinner 0.2.0
 - MinIONQC
 - Multiqc

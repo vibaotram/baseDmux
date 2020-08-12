@@ -16,7 +16,7 @@ for (p in unique(barcode_path)) {
   barcode = basename(p)
   newfile = paste0(p, "/", barcode, ".fastq")
   concat = paste0("cat ", p, "/*.fastq", " > ", newfile)
-  gzip = paste0("gzip -f -9", newfile)
+  gzip = paste0("gzip -f9 ", newfile)
   rm = paste0("rm ", p, "/*.fastq")
   print(paste("Concatenating fastq files for", barcode))
   system(paste(concat, gzip, rm, sep = " && "))
