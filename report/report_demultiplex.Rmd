@@ -14,7 +14,6 @@ knitr::opts_chunk$set(warning = FALSE)
 knitr::opts_chunk$set(message = FALSE)
 library(stringr)
 library(ggplot2)
-library(plotly)
 library(dplyr)
 ```
 
@@ -76,7 +75,7 @@ bcgenome_tsv = snakemake@params$barcode_by_genome
 if (file.exists(bcgenome_tsv)) {
   bcgenome <- read.table(bcgenome_tsv, header = T, sep = "\t")
   bcgenome$Sample <- paste(bcgenome$Demultiplexer, bcgenome$Run_ID, bcgenome$ONT_Barcode, sep = " | ")
-  
+
   bcgenome <- left_join(bcgenome, df, by.x = "Sample", by.y = "Sample", all.x = T)
 }
 ```
@@ -122,4 +121,3 @@ if (file.exists(bcgenome_tsv)) {
           legend.direction = "horizontal", legend.position = "top")
 }
 ```
-

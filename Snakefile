@@ -274,7 +274,7 @@ rule guppy_basecalling:
 
 rule guppy_demultiplexing:
 	message: "GUPPY demultiplexing running on {RESOURCE}"
-	input: rules.guppy_basecalling.output.fastq
+	input: rules.guppy_basecalling.output.compressed_fastq
 	output:
 		demux = os.path.join(outdir, "demultiplex/guppy/{run}/barcoding_summary.txt"),
 		check = temp(os.path.join(outdir, "demultiplex/guppy/{run}/demultiplex.done"))
