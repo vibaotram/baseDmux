@@ -551,13 +551,14 @@ rule get_multi_fast5_per_barcode:
 		"""
 
 
-REPORT_DEMULTIPLEX_OUTPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules.multiqc_demultiplex.output, demultiplexer = demultiplexer, run = run), no = ())
+REPORT_DEMULTIPLEX_INPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules.multiqc_demultiplex.output, demultiplexer = demultiplexer, run = run), no = ())
 
 rule report_demultiplex:
-	input: REPORT_DEMULTIPLEX_OUTPUT
+	input: REPORT_DEMULTIPLEX_INPUT
 	message: " Reporting demultiplex results"
 	output: os.path.join(outdir, "report/demultiplex_report.html")
 	params:
+		barcode_by_genome = BARCODE_BY_GENOME,
 		indir = os.path.join(outdir, "demultiplex"),
 		log = "report_demultiplex.log"
 	singularity: guppy_container

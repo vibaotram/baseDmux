@@ -6,66 +6,120 @@ params:
    rmd: "report_demultiplex.Rmd"
 output: html_document
 ---
-The report provides plots in order to compare demultiplexing results from different runs, and from different demultiplexers (guppy and deepbinner).
+The report provides plots in order to compare demultiplexing results from different runs, and from different demultiplexers (guppy and deepbinner), and for each genome (if the table barcode by genome is provided).
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
 library(stringr)
 library(ggplot2)
+library(plotly)
+library(dplyr)
 ```
 
-
+#  {.tabset .tabset-fade }
+## by run
 ```{r input dataframe}
-# indir = "/home/baotram/tal/workflow/test/demultiplex"
 indir = snakemake@params$indir
-mqc = list.files(indir, "multiqc_minionqc.txt", recursive = T, full.names = T)
-
-# raw_df <- data.frame()
-# for (i in 1:length(mqc)) {
-#   f <- read.table(mqc[i], header = T, sep = "\t")
-#   raw_df <- rbind(raw_df, f)
-# }
+mqc <- list.files(indir, "multiqc_minionqc.txt", recursive = T, full.names = T)
 
 list_df <- lapply(mqc, function(x) read.table(x, header = T, sep = "\t"))
 raw_df <- do.call(rbind, list_df)
-# names(list_df) <- mqc
-# raw_df <- dplyr::bind_rows(list_df, .id = "path_to_file")
 ```
 
 ```{r add cols}
 add_df <- str_split_fixed(raw_df$Sample, " \\| ", 3)
-colnames(add_df) <- c("demultiplex", "run", "barcode")
+colnames(add_df) <- c("demultiplexer", "run", "barcode")
 df <- data.frame(raw_df, add_df)
-
-# file = file.path("aggregated_demultiplex_minionQC_stats.tsv"
 ```
 
-# Total gigabases
+### Total gigabases
 
 ```{r plot of total.gigabases, fig.width= 10, fig.height= 6}
-ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplex)) +
+ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplexer)) +
   geom_col(position = position_dodge()) +
-  facet_wrap(vars(run), scales = "fixed", ncol=3) +
+  scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+  facet_wrap(vars(run), scales = "fixed", ncol=3, strip.position = "right") +
   theme_light() +
-  theme(axis.text.x=element_text(angle=90,hjust=1))
+  theme(axis.text.x=element_text(angle=90,hjust=1),
+        legend.direction = "horizontal", legend.position = "top")
 ```
 
-# Median length
+### Median length
 
 ```{r plot of median.length, fig.width= 10, fig.height= 6}
-ggplot(df, aes(x=barcode, y=median.length, fill=demultiplex)) +
+ggplot(df, aes(x=barcode, y=median.length, fill=demultiplexer)) +
   geom_col(position = position_dodge()) +
-  facet_wrap(vars(run), scales = "fixed", ncol=3) +
+  scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+  facet_wrap(vars(run), scales = "fixed", ncol=3, strip.position = "right") +
   theme_light() +
-  theme(axis.text.x=element_text(angle=90,hjust=1))
+  theme(axis.text.x=element_text(angle=90,hjust=1),
+        legend.direction = "horizontal", legend.position = "top")
 ```
 
-# Total reads
+### Total reads
 
 ```{r plot of total.reads, fig.width= 10, fig.height= 6}
-ggplot(df, aes(x=barcode, y=total.reads, fill=demultiplex)) +
+ggplot(df, aes(x=barcode, y=total.reads, fill=demultiplexer)) +
   geom_col(position = position_dodge()) +
-  facet_wrap(vars(run), scales = "fixed", ncol=3) +
+  scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+  facet_wrap(vars(run), scales = "fixed", ncol=3, strip.position = "right") +
   theme_light() +
-  theme(axis.text.x=element_text(angle=90,hjust=1))
+  theme(axis.text.x=element_text(angle=90,hjust=1),
+        legend.direction = "horizontal", legend.position = "top")
 ```
+
+## by genome
+```{r}
+bcgenome_tsv = snakemake@params$barcode_by_genome
+if (file.exists(bcgenome_tsv)) {
+  bcgenome <- read.table(bcgenome_tsv, header = T, sep = "\t")
+  bcgenome$Sample <- paste(bcgenome$Demultiplexer, bcgenome$Run_ID, bcgenome$ONT_Barcode, sep = " | ")
+  
+  bcgenome <- left_join(bcgenome, df, by.x = "Sample", by.y = "Sample", all.x = T)
+}
+```
+
+### Total gigabases
+
+```{r total.gigabases, fig.width= 10, fig.height= 6}
+if (file.exists(bcgenome_tsv)) {
+  ggplot(bcgenome, aes(x=barcode, y=total.gigabases, fill=demultiplexer)) +
+    geom_col(position = position_dodge()) +
+    scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+    facet_wrap(vars(Genome_ID), scales = "fixed", ncol=3) +
+    theme_light() +
+    theme(axis.text.x=element_text(angle=90,hjust=1),
+          legend.direction = "horizontal", legend.position = "top")
+}
+```
+
+### Median length
+
+```{r median.length, fig.width= 10, fig.height= 6}
+if (file.exists(bcgenome_tsv)) {
+  ggplot(bcgenome, aes(x=barcode, y=median.length, fill=demultiplexer)) +
+    geom_col(position = position_dodge()) +
+    scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+    facet_wrap(vars(Genome_ID), scales = "fixed", ncol=3) +
+    theme_light() +
+    theme(axis.text.x=element_text(angle=90,hjust=1),
+          legend.direction = "horizontal", legend.position = "top")
+}
+```
+
+### Total reads
+
+```{r total.reads, fig.width= 10, fig.height= 6}
+if (file.exists(bcgenome_tsv)) {
+  ggplot(bcgenome, aes(x=barcode, y=total.reads, fill=demultiplexer)) +
+    geom_col(position = position_dodge()) +
+    scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+    facet_wrap(vars(Genome_ID), scales = "fixed", ncol=3) +
+    theme_light() +
+    theme(axis.text.x=element_text(angle=90,hjust=1),
+          legend.direction = "horizontal", legend.position = "top")
+}
+```
+
