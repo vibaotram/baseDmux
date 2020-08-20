@@ -31,6 +31,7 @@ raw_df <- do.call(rbind, list_df)
 add_df <- str_split_fixed(raw_df$Sample, " \\| ", 3)
 colnames(add_df) <- c("demultiplexer", "run", "barcode")
 df <- data.frame(raw_df, add_df)
+df$demultiplexer <- factor(df$demultiplexer, levels = c("guppy", "deepbinner"), ordered = F)
 ```
 
 ### Total gigabases
@@ -38,7 +39,7 @@ df <- data.frame(raw_df, add_df)
 ```{r plot of total.gigabases, fig.width= 10, fig.height= 6}
 ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplexer)) +
   geom_col(position = position_dodge()) +
-  scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+  scale_fill_viridis_d(option = "E", end = .85) +
   facet_wrap(vars(run), scales = "fixed", ncol=3, strip.position = "right") +
   theme_light() +
   theme(axis.text.x=element_text(angle=90,hjust=1),
@@ -50,7 +51,7 @@ ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplexer)) +
 ```{r plot of median.length, fig.width= 10, fig.height= 6}
 ggplot(df, aes(x=barcode, y=median.length, fill=demultiplexer)) +
   geom_col(position = position_dodge()) +
-  scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+  scale_fill_viridis_d(option = "E", end = .85) +
   facet_wrap(vars(run), scales = "fixed", ncol=3, strip.position = "right") +
   theme_light() +
   theme(axis.text.x=element_text(angle=90,hjust=1),
@@ -62,7 +63,7 @@ ggplot(df, aes(x=barcode, y=median.length, fill=demultiplexer)) +
 ```{r plot of total.reads, fig.width= 10, fig.height= 6}
 ggplot(df, aes(x=barcode, y=total.reads, fill=demultiplexer)) +
   geom_col(position = position_dodge()) +
-  scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+  scale_fill_viridis_d(option = "E", end = .85) +
   facet_wrap(vars(run), scales = "fixed", ncol=3, strip.position = "right") +
   theme_light() +
   theme(axis.text.x=element_text(angle=90,hjust=1),
@@ -78,6 +79,7 @@ if (file.exists(bcgenome_tsv)) {
 
   bcgenome <- left_join(bcgenome, df, by.x = "Sample", by.y = "Sample", all.x = T)
 }
+bcgenome$demultiplexer <- factor(bcgenome$demultiplexer, levels = c("guppy", "deepbinner"), ordered = F)
 ```
 
 ### Total gigabases
@@ -86,7 +88,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   ggplot(bcgenome, aes(x=barcode, y=total.gigabases, fill=demultiplexer)) +
     geom_col(position = position_dodge()) +
-    scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+    scale_fill_viridis_d(option = "E", end = .85) +
     facet_wrap(vars(Genome_ID), scales = "fixed", ncol=3) +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
@@ -100,7 +102,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   ggplot(bcgenome, aes(x=barcode, y=median.length, fill=demultiplexer)) +
     geom_col(position = position_dodge()) +
-    scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+    scale_fill_viridis_d(option = "E", end = .85) +
     facet_wrap(vars(Genome_ID), scales = "fixed", ncol=3) +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
@@ -114,7 +116,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   ggplot(bcgenome, aes(x=barcode, y=total.reads, fill=demultiplexer)) +
     geom_col(position = position_dodge()) +
-    scale_fill_viridis_d(option = "E", end = .85, direction = -1) +
+    scale_fill_viridis_d(option = "E", end = .85) +
     facet_wrap(vars(Genome_ID), scales = "fixed", ncol=3) +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
