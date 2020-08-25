@@ -92,7 +92,7 @@ if (file.exists(bcgenome_tsv)) {
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
-          legend.direction = "horizontal", legend.position = "top")
+          legend.direction = "vertical", legend.position = "top")
 }
 ```
 
@@ -105,7 +105,7 @@ if (file.exists(bcgenome_tsv)) {
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
-          legend.direction = "horizontal", legend.position = "top")
+          legend.direction = "vertical", legend.position = "top")
 }
 ```
 
@@ -118,11 +118,11 @@ if (file.exists(bcgenome_tsv)) {
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
-          legend.direction = "horizontal", legend.position = "top")
+          legend.direction = "vertical", legend.position = "top")
 }
 ```
 
-### barcode_by_genome
+## barcode_by_genome
 ```{r barcode_table}
 if (file.exists(bcgenome_tsv)) {
   bcgenome <- read.table(bcgenome_tsv, header = T, sep = "\t")

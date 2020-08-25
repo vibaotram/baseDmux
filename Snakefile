@@ -7,9 +7,10 @@ import sys
 
 report: "report/workflow.rst"
 
-cf = workflow.overwrite_configfiles
-if cf:
-	cf = cf[-1]
+request = sys.argv[:]
+if "--configfile" in request:
+	arg_index = request.index("--configfile")
+	cf = request[arg_index + 1]
 else:
 	cf = "config.yaml"
 configfile: cf
