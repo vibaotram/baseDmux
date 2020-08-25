@@ -15,6 +15,7 @@ knitr::opts_chunk$set(message = FALSE)
 library(stringr)
 library(ggplot2)
 library(dplyr)
+library(DT)
 ```
 
 #  {.tabset .tabset-fade }
@@ -78,18 +79,17 @@ if (file.exists(bcgenome_tsv)) {
   bcgenome$Sample <- paste(bcgenome$Demultiplexer, bcgenome$Run_ID, bcgenome$ONT_Barcode, sep = " | ")
 
   bcgenome <- left_join(bcgenome, df, by.x = "Sample", by.y = "Sample", all.x = T)
+  bcgenome$demultiplexer <- factor(bcgenome$demultiplexer, levels = c("guppy", "deepbinner"), ordered = F)
 }
-bcgenome$demultiplexer <- factor(bcgenome$demultiplexer, levels = c("guppy", "deepbinner"), ordered = F)
 ```
 
 ### Total gigabases
 
 ```{r total.gigabases, fig.width= 10, fig.height= 6}
 if (file.exists(bcgenome_tsv)) {
-  ggplot(bcgenome, aes(x=barcode, y=total.gigabases, fill=demultiplexer)) +
-    geom_col(position = position_dodge()) +
-    scale_fill_viridis_d(option = "E", end = .85) +
-    facet_wrap(vars(Genome_ID), scales = "fixed", ncol=3) +
+  ggplot(bcgenome, aes(x=Genome_ID, y=total.gigabases, fill=Run_ID)) +
+    geom_col(position = position_stack()) +
+    scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
           legend.direction = "horizontal", legend.position = "top")
@@ -100,10 +100,9 @@ if (file.exists(bcgenome_tsv)) {
 
 ```{r median.length, fig.width= 10, fig.height= 6}
 if (file.exists(bcgenome_tsv)) {
-  ggplot(bcgenome, aes(x=barcode, y=median.length, fill=demultiplexer)) +
+  ggplot(bcgenome, aes(x=Genome_ID, y=median.length, fill=Run_ID)) +
     geom_col(position = position_dodge()) +
-    scale_fill_viridis_d(option = "E", end = .85) +
-    facet_wrap(vars(Genome_ID), scales = "fixed", ncol=3) +
+    scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
           legend.direction = "horizontal", legend.position = "top")
@@ -114,12 +113,19 @@ if (file.exists(bcgenome_tsv)) {
 
 ```{r total.reads, fig.width= 10, fig.height= 6}
 if (file.exists(bcgenome_tsv)) {
-  ggplot(bcgenome, aes(x=barcode, y=total.reads, fill=demultiplexer)) +
+  ggplot(bcgenome, aes(x=Genome_ID, y=total.reads, fill=Run_ID)) +
     geom_col(position = position_dodge()) +
-    scale_fill_viridis_d(option = "E", end = .85) +
-    facet_wrap(vars(Genome_ID), scales = "fixed", ncol=3) +
+    scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
           legend.direction = "horizontal", legend.position = "top")
+}
+```
+
+### barcode_by_genome
+```{r barcode_table}
+if (file.exists(bcgenome_tsv)) {
+  bcgenome <- read.table(bcgenome_tsv, header = T, sep = "\t")
+  datatable(bcgenome, options = list(dom = 'ft'))
 }
 ```
