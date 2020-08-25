@@ -15,7 +15,7 @@ knitr::opts_chunk$set(message = FALSE)
 library(stringr)
 library(ggplot2)
 library(dplyr)
-library(dt)
+library(DT)
 ```
 
 #  {.tabset .tabset-fade }

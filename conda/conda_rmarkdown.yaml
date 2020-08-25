@@ -10,3 +10,4 @@ dependencies:
     - mkl-service=2.3.0
     - xorg-libxrender=0.9.10
     - fonts-conda-forge
+    - r-dt=0.4=r350h912f1d8_0
