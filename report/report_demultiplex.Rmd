@@ -114,7 +114,7 @@ if (file.exists(bcgenome_tsv)) {
 ```{r total.reads, fig.width= 10, fig.height= 6}
 if (file.exists(bcgenome_tsv)) {
   ggplot(bcgenome, aes(x=Genome_ID, y=total.reads, fill=Run_ID)) +
-    geom_col(position = position_dodge()) +
+    geom_col(position = position_stack()) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
@@ -126,6 +126,6 @@ if (file.exists(bcgenome_tsv)) {
 ```{r barcode_table}
 if (file.exists(bcgenome_tsv)) {
   bcgenome <- read.table(bcgenome_tsv, header = T, sep = "\t")
-  datatable(bcgenome, options = list(dom = 'ft'))
+  datatable(bcgenome)
 }
 ```
