@@ -39,7 +39,7 @@ df$demultiplexer <- factor(df$demultiplexer, levels = c("guppy", "deepbinner"), 
 
 ```{r plot of total.gigabases, fig.width= 10, fig.height= 6}
 ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplexer)) +
-  geom_col(position = position_dodge()) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
   scale_fill_viridis_d(option = "E", end = .85) +
   facet_wrap(vars(run), scales = "fixed", ncol=3, strip.position = "right") +
   theme_light() +
@@ -51,7 +51,19 @@ ggplot(df, aes(x=barcode, y=total.gigabases, fill=demultiplexer)) +
 
 ```{r plot of median.length, fig.width= 10, fig.height= 6}
 ggplot(df, aes(x=barcode, y=median.length, fill=demultiplexer)) +
-  geom_col(position = position_dodge()) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  facet_wrap(vars(run), scales = "fixed", ncol=3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x=element_text(angle=90,hjust=1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+### N50 length
+
+```{r plot of median.length, fig.width= 10, fig.height= 6}
+ggplot(df, aes(x=barcode, y=N50.length, fill=demultiplexer)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
   scale_fill_viridis_d(option = "E", end = .85) +
   facet_wrap(vars(run), scales = "fixed", ncol=3, strip.position = "right") +
   theme_light() +
@@ -63,7 +75,7 @@ ggplot(df, aes(x=barcode, y=median.length, fill=demultiplexer)) +
 
 ```{r plot of total.reads, fig.width= 10, fig.height= 6}
 ggplot(df, aes(x=barcode, y=total.reads, fill=demultiplexer)) +
-  geom_col(position = position_dodge()) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
   scale_fill_viridis_d(option = "E", end = .85) +
   facet_wrap(vars(run), scales = "fixed", ncol=3, strip.position = "right") +
   theme_light() +
@@ -101,7 +113,20 @@ if (file.exists(bcgenome_tsv)) {
 ```{r median.length, fig.width= 10, fig.height= 6}
 if (file.exists(bcgenome_tsv)) {
   ggplot(bcgenome, aes(x=Genome_ID, y=median.length, fill=Run_ID)) +
-    geom_col(position = position_dodge()) +
+    geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+    scale_fill_viridis_d(option = "C") +
+    theme_light() +
+    theme(axis.text.x=element_text(angle=90,hjust=1),
+          legend.direction = "vertical", legend.position = "top")
+}
+```
+
+### N50 length
+
+```{r median.length, fig.width= 10, fig.height= 6}
+if (file.exists(bcgenome_tsv)) {
+  ggplot(bcgenome, aes(x=Genome_ID, y=N50.length, fill=Run_ID)) +
+    geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
