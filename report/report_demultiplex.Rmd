@@ -61,7 +61,7 @@ ggplot(df, aes(x=barcode, y=median.length, fill=demultiplexer)) +
 
 ### N50 length
 
-```{r plot of median.length, fig.width= 10, fig.height= 6}
+```{r plot of N50.length, fig.width= 10, fig.height= 6}
 ggplot(df, aes(x=barcode, y=N50.length, fill=demultiplexer)) +
   geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
   scale_fill_viridis_d(option = "E", end = .85) +
@@ -123,7 +123,7 @@ if (file.exists(bcgenome_tsv)) {
 
 ### N50 length
 
-```{r median.length, fig.width= 10, fig.height= 6}
+```{r N50.length, fig.width= 10, fig.height= 6}
 if (file.exists(bcgenome_tsv)) {
   ggplot(bcgenome, aes(x=Genome_ID, y=N50.length, fill=Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
