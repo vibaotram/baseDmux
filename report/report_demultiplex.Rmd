@@ -101,6 +101,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   ggplot(bcgenome, aes(x=Genome_ID, y=total.gigabases, fill=Run_ID)) +
     geom_col(position = position_stack()) +
+    geom_text(aes(label = ONT_Barcode), color = "cyan", position = position_stack(), vjust = 1) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
@@ -114,6 +115,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   ggplot(bcgenome, aes(x=Genome_ID, y=median.length, fill=Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+    geom_text(aes(label = ONT_Barcode), color = "cyan", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, hjust = 1.1) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
@@ -127,6 +129,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   ggplot(bcgenome, aes(x=Genome_ID, y=N50.length, fill=Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+    geom_text(aes(label = ONT_Barcode), color = "cyan", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, hjust = 1.1) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
@@ -140,6 +143,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   ggplot(bcgenome, aes(x=Genome_ID, y=total.reads, fill=Run_ID)) +
     geom_col(position = position_stack()) +
+    geom_text(aes(label = ONT_Barcode), color = "cyan", position = position_stack(), vjust = 1) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x=element_text(angle=90,hjust=1),
