@@ -561,7 +561,8 @@ rule report_demultiplex:
 	params:
 		barcode_by_genome = BARCODE_BY_GENOME,
 		indir = os.path.join(outdir, "demultiplex"),
-		log = "report_demultiplex.log"
+		log = "report_demultiplex.log",
+		outpath = lambda wildcards, output: os.path.dirname(output[0])
 	singularity: guppy_container
 	conda: 'conda/conda_rmarkdown.yaml'
 	script:
