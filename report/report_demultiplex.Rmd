@@ -158,3 +158,8 @@ if (file.exists(bcgenome_tsv)) {
   datatable(bcgenome)
 }
 ```
+
+```{r save_workspace, include=FALSE}
+image_path <- file.path(dirname(snakemake@output), "demultiplex_report.RData")
+save.image(file = image_path, compress = TRUE)
+```
