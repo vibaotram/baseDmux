@@ -133,6 +133,15 @@ else :
 
 GET_READS_PER_GENOME_OUTPUT = [directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)]
 
+
+
+POST_DEMULTIPLEXING = sorted(config["POST_DEMULTIPLEXING"], reverse = True)
+POST_DEMULTIPLEXING = ["fastq"] + POST_DEMULTIPLEXING
+post_demux = "_".join(POST_DEMULTIPLEXING)
+
+PORECHOP_PARAMS = config["RULE_PORECHOP"]["PARAMS"]
+FILTLONG_PARAMS = config["RULE_FILTLONG"]["PARAMS"]
+
 ##############################
 ## reports
 DEMULTIPLEX_REPORT = config['REPORTS']['DEMULTIPLEX_REPORT']
@@ -188,6 +197,7 @@ if nasID and not os.path.isdir(ssh_dir):
 ##############################
 ##############################
 
+ruleorder: filtlong > porechop
 
 rule finish:
 	input:
@@ -196,7 +206,7 @@ rule finish:
 		os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), # BASECALLING QC
 		by_cond(DEMULTIPLEX_REPORT, os.path.join(outdir, "report/demultiplex_report.html"), ()),
 		expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome),
-		expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome),
+		expand(os.path.join(outdir, "reads_per_genome/{post_demux}/{genome}.fastq.gz"), genome = genome, post_demux = post_demux),
 		# expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)
 		# expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
 		# os.path.join(outdir, "report/demultiplex_report.html")
@@ -582,9 +592,9 @@ rule get_reads_per_genome:
 		expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run),
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done"), demultiplexer = get_demultiplexer, run = run)
 	output:
-		GET_READS_PER_GENOME_OUTPUT
-		# fast5 = directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)),
-		# fastq = expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome),
+		# GET_READS_PER_GENOME_OUTPUT
+		fast5 = directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)),
+		fastq = expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome),
 		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),
@@ -597,6 +607,41 @@ rule get_reads_per_genome:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		Rscript script/get_reads_per_genome.R -b {outdir} -o {params.outpath} -d {params.barcode_by_genome} --{params.transfering}
+		"""
+
+##############################
+########## POST_DEMULTIPLEXING
+
+rule porechop:
+	input: os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz")
+	output:
+		fastq = os.path.join(outdir, "reads_per_genome/fastq_porechop/{genome}.fastq.gz")
+	params:
+		porechop = PORECHOP_PARAMS,
+		log = "porechop_{genome}.log"
+	singularity: guppy_container
+	conda: 'conda/conda_porechop.yaml'
+	threads: config["RULE_PORECHOP"]["THREADS"]
+	shell:
+		"""
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
+		porechop -i {input} -o {output} --format auto --verbosity 3 --threads {threads} {params.porechop}
+		"""
+
+FILTLONG_INPUT = by_cond("porechop" in POST_DEMULTIPLEXING, rules.porechop.output.fastq, os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"))
+rule filtlong:
+	input: FILTLONG_INPUT
+	output:
+		fastq = os.path.join(outdir, "reads_per_genome/{post_demux}/{genome}.fastq.gz")
+	params:
+		filtlong = FILTLONG_PARAMS,
+		log = "filtlong_{genome}.log"
+	singularity: guppy_container
+	conda: 'conda/conda_filtlong.yaml'
+	shell:
+		"""
+		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
+		filtlong {params.filtlong} {input}
 		"""
 
 ##############################

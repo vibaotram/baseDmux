@@ -68,6 +68,13 @@ RULE_MINIONQC_:
     'SMALLFIGURES': "FALSE" # 'TRUE'/'FALSE'
     'PROCESSORS': 12
 
+##############################
+##### Post-demultiplexing
+POST_DEMULTIPLEXING: ["porechop", "filtlong"]
+
+RULE_PORECHOP:
+
+RULE_FILTLONG:
 
 ##############################
 ##### get_reads_per_genome parameters

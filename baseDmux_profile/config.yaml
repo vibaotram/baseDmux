@@ -1,0 +1,25 @@
+##############################
+#####  basic configuration
+configfile: "config-test.yaml"
+use-singularity: true
+singularity-args: "--nv "
+use-conda: true
+cores: "all"
+restart-times: 2
+printshellcmds: true
+verbose: true
+rerun-incomplete: true
+notemp: false
+nolock: true
+show-failed-logs: false
+dry-run: false
+
+
+##############################
+#####  cluster configuration
+# local-cores: 0
+# latency-wait: 60
+# cluster-config: false
+# cluster: "python3 cluster/slurm_wrapper.py"
+# cluster-status: "python3 cluster/slurm_status.py"
+# immediate-submit: false

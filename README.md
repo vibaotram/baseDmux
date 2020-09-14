@@ -83,7 +83,7 @@ snakemake --nolock --use-singularity --use-conda --cores -p --verbose --singular
 Run `guppy_basecaller` with filtering reads, then subset fast5 reads from passed reads list (`passed_sequencing_summary.txt`).
 
 - **Guppy demultiplexing**
-Run `guppy_barcoder` with passed fastq, then subset fastq to classified barcode folders based on `barcoding_summary.txt`.
+Run `guppy_barcoder` with passed fastq, then subset fastq to classified barcode folders based on `barcoding_summary.txt`. **Barcode sequences are removed after demultiplexing.**
 
 - **Multi to single fast5**
 Convert passed multi-read fast5 files to single-read fast5 file, preparing for deepbinner.
