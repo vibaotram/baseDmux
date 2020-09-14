@@ -552,7 +552,7 @@ rule get_multi_fast5_per_barcode:
 	singularity: deepbinner_container
 	params:
 		path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
-		log = "get_multi_fast5_per_barcode_{demultiplexer}_{run}.log" config['RULE_GET_MULTI_FAST5_PER_BARCODE']['THREADS']
+		log = "get_multi_fast5_per_barcode_{demultiplexer}_{run}.log"
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
