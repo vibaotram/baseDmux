@@ -640,7 +640,7 @@ rule filtlong:
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		filtlong {params.filtlong} {input}
+		filtlong {params.filtlong} {input} | gzip > {output}
 		"""
 
 ##############################
