@@ -4,8 +4,8 @@
 ##############################
 ##### input/output directory
 INDIR: "/data3/projects/xanthopore/baotram/test/reads"
-OUTDIR: "/home/baotram/tal/workflow/test/results"
-NASID: "" # host name, if indir and outdir in NAS but workdir is not
+OUTDIR: "/data3/projects/xanthopore/baotram/test/results_scratch"
+NASID: "NAS3" # host name, if indir and outdir in NAS but workdir is not
 
 
 ##############################
@@ -70,11 +70,14 @@ RULE_MINIONQC_:
 
 ##############################
 ##### Post-demultiplexing
-POST_DEMULTIPLEXING: ["porechop", "filtlong"]
+POST_DEMULTIPLEXING: ["filtlong", "porechop"]
 
 RULE_PORECHOP:
+    'THREADS': 8
+    'PARAMS': ""
 
 RULE_FILTLONG:
+    'PARAMS': ""
 
 ##############################
 ##### get_reads_per_genome parameters
