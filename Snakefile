@@ -561,23 +561,6 @@ rule get_multi_fast5_per_barcode:
 		"""
 
 
-REPORT_DEMULTIPLEX_INPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules.multiqc_demultiplex.output, demultiplexer = demultiplexer, run = run), no = ())
-
-rule report_demultiplex:
-	input: REPORT_DEMULTIPLEX_INPUT
-	message: " Reporting demultiplex results"
-	output: os.path.join(outdir, "report/demultiplex_report.html")
-	params:
-		barcode_by_genome = BARCODE_BY_GENOME,
-		indir = os.path.join(outdir, "demultiplex"),
-		log = "report_demultiplex.log",
-		outpath = lambda wildcards, output: os.path.dirname(output[0])
-	singularity: guppy_container
-	conda: 'conda/conda_rmarkdown.yaml'
-	script:
-		"report/report_demultiplex.Rmd"
-
-
 ##############################
 ################# SUBSET READS
 #################### BY GENOME
@@ -624,7 +607,7 @@ rule porechop:
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		porechop -i {input} -o {output} --format auto --verbosity 3 --threads {threads} {params.porechop}
+		porechop -i {input} -o {output} --format auto --verbosity 3 --threads {threads} --discard_middle {params.porechop}
 		"""
 
 FILTLONG_INPUT = by_cond("porechop" in POST_DEMULTIPLEXING, rules.porechop.output.fastq, os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"))
@@ -642,6 +625,29 @@ rule filtlong:
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		filtlong {params.filtlong} {input} | gzip > {output}
 		"""
+
+
+##############################
+####################### REPORT
+
+REPORT_DEMULTIPLEX_INPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules.multiqc_demultiplex.output, demultiplexer = demultiplexer, run = run), no = ())
+
+rule report_demultiplex:
+	input:
+		fast5 = directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)),
+		fastq = expand(os.path.join(outdir, "reads_per_genome/{post_demux}/{genome}.fastq.gz"), genome = genome, post_demux = post_demux),
+	message: " Reporting demultiplex results"
+	output: os.path.join(outdir, "report/demultiplex_report.html")
+	params:
+		barcode_by_genome = BARCODE_BY_GENOME,
+		demultiplex = os.path.join(outdir, "demultiplex"),
+		postdemux = os.path.join(outdir, f"reads_per_genome/{post_demux}"),
+		log = "report_demultiplex.log",
+		outpath = lambda wildcards, output: os.path.dirname(output[0])
+	singularity: guppy_container
+	conda: 'conda/conda_rmarkdown.yaml'
+	script:
+		"report/report_demultiplex.Rmd"
 
 ##############################
 ############### SOMETHING ELSE

@@ -4,11 +4,6 @@
 # output: folders for each genome containing corresponding fast5 and fastq
 
 #### Loading required packages #####
-if (!requireNamespace("BiocManager", quietly = TRUE))
-  install.packages("BiocManager", repos = "https://cloud.r-project.org")
-
-BiocManager::install("Biostrings", update = F, ask = F)
-
 suppressPackageStartupMessages(library("optparse"))
 suppressPackageStartupMessages(library("Biostrings"))
 
@@ -136,15 +131,6 @@ for (i in unique(dict$Genome_ID)) {
 
 for (i in unique(dict$Genome_ID)) {
   ori_file = dict[dict$Genome_ID == i, "ori_fastq"]
-  ## save info in fastq name
-  for (f in ori_file) {
-    splitted_path <- unlist(strsplit(dirname(f), "/", fixed = T))
-    marked <- do.call(paste, as.list(c(splitted_path[(length(splitted_path) - 2):length(splitted_path)], sep = "|")))
-    fq <- readDNAStringSet(f, seek.first.rec = T, with.qualities = T, format = "fastq")
-    names(fq) <- marked
-    writeXStringSet(fq, f, compress = T, format = "fastq")
-  }
-  
   dest_file = file.path(dest_fastq_dir, paste0(i, ".fastq.gz"))
   if (length(ori_file) == 1) {
     transfer_file = paste(cmd, ori_file, dest_file, sep = " ")
