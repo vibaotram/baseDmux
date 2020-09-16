@@ -203,7 +203,7 @@ if (file.exists(bcgenome_tsv)) {
 
 ```{r median.length, fig.width= 12, fig.height= 8}
 if (file.exists(bcgenome_tsv)) {
-  ggplot(bygenome, aes(x=Genome_ID, y=median.length, fill=Run_ID)) +
+  p <- ggplot(bygenome, aes(x=Genome_ID, y=median.length, fill=Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
     geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1.1, size = 3.8*10/nlevels(as.factor(bcgenome$Genome_ID))) +
     scale_fill_viridis_d(option = "C") +
@@ -220,7 +220,7 @@ if (file.exists(bcgenome_tsv)) {
 
 ```{r N50.length, fig.width= 12, fig.height= 8}
 if (file.exists(bcgenome_tsv)) {
-  ggplot(bygenome, aes(x=Genome_ID, y=N50.length, fill=Run_ID)) +
+  p <- ggplot(bygenome, aes(x=Genome_ID, y=N50.length, fill=Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
     geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust = .5, hjust = 1.1, size = 3.8*10/nlevels(as.factor(bcgenome$Genome_ID))) +
     scale_fill_viridis_d(option = "C") +
@@ -237,7 +237,7 @@ if (file.exists(bcgenome_tsv)) {
 
 ```{r total.reads, fig.width= 12, fig.height= 8}
 if (file.exists(bcgenome_tsv)) {
-  ggplot(bygenome, aes(x=Genome_ID, y=total.reads, fill=Run_ID)) +
+  p <- ggplot(bygenome, aes(x=Genome_ID, y=total.reads, fill=Run_ID)) +
     geom_col(position = position_stack(), color = "gray") +
     geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_stack(), vjust = 1.2, size = 3.8*10/nlevels(as.factor(bcgenome$Genome_ID))) +
     scale_fill_viridis_d(option = "C") +
