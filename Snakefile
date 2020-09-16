@@ -640,6 +640,7 @@ rule report_demultiplex:
 	output: os.path.join(outdir, "report/demultiplex_report.html")
 	params:
 		barcode_by_genome = BARCODE_BY_GENOME,
+		fastq = os.path.join(outdir, "reads_per_genome/fastq"),
 		demultiplex = os.path.join(outdir, "demultiplex"),
 		postdemux = os.path.join(outdir, f"reads_per_genome/{post_demux}"),
 		log = "report_demultiplex.log",
