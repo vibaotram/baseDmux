@@ -634,7 +634,7 @@ REPORT_DEMULTIPLEX_INPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules
 
 rule report_demultiplex:
 	input:
-		fast5 = directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)),
+		fast5 = expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome),
 		fastq = expand(os.path.join(outdir, "reads_per_genome/{post_demux}/{genome}.fastq.gz"), genome = genome, post_demux = post_demux),
 	message: " Reporting demultiplex results"
 	output: os.path.join(outdir, "report/demultiplex_report.html")

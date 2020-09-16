@@ -5,9 +5,8 @@ channels:
     - defaults
     - biobuilds
 dependencies:
-    - r-base=3.5.0
-    - r-essentials=3.5.0=r350_0
+    - r-base=3.6.1
+    - r-essentials=3.6.0
     - mkl-service=2.3.0
     - xorg-libxrender=0.9.10
     - fonts-conda-forge
-    - r-dt=0.4=r350h912f1d8_0
