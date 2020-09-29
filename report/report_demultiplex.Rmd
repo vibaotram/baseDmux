@@ -41,6 +41,7 @@ demux <- do.call(rbind, lapply(demux_fastq, function(fg) {
                    "run_id" = gsub("(.+ runid=| sampleid.+)", "", names(fastq)),
                    "read_length" = width(fastq),
                    "Genome_ID" = gsub("\\.fastq.gz", "", basename(fg)),
+                   "Step" = "demultiplex",
                    "id" = names(fastq),
                    stringsAsFactors = F)
   return(dt)
@@ -57,7 +58,6 @@ sum <- do.call(rbind, lapply(summaries, function(s) {
                     "ONT_Barcode" = splitted_path[length(splitted_path)],
                     "Run_ID" = splitted_path[length(splitted_path) - 1],
                     "Demultiplexer" = splitted_path[length(splitted_path) - 2],
-                    "Step" = "demultiplex",
                     stringsAsFactors = F)
   return(sum)
 }))
@@ -69,7 +69,7 @@ demux_sum <- merge(demux, sum[c("read_id", "run_id", "ONT_Barcode", "Run_ID", "D
 
 ```{r postdemux}
 postdemux_folder <- snakemake@params$postdemux # "/data3/projects/xanthopore/baotram/test/results_guppy/reads_per_genome/fastq_porechop_filtlong"
-if (postdemux_folder != demux_folder) {
+if (any(postdemux_folder != demux_folder)) {
   postdemux_fastq <- list.files(postdemux_folder, ".*\\.fastq.gz", full.names = T)
 
   postdemux <- do.call(rbind, lapply(postdemux_fastq, function(fg) {
@@ -89,7 +89,7 @@ if (postdemux_folder != demux_folder) {
 ```
 
 ```{r all_qc}
-if (postdemux_folder == demux_folder) {
+if (any(postdemux_folder == demux_folder)) {
   all_sum <- demux_sum %>% dplyr::mutate(Step = NA)
 } else {
   all_sum <- rbind(demux_sum, postdemux_sum)
@@ -124,7 +124,7 @@ byrun <- all_sum %>%
 
 ### Total gigabases
 
-```{r plot of total.gigabases, fig.width= 12, fig.height= 8}
+```{r plot of total.gigabases, fig.width = 12, fig.height = 8}
 ggplot(byrun, aes(x=ONT_Barcode, y=total.gigabases, fill=Demultiplexer, alpha = Step)) +
   geom_col(position = position_dodge2(preserve = "single", padding = 0), stat = "identity") +
   scale_fill_viridis_d(option = "E", end = .85) +
@@ -137,7 +137,7 @@ ggplot(byrun, aes(x=ONT_Barcode, y=total.gigabases, fill=Demultiplexer, alpha = 
 
 ### Median length
 
-```{r plot of median.length, fig.width= 12, fig.height= 8}
+```{r plot of median.length, fig.width = 12, fig.height = 8}
 ggplot(byrun, aes(x=ONT_Barcode, y=median.length, fill=Demultiplexer, alpha = Step)) +
   geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
   scale_fill_viridis_d(option = "E", end = .85) +
@@ -150,7 +150,7 @@ ggplot(byrun, aes(x=ONT_Barcode, y=median.length, fill=Demultiplexer, alpha = St
 
 ### N50 length
 
-```{r plot of N50.length, fig.width= 12, fig.height= 8}
+```{r plot of N50.length, fig.width = 12, fig.height = 8}
 ggplot(byrun, aes(x=ONT_Barcode, y=N50.length, fill=Demultiplexer, alpha = Step)) +
   geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
   scale_fill_viridis_d(option = "E", end = .85) +
@@ -163,7 +163,7 @@ ggplot(byrun, aes(x=ONT_Barcode, y=N50.length, fill=Demultiplexer, alpha = Step)
 
 ### Total reads
 
-```{r plot of total.reads, fig.width= 12, fig.height= 8}
+```{r plot of total.reads, fig.width = 12, fig.height = 8}
 ggplot(byrun, aes(x=ONT_Barcode, y=total.reads, fill=Demultiplexer, alpha = Step)) +
   geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
   scale_fill_viridis_d(option = "E", end = .85) +
@@ -186,7 +186,7 @@ if (file.exists(bcgenome_tsv)) {
 
 ### Total gigabases
 
-```{r total.gigabases, fig.width= 12, fig.height= 8}
+```{r total.gigabases, fig.width = 12, fig.height = 8}
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x=Genome_ID, y=total.gigabases, fill=Run_ID)) +
     geom_col(position = position_stack(), color = "gray") +
@@ -203,7 +203,7 @@ if (file.exists(bcgenome_tsv)) {
 
 ### Median length
 
-```{r median.length, fig.width= 12, fig.height= 8}
+```{r median.length, fig.width = 12, fig.height = 8}
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x=Genome_ID, y=median.length, fill=Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
@@ -220,7 +220,7 @@ if (file.exists(bcgenome_tsv)) {
 
 ### N50 length
 
-```{r N50.length, fig.width= 12, fig.height= 8}
+```{r N50.length, fig.width = 12, fig.height = 8}
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x=Genome_ID, y=N50.length, fill=Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
@@ -237,7 +237,7 @@ if (file.exists(bcgenome_tsv)) {
 
 ### Total reads
 
-```{r total.reads, fig.width= 12, fig.height= 8}
+```{r total.reads, fig.width = 12, fig.height = 8}
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x=Genome_ID, y=total.reads, fill=Run_ID)) +
     geom_col(position = position_stack(), color = "gray") +
