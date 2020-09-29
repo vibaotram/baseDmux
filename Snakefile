@@ -135,12 +135,30 @@ GET_READS_PER_GENOME_OUTPUT = [directory(expand(os.path.join(outdir, "reads_per_
 
 
 
-POST_DEMULTIPLEXING = sorted(config["POST_DEMULTIPLEXING"], reverse = True)
-POST_DEMULTIPLEXING = ["fastq"] + POST_DEMULTIPLEXING
-post_demux = "_".join(POST_DEMULTIPLEXING)
+# POST_DEMULTIPLEXING = sorted(config["POST_DEMULTIPLEXING"], reverse = True)
+POST_DEMULTIPLEXING = config["POST_DEMULTIPLEXING"]
 
-PORECHOP_PARAMS = config["RULE_PORECHOP"]["PARAMS"]
-FILTLONG_PARAMS = config["RULE_FILTLONG"]["PARAMS"]
+
+if len(POST_DEMULTIPLEXING) == 0:
+	post_demux = "fastq"
+else:
+	post_demux = []
+	n_filtlong = POST_DEMULTIPLEXING.copy()
+	if "porechop" in POST_DEMULTIPLEXING:
+		n_filtlong.remove("porechop")
+		if len(n_filtlong) > 0:
+			for i in n_filtlong:
+				post_demux.append("_".join(["fastq", "porechop", i]))
+		else:
+			post_demux.append("fastq_porechop")
+	else:
+		for i in n_filtlong:
+			t = ["fastq", i]
+			post_demux.append("_".join(t))
+
+
+PORECHOP_PARAMS = config["porechop"]["PARAMS"]
+# FILTLONG_PARAMS = config["RULE_FILTLONG"]["PARAMS"]
 
 ##############################
 ## reports
@@ -603,21 +621,31 @@ rule porechop:
 		log = "porechop_{genome}.log"
 	singularity: guppy_container
 	conda: 'conda/conda_porechop.yaml'
-	threads: config["RULE_PORECHOP"]["THREADS"]
+	threads: config["porechop"]["THREADS"]
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		porechop -i {input} -o {output} --format auto --verbosity 3 --threads {threads} --discard_middle {params.porechop}
+		porechop -i {input} -o {output} --format auto --verbosity 3 --threads {threads} {params.porechop}
 		"""
 
 FILTLONG_INPUT = by_cond("porechop" in POST_DEMULTIPLEXING, rules.porechop.output.fastq, os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"))
+
+FILTLONG_OUTPUT = by_cond("porechop" in POST_DEMULTIPLEXING, os.path.join(outdir, "reads_per_genome/fastq_porechop_{n_filtlong}/{genome}.fastq.gz"), os.path.join(outdir, "reads_per_genome/fastq_{n_filtlong}/{genome}.fastq.gz"))
+
+def filtlong_params(wildcards):
+	params = config[wildcards.n_filtlong].values()
+	return unpack(params)
+
+
+
+
 rule filtlong:
 	input: FILTLONG_INPUT
 	output:
-		fastq = os.path.join(outdir, "reads_per_genome/{post_demux}/{genome}.fastq.gz")
+		fastq = FILTLONG_OUTPUT
 	params:
-		filtlong = FILTLONG_PARAMS,
-		log = "filtlong_{genome}.log"
+		filtlong = filtlong_params,
+		log = "{n_filtlong}_{genome}.log"
 	singularity: guppy_container
 	conda: 'conda/conda_filtlong.yaml'
 	shell:
@@ -642,7 +670,7 @@ rule report_demultiplex:
 		barcode_by_genome = BARCODE_BY_GENOME,
 		fastq = os.path.join(outdir, "reads_per_genome/fastq"),
 		demultiplex = os.path.join(outdir, "demultiplex"),
-		postdemux = os.path.join(outdir, f"reads_per_genome/{post_demux}"),
+		postdemux = expand(os.path.join(outdir, "reads_per_genome/{post_demux}"), post_demux = post_demux),
 		log = "report_demultiplex.log",
 		outpath = lambda wildcards, output: os.path.dirname(output[0])
 	singularity: guppy_container
@@ -686,7 +714,7 @@ rule help:
 rule test:
 	shell:
 		"""
-		echo "{cf}"
+		echo "{n_filtlong}"
 		"""
 
 # rule add_slurm_logs:

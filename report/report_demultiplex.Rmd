@@ -57,6 +57,7 @@ sum <- do.call(rbind, lapply(summaries, function(s) {
                     "ONT_Barcode" = splitted_path[length(splitted_path)],
                     "Run_ID" = splitted_path[length(splitted_path) - 1],
                     "Demultiplexer" = splitted_path[length(splitted_path) - 2],
+                    "Step" = "demultiplex",
                     stringsAsFactors = F)
   return(sum)
 }))
@@ -78,6 +79,7 @@ if (postdemux_folder != demux_folder) {
                      "read_length" = width(fastq),
                      "Genome_ID" = gsub("\\.fastq.gz", "", basename(fg)),
                      "id" = names(fastq),
+                     "Step" = gsub("fastq", "demultiplex", basename(dirname(fg))),
                      stringsAsFactors = F)
     return(dt)
   }))
@@ -88,11 +90,11 @@ if (postdemux_folder != demux_folder) {
 
 ```{r all_qc}
 if (postdemux_folder == demux_folder) {
-  all_sum <- data.frame(demux_sum, "Step" = NA)
+  all_sum <- demux_sum %>% dplyr::mutate(Step = NA)
 } else {
-  all_sum <- rbind(data.frame(demux_sum, "Step" = "demultiplex"),
-                   data.frame(postdemux_sum, "Step" = gsub("fastq", "demultiplex", basename(postdemux_folder))))
+  all_sum <- rbind(demux_sum, postdemux_sum)
 }
+
 
 all_sum$Demultiplexer <- factor(all_sum$Demultiplexer, levels = c("guppy", "deepbinner"), ordered = F)
 # all_sum$Step <- factor(all_sum$Step, levels = c(gsub("fastq", "demultiplex", basename(postdemux_folder)), "demultiplex"), ordered = F)
