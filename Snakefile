@@ -3,7 +3,7 @@ import glob
 import getpass
 import pandas as pd
 import sys
-import re
+
 
 report: "report/workflow.rst"
 
@@ -140,7 +140,7 @@ POST_DEMULTIPLEXING = config["POST_DEMULTIPLEXING"]
 
 
 if len(POST_DEMULTIPLEXING) == 0:
-	post_demux = "fastq"
+	post_demux = ""
 else:
 	post_demux = []
 	n_filtlong = POST_DEMULTIPLEXING.copy()
@@ -148,15 +148,13 @@ else:
 		n_filtlong.remove("porechop")
 		if len(n_filtlong) > 0:
 			for i in n_filtlong:
-				if re.match("filtlong.+", i):
-					post_demux.append("_".join(["fastq", "porechop", i]))
+				post_demux.append("_".join(["_porechop", i]))
 		else:
-			post_demux.append("fastq_porechop")
+			post_demux.append("_porechop")
 	else:
 		for i in n_filtlong:
-			if re.match("filtlong.+", i):
-				t = ["fastq", i]
-				post_demux.append("_".join(t))
+			post_demux.append("_" + i)
+
 
 
 PORECHOP_PARAMS = config["porechop"]["PARAMS"]
@@ -222,11 +220,11 @@ ruleorder: filtlong > porechop
 rule finish:
 	input:
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer = demultiplexer, run = run), # DEMULTIPLEXING QC
-		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer = demultiplexer, run = run),
+		# expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer = demultiplexer, run = run),
 		os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), # BASECALLING QC
-		by_cond(DEMULTIPLEX_REPORT, os.path.join(outdir, "report/demultiplex_report.html"), ()),
+		by_cond(DEMULTIPLEX_REPORT and len(get_demultiplexer) > 0, os.path.join(outdir, "report/demultiplex_report.html"), ()),
 		expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome),
-		expand(os.path.join(outdir, "reads_per_genome/{post_demux}/{genome}.fastq.gz"), genome = genome, post_demux = post_demux),
+		expand(os.path.join(outdir, "reads_per_genome/fastq{post_demux}/{genome}{post_demux}.fastq.gz"), genome = genome, post_demux = post_demux),
 		# expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)
 		# expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
 		# os.path.join(outdir, "report/demultiplex_report.html")
@@ -595,8 +593,7 @@ rule get_reads_per_genome:
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done"), demultiplexer = get_demultiplexer, run = run)
 	output:
 		# GET_READS_PER_GENOME_OUTPUT
-		fast5 = directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)),
-		fastq = expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome),
+		reads_per_genome = [directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)],
 		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),
@@ -617,7 +614,7 @@ rule get_reads_per_genome:
 rule porechop:
 	input: os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz")
 	output:
-		fastq = os.path.join(outdir, "reads_per_genome/fastq_porechop/{genome}.fastq.gz")
+		fastq = os.path.join(outdir, "reads_per_genome/fastq_porechop/{genome}_porechop.fastq.gz")
 	params:
 		porechop = PORECHOP_PARAMS,
 		log = "porechop_{genome}.log"
@@ -632,10 +629,10 @@ rule porechop:
 
 FILTLONG_INPUT = by_cond("porechop" in POST_DEMULTIPLEXING, rules.porechop.output.fastq, os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"))
 
-FILTLONG_OUTPUT = by_cond("porechop" in POST_DEMULTIPLEXING, os.path.join(outdir, "reads_per_genome/fastq_porechop_{n_filtlong}/{genome}.fastq.gz"), os.path.join(outdir, "reads_per_genome/fastq_{n_filtlong}/{genome}.fastq.gz"))
+FILTLONG_OUTPUT = by_cond("porechop" in POST_DEMULTIPLEXING, os.path.join(outdir, "reads_per_genome/fastq_porechop_filtlong{filtlong}/{genome}_porechop_filtlong{filtlong}.fastq.gz"), os.path.join(outdir, "reads_per_genome/fastq_filtlong{filtlong}/{genome}_filtlong{filtlong}.fastq.gz"))
 
 def filtlong_params(wildcards):
-	params = config[wildcards.n_filtlong].values()
+	params = config["filtlong" + wildcards.filtlong].values()
 	return unpack(params)
 
 
@@ -647,7 +644,7 @@ rule filtlong:
 		fastq = FILTLONG_OUTPUT
 	params:
 		filtlong = filtlong_params,
-		log = "{n_filtlong}_{genome}.log"
+		log = "{filtlong}_{genome}.log"
 	singularity: guppy_container
 	conda: 'conda/conda_filtlong.yaml'
 	shell:
@@ -665,14 +662,14 @@ REPORT_DEMULTIPLEX_INPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules
 rule report_demultiplex:
 	input:
 		fast5 = expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome),
-		fastq = expand(os.path.join(outdir, "reads_per_genome/{post_demux}/{genome}.fastq.gz"), genome = genome, post_demux = post_demux),
+		fastq = expand(os.path.join(outdir, "reads_per_genome/fastq{post_demux}/{genome}{post_demux}.fastq.gz"), genome = genome, post_demux = post_demux),
 	message: " Reporting demultiplex results"
 	output: os.path.join(outdir, "report/demultiplex_report.html")
 	params:
 		barcode_by_genome = BARCODE_BY_GENOME,
 		fastq = os.path.join(outdir, "reads_per_genome/fastq"),
 		demultiplex = os.path.join(outdir, "demultiplex"),
-		postdemux = expand(os.path.join(outdir, "reads_per_genome/{post_demux}"), post_demux = post_demux),
+		postdemux = expand(os.path.join(outdir, "reads_per_genome/fastq{post_demux}"), post_demux = post_demux),
 		log = "report_demultiplex.log",
 		outpath = lambda wildcards, output: os.path.dirname(output[0])
 	singularity: guppy_container
@@ -716,7 +713,7 @@ rule help:
 rule test:
 	shell:
 		"""
-		echo "{n_filtlong}"
+		echo "{genome}"
 		"""
 
 # rule add_slurm_logs:
