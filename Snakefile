@@ -3,7 +3,7 @@ import glob
 import getpass
 import pandas as pd
 import sys
-
+import re
 
 report: "report/workflow.rst"
 
@@ -148,13 +148,15 @@ else:
 		n_filtlong.remove("porechop")
 		if len(n_filtlong) > 0:
 			for i in n_filtlong:
-				post_demux.append("_".join(["fastq", "porechop", i]))
+				if re.match("filtlong.+", i):
+					post_demux.append("_".join(["fastq", "porechop", i]))
 		else:
 			post_demux.append("fastq_porechop")
 	else:
 		for i in n_filtlong:
-			t = ["fastq", i]
-			post_demux.append("_".join(t))
+			if re.match("filtlong.+", i):
+				t = ["fastq", i]
+				post_demux.append("_".join(t))
 
 
 PORECHOP_PARAMS = config["porechop"]["PARAMS"]
