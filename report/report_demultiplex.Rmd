@@ -443,15 +443,10 @@ ggplot(all_sum, aes(x = round(phred.score))) +
 ```{r barcode_table}
 if (file.exists(bcgenome_tsv)) {
   datatable(bygenome)
+  write.table(bygenome, file.path(snakemake@params$outpath, "demultiplex_report.tsv"), sep = "\t", row.names = F, quote = F)
+} else {
+  write.table(byrun, file.path(snakemake@params$outpath, "demultiplex_report.tsv"), sep = "\t", row.names = F, quote = F)
 }
-```
-
-## filtering configuration
-```{r}
-print("porechop")
-filtlongs <- names(snakemake@config)[grep("filtlong.+", names(snakemake@config))]
-snakemake@config[filtlongs]
-snakemake@config["porechop"]
 ```
 
 ```{r save_workspace, include=FALSE}
