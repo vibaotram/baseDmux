@@ -43,7 +43,7 @@ DEMULTIPLEXER: ["guppy", "deepbinner"] # "guppy"/"deepbinner"
 RULE_GUPPY_DEMULTIPLEXING:
     'CONFIG': "configuration.cfg"
     'WORKER_THREADS': 12
-    'ADDITION': "--trim_barcodes" 
+    'ADDITION': "--trim_barcodes"
 
 
 ##############################
@@ -99,3 +99,6 @@ REPORTS:
         'MULTIQC_BASECALL': True
         'MULTIQC_DEMULTIPLEX': True
     'DEMULTIPLEX_REPORT': True
+
+RULE_REPORT_DEMULTIPLEX:
+  'CORES': 8

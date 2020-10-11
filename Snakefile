@@ -321,7 +321,7 @@ rule guppy_demultiplexing:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
-		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} --trim_barcodes {ADDITION} # --compress_fastq
+		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} {ADDITION} # --compress_fastq
 		Rscript {RENAME_FASTQ_GUPPY_BARCODER} {params.outpath}
 		touch {output.check}
 		"""
@@ -677,6 +677,7 @@ rule report_demultiplex:
 		outpath = lambda wildcards, output: os.path.dirname(output[0])
 	singularity: guppy_container
 	conda: 'conda/conda_rmarkdown.yaml'
+	threads: config['RULE_REPORT_DEMULTIPLEX']['CORES']
 	script:
 		"report/report_demultiplex.Rmd"
 

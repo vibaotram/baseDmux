@@ -6,6 +6,14 @@ params:
    rmd: "report_demultiplex.Rmd"
 output: html_document
 ---
+
+<style>
+.main-container {
+    width: 70%;
+    max-width: unset;
+}
+</style>
+
 The report provides plots in order to compare demultiplexing results from different runs, and from different demultiplexers (guppy and deepbinner), and for each genome (if the table barcode by genome is provided).
 
 ```{r setup, include=FALSE}
@@ -16,6 +24,8 @@ if (!requireNamespace("DT", quietly = TRUE)) install.packages('DT', repos = "htt
 if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages('ggplot2', repos = "https://cloud.r-project.org")
 if (!requireNamespace("dplyr", quietly = TRUE)) install.packages('dplyr', repos = "https://cloud.r-project.org")
 if (!requireNamespace("stringr", quietly = TRUE)) install.packages('stringr', repos = "https://cloud.r-project.org")
+if (!requireNamespace("S4Vectors", quietly = TRUE)) install.packages('S4Vectors', repos = "https://cloud.r-project.org")
+if (!requireNamespace("parallel", quietly = TRUE)) install.packages('parallel', repos = "https://cloud.r-project.org")
 if (!requireNamespace("Biostrings", quietly = TRUE)) {
   if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager", repos = "https://cloud.r-project.org")
@@ -28,6 +38,8 @@ library(ggplot2)
 library(dplyr)
 library(DT)
 library(Biostrings)
+library(S4Vectors)
+library(parallel)
 ```
 
 
@@ -35,17 +47,22 @@ library(Biostrings)
 fastq_folder <- snakemake@params$fastq # "/data3/projects/xanthopore/baotram/test/results_guppy/reads_per_genome/fastq"
 demux_fastq <- list.files(fastq_folder, ".*\\.fastq.gz", full.names = T)
 
-demux <- do.call(rbind, lapply(demux_fastq, function(fg) {
+demux <- do.call(rbind, mclapply(demux_fastq, function(fg) {
   fastq <- readDNAStringSet(fg, format = "fastq", seek.first.rec = T, with.qualities = T)
+  # phred score
+  phred <- PhredQuality(mcols(fastq)$qualities)
+  scores <- unlist(lapply(as(phred, "IntegerList"), mean))
+  
   dt <- data.frame("read_id" = gsub(" .+", "", names(fastq)),
                    "run_id" = gsub("(.+ runid=| sampleid.+)", "", names(fastq)),
                    "read_length" = width(fastq),
+                   "phred.score" = scores,
                    "Genome_ID" = gsub("\\.fastq.gz", "", basename(fg)),
                    "Step" = "demultiplex",
                    "id" = names(fastq),
                    stringsAsFactors = F)
   return(dt)
-}))
+}, mc.cores = snakemake@threads))
 ```
 
 ```{r sequencing_summary}
@@ -71,18 +88,22 @@ demux_sum <- merge(demux, sum[c("read_id", "run_id", "ONT_Barcode", "Run_ID", "D
 postdemux_folder <- snakemake@params$postdemux # "/data3/projects/xanthopore/baotram/test/results_guppy/reads_per_genome/fastq_porechop_filtlong"
 if (any(postdemux_folder != demux_folder)) {
   postdemux_fastq <- list.files(postdemux_folder, ".*\\.fastq.gz", full.names = T)
-
-  postdemux <- do.call(rbind, lapply(postdemux_fastq, function(fg) {
+  postdemux <- do.call(rbind, mclapply(postdemux_fastq, function(fg) {
     fastq <- readDNAStringSet(fg, format = "fastq", seek.first.rec = T, with.qualities = T)
+    # phred score
+    phred <- PhredQuality(mcols(fastq)$qualities)
+    scores <- unlist(lapply(as(phred, "IntegerList"), mean))
+    
     dt <- data.frame("read_id" = gsub(" .+", "", names(fastq)),
                      "run_id" = gsub("(.+ runid=| sampleid.+)", "", names(fastq)),
                      "read_length" = width(fastq),
+                     "phred.score" = scores,
                      "Genome_ID" = gsub("\\.fastq.gz", "", basename(fg)),
-                     "id" = names(fastq),
                      "Step" = gsub("fastq", "demultiplex", basename(dirname(fg))),
+                     "id" = names(fastq),
                      stringsAsFactors = F)
     return(dt)
-  }))
+  }, mc.cores = snakemake@threads))
 
   postdemux_sum <- merge(postdemux, sum[c("read_id", "run_id", "ONT_Barcode", "Run_ID", "Demultiplexer")], by = c("read_id", "run_id"))
 }
@@ -114,35 +135,74 @@ byrun <- all_sum %>%
   dplyr::group_by(Step, Demultiplexer, Run_ID, ONT_Barcode) %>%
   dplyr::summarise(total.gigabases = sum(read_length)/10**9,
                    total.reads = length(read_length),
+                   mean.length = mean(read_length),
                    median.length = median(read_length),
-                   N50.length = find_n50(read_length))
+                   N50.length = find_n50(read_length),
+                   mean.quality.score = mean(phred.score),
+                   median.quality.score = median(phred.score),
+                   N50.quality.score = find_n50(phred.score))
 ```
 
 
-#  {.tabset .tabset-fade }
-## by run
+# {.tabset .tabset-fade }
+## by run {.tabset .tabset-fade }
+
+```{r}
+if (nlevels(factor(byrun$Step)) > 1) {
+  cat("FILTERING PARAMS\n\n")
+  if ("porechop" %in% names(snakemake@config)) print(snakemake@config["porechop"])
+  filtlongs <- names(snakemake@config)[grep("filtlong.+", names(snakemake@config))]
+  if (length(filtlongs) > 0) print(snakemake@config[filtlongs])
+}
+```
 
 ### Total gigabases
 
-```{r plot of total.gigabases, fig.width = 12, fig.height = 8}
-ggplot(byrun, aes(x=ONT_Barcode, y=total.gigabases, fill=Demultiplexer, alpha = Step)) +
+```{r run.total.gigabases, fig.width = 16, fig.height = 8}
+ggplot(byrun, aes(x = ONT_Barcode, y = total.gigabases, fill = Demultiplexer, alpha = Step)) +
   geom_col(position = position_dodge2(preserve = "single", padding = 0), stat = "identity") +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1)) +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+### Total reads
+
+```{r run.total.reads, fig.width = 16, fig.height = 8}
+ggplot(byrun, aes(x = ONT_Barcode, y = total.reads, fill = Demultiplexer, alpha = Step)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
   scale_fill_viridis_d(option = "E", end = .85) +
   scale_alpha_discrete(range = c(.3, 1)) +
   facet_wrap(vars(Run_ID), scales = "fixed", ncol=3, strip.position = "right") +
   theme_light() +
-  theme(axis.text.x=element_text(angle=90,hjust=1),
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+### Mean length
+
+```{r run.mean.length, fig.width = 16, fig.height = 8}
+ggplot(byrun, aes(x = ONT_Barcode, y = mean.length, fill = Demultiplexer, alpha = Step)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1)) +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
         legend.direction = "horizontal", legend.position = "top")
 ```
 
 ### Median length
 
-```{r plot of median.length, fig.width = 12, fig.height = 8}
-ggplot(byrun, aes(x=ONT_Barcode, y=median.length, fill=Demultiplexer, alpha = Step)) +
+```{r run.median.length, fig.width = 16, fig.height = 8}
+ggplot(byrun, aes(x = ONT_Barcode, y = median.length, fill = Demultiplexer, alpha = Step)) +
   geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
   scale_fill_viridis_d(option = "E", end = .85) +
   scale_alpha_discrete(range = c(.3, 1)) +
-  facet_wrap(vars(Run_ID), scales = "fixed", ncol=3, strip.position = "right") +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
   theme_light() +
   theme(axis.text.x=element_text(angle=90,hjust=1),
         legend.direction = "horizontal", legend.position = "top")
@@ -150,31 +210,68 @@ ggplot(byrun, aes(x=ONT_Barcode, y=median.length, fill=Demultiplexer, alpha = St
 
 ### N50 length
 
-```{r plot of N50.length, fig.width = 12, fig.height = 8}
-ggplot(byrun, aes(x=ONT_Barcode, y=N50.length, fill=Demultiplexer, alpha = Step)) +
+```{r run.N50.length, fig.width = 16, fig.height = 8}
+ggplot(byrun, aes(x = ONT_Barcode, y = N50.length, fill = Demultiplexer, alpha = Step)) +
   geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
   scale_fill_viridis_d(option = "E", end = .85) +
   scale_alpha_discrete(range = c(.3, 1)) +
-  facet_wrap(vars(Run_ID), scales = "fixed", ncol=3, strip.position = "right") +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
   theme_light() +
-  theme(axis.text.x=element_text(angle=90,hjust=1),
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
         legend.direction = "horizontal", legend.position = "top")
 ```
 
-### Total reads
+### Mean quality score
 
-```{r plot of total.reads, fig.width = 12, fig.height = 8}
-ggplot(byrun, aes(x=ONT_Barcode, y=total.reads, fill=Demultiplexer, alpha = Step)) +
+```{r run.mean.quality, fig.width = 16, fig.height = 8}
+ggplot(byrun, aes(x = ONT_Barcode, y = mean.quality.score, fill = Demultiplexer, alpha = Step)) +
   geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
   scale_fill_viridis_d(option = "E", end = .85) +
   scale_alpha_discrete(range = c(.3, 1)) +
-  facet_wrap(vars(Run_ID), scales = "fixed", ncol=3, strip.position = "right") +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
   theme_light() +
-  theme(axis.text.x=element_text(angle=90,hjust=1),
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
         legend.direction = "horizontal", legend.position = "top")
 ```
 
-## by genome
+### Median quality score
+
+```{r run.median.quality, fig.width = 16, fig.height = 8}
+ggplot(byrun, aes(x = ONT_Barcode, y = median.quality.score, fill = Demultiplexer, alpha = Step)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1)) +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+### N50 quality score
+
+```{r run.n50.quality, fig.width = 16, fig.height = 8}
+ggplot(byrun, aes(x = ONT_Barcode, y = N50.quality.score, fill = Demultiplexer, alpha = Step)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1)) +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+
+### Quality score distribution
+
+```{r run.quality.distribution, fig.width = 16, fig.height = 8}
+ggplot(all_sum, aes(x = round(phred.score))) +
+  geom_line(aes(alpha = Step, color = Demultiplexer), stat = "count") +
+  facet_grid(cols = vars(Run_ID), rows = vars(Demultiplexer), scales = "fixed") +
+  scale_color_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1))
+```
+
+## by genome {.tabset .tabset-fade }
 
 ```{r}
 bcgenome_tsv = snakemake@params$barcode_by_genome # "/data3/projects/xanthopore/baotram/baseDmux/barcodeByGenome_sample.tsv"
@@ -184,72 +281,161 @@ if (file.exists(bcgenome_tsv)) {
 }
 ```
 
+```{r}
+if (file.exists(bcgenome_tsv)) {
+  if (nlevels(factor(bygenome$Step)) > 1) {
+  cat("FILTERING PARAMS\n\n")
+  if ("porechop" %in% names(snakemake@config)) print(snakemake@config["porechop"])
+  filtlongs <- names(snakemake@config)[grep("filtlong.+", names(snakemake@config))]
+  if (length(filtlongs) > 0) print(snakemake@config[filtlongs])
+  }
+}
+```
+
 ### Total gigabases
 
-```{r total.gigabases, fig.width = 12, fig.height = 8}
+```{r genome.total.gigabases, fig.width = 16, fig.height = 10}
 if (file.exists(bcgenome_tsv)) {
-  p <- ggplot(bygenome, aes(x=Genome_ID, y=total.gigabases, fill=Run_ID)) +
+  p <- ggplot(bygenome, aes(x = Genome_ID, y = total.gigabases, fill = Run_ID)) +
     geom_col(position = position_stack(), color = "gray") +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_stack(), vjust = 1.2, size = 3.8*10/nlevels(as.factor(bcgenome$Genome_ID))) +
+    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_stack(), vjust = 1.2, size = 3.88*16/nlevels(as.factor(bygenome$Genome_ID))) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
-    theme(axis.text.x=element_text(angle=90,hjust=1),
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
           legend.direction = "vertical", legend.position = "top")
 
-  if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = 2)
-  p
-}
-```
-
-### Median length
-
-```{r median.length, fig.width = 12, fig.height = 8}
-if (file.exists(bcgenome_tsv)) {
-  p <- ggplot(bygenome, aes(x=Genome_ID, y=median.length, fill=Run_ID)) +
-    geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1.1, size = 3.8*10/nlevels(as.factor(bcgenome$Genome_ID))) +
-    scale_fill_viridis_d(option = "C") +
-    theme_light() +
-    theme(axis.text.x=element_text(angle=90,hjust=1),
-          legend.direction = "vertical", legend.position = "top")
-
-  if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = 2)
-  p
-}
-```
-
-### N50 length
-
-```{r N50.length, fig.width = 12, fig.height = 8}
-if (file.exists(bcgenome_tsv)) {
-  p <- ggplot(bygenome, aes(x=Genome_ID, y=N50.length, fill=Run_ID)) +
-    geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust = .5, hjust = 1.1, size = 3.8*10/nlevels(as.factor(bcgenome$Genome_ID))) +
-    scale_fill_viridis_d(option = "C") +
-    theme_light() +
-    theme(axis.text.x=element_text(angle=90,hjust=1),
-          legend.direction = "vertical", legend.position = "top")
-
-  if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = 2)
+if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
   p
 }
 ```
 
 ### Total reads
 
-```{r total.reads, fig.width = 12, fig.height = 8}
+```{r genome.total.reads, fig.width = 16, fig.height = 10}
 if (file.exists(bcgenome_tsv)) {
-  p <- ggplot(bygenome, aes(x=Genome_ID, y=total.reads, fill=Run_ID)) +
+  p <- ggplot(bygenome, aes(x = Genome_ID, y = total.reads, fill=Run_ID)) +
     geom_col(position = position_stack(), color = "gray") +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_stack(), vjust = 1.2, size = 3.8*10/nlevels(as.factor(bcgenome$Genome_ID))) +
+    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_stack(), vjust = 1.2, size = 3.88*16/nlevels(as.factor(bygenome$Genome_ID))) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
-    theme(axis.text.x=element_text(angle=90,hjust=1),
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
           legend.direction = "vertical", legend.position = "top")
-
-  if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = 2)
+  
+  if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
   p
 }
+```
+
+### Mean length
+
+```{r genome.mean.length, fig.width = 16, fig.height = 10}
+if (file.exists(bcgenome_tsv)) {
+  p <- ggplot(bygenome, aes(x = Genome_ID, y = mean.length, fill = Run_ID)) +
+    geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    scale_fill_viridis_d(option = "C") +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
+          legend.direction = "vertical", legend.position = "top")
+  
+  if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
+  p
+}
+```
+
+### Median length
+
+```{r genome.median.length, fig.width = 16, fig.height = 10}
+if (file.exists(bcgenome_tsv)) {
+  p <- ggplot(bygenome, aes(x = Genome_ID, y = median.length, fill = Run_ID)) +
+    geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    scale_fill_viridis_d(option = "C") +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
+          legend.direction = "vertical", legend.position = "top")
+  
+  if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
+  p
+}
+```
+
+### N50 length
+
+```{r genome.N50.length, fig.width = 16, fig.height = 10}
+if (file.exists(bcgenome_tsv)) {
+  p <- ggplot(bygenome, aes(x = Genome_ID, y = N50.length, fill = Run_ID)) +
+    geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    scale_fill_viridis_d(option = "C") +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
+          legend.direction = "vertical", legend.position = "top")
+  
+  if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
+  p
+}
+```
+
+### Mean quality score
+
+```{r genome.mean.quality, fig.width = 16, fig.height = 10}
+if (file.exists(bcgenome_tsv)) {
+  p <- ggplot(bygenome, aes(x = Genome_ID, y = mean.quality.score, fill = Run_ID)) +
+    geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    scale_fill_viridis_d(option = "C") +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
+          legend.direction = "vertical", legend.position = "top")
+  
+  if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
+  p
+}
+```
+
+### Median quality score
+
+```{r genome.median.quality, fig.width = 16, fig.height = 10}
+if (file.exists(bcgenome_tsv)) {
+  p <- ggplot(bygenome, aes(x = Genome_ID, y = median.quality.score, fill = Run_ID)) +
+    geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    scale_fill_viridis_d(option = "C") +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
+          legend.direction = "vertical", legend.position = "top")
+  
+  if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
+  p
+}
+```
+
+### N50 quality score
+
+```{r genome.n50.quality, fig.width = 12, fig.height = 8}
+if (file.exists(bcgenome_tsv)) {
+  p <- ggplot(bygenome, aes(x = Genome_ID, y = N50.quality.score, fill = Run_ID)) +
+    geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    scale_fill_viridis_d(option = "C") +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
+          legend.direction = "vertical", legend.position = "top")
+  
+  if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
+  p
+}
+```
+
+### Quality score distribution
+
+```{r genome.quality.distribution, fig.width = 16, fig.height = 10}
+ggplot(all_sum, aes(x = round(phred.score))) +
+  geom_line(aes(alpha = Step, color = Demultiplexer), stat = "count") +
+  facet_grid(cols = vars(Genome_ID), rows = vars(Demultiplexer), scales = "fixed") +
+  scale_color_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1))
 ```
 
 ## barcode by genome
@@ -260,7 +446,16 @@ if (file.exists(bcgenome_tsv)) {
 }
 ```
 
+## filtering configuration
+```{r}
+print("porechop")
+filtlongs <- names(snakemake@config)[grep("filtlong.+", names(snakemake@config))]
+snakemake@config[filtlongs]
+snakemake@config["porechop"]
+```
+
 ```{r save_workspace, include=FALSE}
 image_path <- file.path(snakemake@params$outpath, "demultiplex_report.RData")
+remove(p)
 save.image(file = image_path, compress = TRUE)
 ```
