@@ -13,7 +13,7 @@ if "--configfile" in request:
 	cf = request[arg_index + 1]
 else:
 	cf = "config.yaml"
-configfile: cf
+# configfile: cf
 
 
 indir = config['INDIR']
