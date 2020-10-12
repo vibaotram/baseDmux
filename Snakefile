@@ -221,7 +221,7 @@ ruleorder: filtlong > porechop
 rule finish:
 	input:
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer = demultiplexer, run = run), # DEMULTIPLEXING QC
-		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer = demultiplexer, run = run),
+		# expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer = demultiplexer, run = run),
 		os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), # BASECALLING QC
 		by_cond(DEMULTIPLEX_REPORT, os.path.join(outdir, "report/demultiplex_report.html"), ()),
 		expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome),
@@ -671,12 +671,11 @@ rule report_demultiplex:
 		barcode_by_genome = BARCODE_BY_GENOME,
 		fastq = os.path.join(outdir, "reads_per_genome/fastq"),
 		demultiplex = os.path.join(outdir, "demultiplex"),
-		postdemux = expand(os.path.join(outdir, "reads_per_genome/{post_demux}"), post_demux = post_demux),
+		postdemux = expand(os.path.join(outdir, "reads_per_genome/fastq{post_demux}"), post_demux = post_demux),
 		log = "report_demultiplex.log",
 		outpath = lambda wildcards, output: os.path.dirname(output[0])
 	singularity: guppy_container
 	conda: 'conda/conda_rmarkdown.yaml'
-	threads: config['RULE_REPORT_DEMULTIPLEX']['CORES']
 	script:
 		"report/report_demultiplex.Rmd"
 

@@ -25,7 +25,7 @@ if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages('ggplot2', re
 if (!requireNamespace("dplyr", quietly = TRUE)) install.packages('dplyr', repos = "https://cloud.r-project.org")
 if (!requireNamespace("stringr", quietly = TRUE)) install.packages('stringr', repos = "https://cloud.r-project.org")
 if (!requireNamespace("S4Vectors", quietly = TRUE)) install.packages('S4Vectors', repos = "https://cloud.r-project.org")
-if (!requireNamespace("parallel", quietly = TRUE)) install.packages('parallel', repos = "https://cloud.r-project.org")
+# if (!requireNamespace("parallel", quietly = TRUE)) install.packages('parallel', repos = "https://cloud.r-project.org")
 if (!requireNamespace("Biostrings", quietly = TRUE)) {
   if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager", repos = "https://cloud.r-project.org")
@@ -52,7 +52,7 @@ demux <- do.call(rbind, mclapply(demux_fastq, function(fg) {
   # phred score
   phred <- PhredQuality(mcols(fastq)$qualities)
   scores <- unlist(lapply(as(phred, "IntegerList"), mean))
-  
+
   dt <- data.frame("read_id" = gsub(" .+", "", names(fastq)),
                    "run_id" = gsub("(.+ runid=| sampleid.+)", "", names(fastq)),
                    "read_length" = width(fastq),
@@ -62,7 +62,7 @@ demux <- do.call(rbind, mclapply(demux_fastq, function(fg) {
                    "id" = names(fastq),
                    stringsAsFactors = F)
   return(dt)
-}, mc.cores = snakemake@threads))
+}))
 ```
 
 ```{r sequencing_summary}
@@ -93,17 +93,19 @@ if (any(postdemux_folder != demux_folder)) {
     # phred score
     phred <- PhredQuality(mcols(fastq)$qualities)
     scores <- unlist(lapply(as(phred, "IntegerList"), mean))
-    
+
     dt <- data.frame("read_id" = gsub(" .+", "", names(fastq)),
                      "run_id" = gsub("(.+ runid=| sampleid.+)", "", names(fastq)),
                      "read_length" = width(fastq),
                      "phred.score" = scores,
-                     "Genome_ID" = gsub("\\.fastq.gz", "", basename(fg)),
+                     # "Genome_ID" = gsub("\\.fastq.gz", "", basename(fg)),
                      "Step" = gsub("fastq", "demultiplex", basename(dirname(fg))),
                      "id" = names(fastq),
                      stringsAsFactors = F)
     return(dt)
-  }, mc.cores = snakemake@threads))
+  }))
+
+  postdemux <- merge(postdemux, demux[c("read_id", "run_id", "Genome_ID")], by = c("read_id", "run_id"))
 
   postdemux_sum <- merge(postdemux, sum[c("read_id", "run_id", "ONT_Barcode", "Run_ID", "Demultiplexer")], by = c("read_id", "run_id"))
 }
@@ -268,7 +270,10 @@ ggplot(all_sum, aes(x = round(phred.score))) +
   geom_line(aes(alpha = Step, color = Demultiplexer), stat = "count") +
   facet_grid(cols = vars(Run_ID), rows = vars(Demultiplexer), scales = "fixed") +
   scale_color_viridis_d(option = "E", end = .85) +
-  scale_alpha_discrete(range = c(.3, 1))
+  scale_alpha_discrete(range = c(.3, 1)) +
+  theme_light() +
+  theme(axis.text.x=element_text(angle=90,hjust=1),
+        legend.direction = "horizontal", legend.position = "top")
 ```
 
 ## by genome {.tabset .tabset-fade }
@@ -320,7 +325,7 @@ if (file.exists(bcgenome_tsv)) {
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
           legend.direction = "vertical", legend.position = "top")
-  
+
   if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
   p
 }
@@ -337,7 +342,7 @@ if (file.exists(bcgenome_tsv)) {
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
           legend.direction = "vertical", legend.position = "top")
-  
+
   if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
   p
 }
@@ -354,7 +359,7 @@ if (file.exists(bcgenome_tsv)) {
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
           legend.direction = "vertical", legend.position = "top")
-  
+
   if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
   p
 }
@@ -371,7 +376,7 @@ if (file.exists(bcgenome_tsv)) {
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
           legend.direction = "vertical", legend.position = "top")
-  
+
   if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
   p
 }
@@ -388,7 +393,7 @@ if (file.exists(bcgenome_tsv)) {
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
           legend.direction = "vertical", legend.position = "top")
-  
+
   if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
   p
 }
@@ -405,7 +410,7 @@ if (file.exists(bcgenome_tsv)) {
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
           legend.direction = "vertical", legend.position = "top")
-  
+
   if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
   p
 }
@@ -413,7 +418,7 @@ if (file.exists(bcgenome_tsv)) {
 
 ### N50 quality score
 
-```{r genome.n50.quality, fig.width = 12, fig.height = 8}
+```{r genome.n50.quality, fig.width = 16, fig.height = 10}
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x = Genome_ID, y = N50.quality.score, fill = Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
@@ -422,7 +427,7 @@ if (file.exists(bcgenome_tsv)) {
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
           legend.direction = "vertical", legend.position = "top")
-  
+
   if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(factor(bygenome$Step)))
   p
 }
@@ -435,21 +440,28 @@ ggplot(all_sum, aes(x = round(phred.score))) +
   geom_line(aes(alpha = Step, color = Demultiplexer), stat = "count") +
   facet_grid(cols = vars(Genome_ID), rows = vars(Demultiplexer), scales = "fixed") +
   scale_color_viridis_d(option = "E", end = .85) +
-  scale_alpha_discrete(range = c(.3, 1))
+  scale_alpha_discrete(range = c(.3, 1)) +
+  theme_light() +
+  theme(axis.text.x=element_text(angle=90,hjust=1),
+        legend.direction = "horizontal", legend.position = "top")
 ```
 
-## barcode by genome
+## data
 
 ```{r barcode_table}
 if (file.exists(bcgenome_tsv)) {
   datatable(bygenome)
-  write.table(bygenome, file.path(snakemake@params$outpath, "demultiplex_report.tsv"), sep = "\t", row.names = F, quote = F)
 } else {
-  write.table(byrun, file.path(snakemake@params$outpath, "demultiplex_report.tsv"), sep = "\t", row.names = F, quote = F)
+  datatable(byrun)
 }
 ```
 
 ```{r save_workspace, include=FALSE}
+if (file.exists(bcgenome_tsv)) {
+  write.table(bygenome, file.path(snakemake@params$outpath, "demultiplex_report.tsv"), sep = "\t", row.names = F, quote = F)
+} else {
+  write.table(byrun, file.path(snakemake@params$outpath, "demultiplex_report.tsv"), sep = "\t", row.names = F, quote = F)
+}
 image_path <- file.path(snakemake@params$outpath, "demultiplex_report.RData")
 remove(p)
 save.image(file = image_path, compress = TRUE)
