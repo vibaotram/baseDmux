@@ -4,6 +4,7 @@ import getpass
 import pandas as pd
 import sys
 import re
+import requests
 
 report: "report/workflow.rst"
 
@@ -13,7 +14,7 @@ if "--configfile" in request:
 	cf = request[arg_index + 1]
 else:
 	cf = "config.yaml"
-# configfile: cf
+configfile: cf
 
 
 indir = config['INDIR']
@@ -43,10 +44,6 @@ def by_cond(cond, yes, no, cond_ext = '', no_ext = ''): # it's working but needs
 ##############################
 ## guppy_basecaller parameters
 RESOURCE = config['RESOURCE']
-if RESOURCE not in ['CPU', 'GPU']:
-	raise KeyError(f'{RESOURCE} in RESOURCE is invalid (configfile line 19)')
-else:
-	pass
 
 KIT = config['KIT']
 
@@ -99,9 +96,9 @@ DEVICE = by_cond(RESOURCE == 'CPU', None, f'--device $CUDA')
 ##############################
 ## MinIONQC parameters
 
-#QSCORE_CUTOFF = config['RULE_MINIONQC_']['QSCORE_CUTOFF']
-SMALLFIGURES = config['RULE_MINIONQC_']['SMALLFIGURES']
-PROCESSORS = config['RULE_MINIONQC_']['PROCESSORS']
+#QSCORE_CUTOFF = config['RULE_MINIONQC']['QSCORE_CUTOFF']
+MinIONQC_ADDITION = config['RULE_MINIONQC']['ADDITION']
+PROCESSORS = config['RULE_MINIONQC']['PROCESSORS']
 fig = ["channel_summary", "flowcell_overview", "gb_per_channel_overview", "length_by_hour", "length_histogram", "length_vs_q", "q_by_hour", "q_histogram", "reads_per_hour", "yield_by_length", "yield_over_time"]
 
 
@@ -135,27 +132,27 @@ GET_READS_PER_GENOME_OUTPUT = [directory(expand(os.path.join(outdir, "reads_per_
 
 
 
-# POST_DEMULTIPLEXING = sorted(config["POST_DEMULTIPLEXING"], reverse = True)
-POST_DEMULTIPLEXING = config["POST_DEMULTIPLEXING"]
+# READS_FILTERING = sorted(config["READS_FILTERING"], reverse = True)
+READS_FILTERING = config["READS_FILTERING"]
 
 
-if len(POST_DEMULTIPLEXING) == 0:
-	post_demux = ""
+if len(READS_FILTERING) == 0:
+	filtered = ""
 else:
-	post_demux = []
-	n_filtlong = POST_DEMULTIPLEXING.copy()
-	if "porechop" in POST_DEMULTIPLEXING:
+	filtered = []
+	n_filtlong = READS_FILTERING.copy()
+	if "porechop" in READS_FILTERING:
 		n_filtlong.remove("porechop")
 		if len(n_filtlong) > 0:
 			for i in n_filtlong:
 				if re.match("filtlong.+", i):
-					post_demux.append("_".join(["_porechop", i]))
+					filtered.append("_".join(["_porechop", i]))
 		else:
-			post_demux.append("_porechop")
+			filtered.append("_porechop")
 	else:
 		for i in n_filtlong:
 			if re.match("filtlong.+", i):
-				post_demux.append("_" + i)
+				filtered.append("_" + i)
 
 
 PORECHOP_PARAMS = config["porechop"]["PARAMS"]
@@ -168,7 +165,7 @@ DEMULTIPLEX_REPORT = config['REPORTS']['DEMULTIPLEX_REPORT']
 ##############################
 ## use different containers for guppy and deepbinner depending on resources
 
-guppy_container = by_cond(RESOURCE == 'CPU', 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api', 'shub://vibaotram/singularity-container:guppy4.0.14gpu-conda-api', cond_ext = 'GPU')
+guppy_container = by_cond(RESOURCE == 'CPU', 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api', 'shub://vibaotram/singularity-container:guppy4.0.14gpu-conda-api', cond_ext = RESOURCE == 'GPU')
 
 deepbinner_container = 'shub://vibaotram/singularity-container:deepbinner-api'
 
@@ -186,7 +183,6 @@ RENAME_FASTQ_GUPPY_BARCODER = 'script/rename_fastq_guppy_barcoder.R'
 
 ##############################
 ## cluster variables
-
 
 user = getpass.getuser()
 
@@ -223,9 +219,10 @@ rule finish:
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer = demultiplexer, run = run), # DEMULTIPLEXING QC
 		# expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer = demultiplexer, run = run),
 		os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), # BASECALLING QC
-		by_cond(DEMULTIPLEX_REPORT, os.path.join(outdir, "report/demultiplex_report.html"), ()),
+		by_cond(DEMULTIPLEX_REPORT and len(genome) > 0, os.path.join(outdir, "report/demultiplex_report.html"), ()),
 		expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome),
-		expand(os.path.join(outdir, "reads_per_genome/fastq{post_demux}/{genome}{post_demux}.fastq.gz"), genome = genome, post_demux = post_demux),
+		by_cond(len(genome) > 0, expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}/{genome}{filtered}.fastq.gz"), genome = genome, filtered = filtered), expand(os.path.join(outdir, "basecall/{run}/{run}{filtered}.fastq.gz"), run = run, filtered = filtered))
+
 		# expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)
 		# expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
 		# os.path.join(outdir, "report/demultiplex_report.html")
@@ -361,7 +358,7 @@ rule multi_to_single_fast5:
 		fi
 		"""
 
-OMP_NUM_THREADS_OPT = by_cond(RESOURCE == 'CPU', '', '--omp_num_threads %s' % OMP_NUM_THREADS)
+OMP_NUM_THREADS_OPT = by_cond(RESOURCE == 'CPU', '', '--omp_num_threads %s' % OMP_NUM_THREADS, RESOURCE == 'GPU')
 
 ## THE DEEPBINNER CONTAINER CANNOT USE A GPU SO IT WILL ALWAYS RUN ON CPU EVEN IF RESOURCE IS GPU
 ## BESIDE, ON ITROP WE WILL ALWAYS HAVE RESOURCE = 'GPU'
@@ -438,7 +435,7 @@ rule minionqc_basecall:
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		MinIONQC.R -i {input} -q {MIN_QSCORE} -s {SMALLFIGURES}
+		MinIONQC.R -i {input} -q {MIN_QSCORE} {ADDITION}
 		"""
 
 MULTIQC_BASECALL_OUTPUT = os.path.join(outdir, "basecall/multiqc/multiqc_report.html")
@@ -528,7 +525,7 @@ rule minionqc_demultiplex:
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		MinIONQC.R -i {params.inpath} -q {MIN_QSCORE} -s {SMALLFIGURES} -p {threads}
+		MinIONQC.R -i {params.inpath} -q {MIN_QSCORE} -p {threads} {ADDITION}
 		rm -rf {params.combinedQC}
 		touch {output.check}
 		"""
@@ -594,8 +591,7 @@ rule get_reads_per_genome:
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done"), demultiplexer = get_demultiplexer, run = run)
 	output:
 		# GET_READS_PER_GENOME_OUTPUT
-		fast5 = directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)),
-		fastq = expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome),
+		fast5_fastq = [directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)],
 		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),
@@ -611,15 +607,15 @@ rule get_reads_per_genome:
 		"""
 
 ##############################
-########## POST_DEMULTIPLEXING
+############## READS FILTERING
 
 rule porechop:
-	input: os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz")
+	input: by_cond(len(genome) > 0, os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), rules.guppy_basecalling.output.compressed_fastq)
 	output:
-		fastq = os.path.join(outdir, "reads_per_genome/fastq_porechop/{genome}_porechop.fastq.gz")
+		fastq = by_cond(len(genome) > 0, os.path.join(outdir, "reads_per_genome/fastq_porechop/{genome}_porechop.fastq.gz"), os.path.join(outdir, "basecall/{run}/{run}_porechop.fastq.gz"))
 	params:
 		porechop = PORECHOP_PARAMS,
-		log = "porechop_{genome}.log"
+		log = by_cond(len(genome) > 0, "porechop_{genome}.log", "porechop_{run}.log")
 	singularity: guppy_container
 	conda: 'conda/conda_porechop.yaml'
 	threads: config["porechop"]["THREADS"]
@@ -629,15 +625,30 @@ rule porechop:
 		porechop -i {input} -o {output} --format auto --verbosity 3 --threads {threads} {params.porechop}
 		"""
 
-FILTLONG_INPUT = by_cond("porechop" in POST_DEMULTIPLEXING, rules.porechop.output.fastq, os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"))
+# FILTLONG_INPUT
+if "porechop" in READS_FILTERING:
+	FILTLONG_INPUT = rules.porechop.output.fastq
+else:
+	if len(genome) > 0:
+		FILTLONG_INPUT = os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz")
+	else:
+		FILTLONG_INPUT = rules.guppy_basecalling.output.compressed_fastq
 
-FILTLONG_OUTPUT = by_cond("porechop" in POST_DEMULTIPLEXING, os.path.join(outdir, "reads_per_genome/fastq_porechop_{filtlongid}/{genome}_porechop_{filtlongid}.fastq.gz"), os.path.join(outdir, "reads_per_genome/fastq_{filtlongid}/{genome}_{filtlongid}.fastq.gz"))
+# FILTLONG_OUTPUT
+if len(genome) > 0:
+	if "porechop" in READS_FILTERING:
+		FILTLONG_OUTPUT = os.path.join(outdir, "reads_per_genome/fastq_porechop_{filtlongid}/{genome}_porechop_{filtlongid}.fastq.gz")
+	else:
+		FILTLONG_OUTPUT = os.path.join(outdir, "reads_per_genome/fastq_{filtlongid}/{genome}_{filtlongid}.fastq.gz")
+else:
+	if "porechop" in READS_FILTERING:
+		FILTLONG_OUTPUT = os.path.join(outdir, "basecall/{run}/{run}_porechop_{filtlongid}.fastq.gz")
+	else:
+		FILTLONG_OUTPUT = os.path.join(outdir, "basecall/{run}/{run}_{filtlongid}.fastq.gz")
 
 def filtlong_params(wildcards):
 	params = config[wildcards.filtlongid].values()
 	return unpack(params)
-
-
 
 
 rule filtlong:
@@ -646,7 +657,7 @@ rule filtlong:
 		fastq = FILTLONG_OUTPUT
 	params:
 		filtlong = filtlong_params,
-		log = "{filtlongid}_{genome}.log"
+		log = by_cond(len(genome) > 0, "{filtlongid}_{genome}.log", "{filtlongid}_{run}.log")
 	singularity: guppy_container
 	conda: 'conda/conda_filtlong.yaml'
 	shell:
@@ -664,20 +675,147 @@ REPORT_DEMULTIPLEX_INPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules
 rule report_demultiplex:
 	input:
 		fast5 = expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome),
-		fastq = expand(os.path.join(outdir, "reads_per_genome/fastq{post_demux}/{genome}{post_demux}.fastq.gz"), genome = genome, post_demux = post_demux),
+		fastq = expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}/{genome}{filtered}.fastq.gz"), genome = genome, filtered = filtered),
 	message: " Reporting demultiplex results"
 	output: os.path.join(outdir, "report/demultiplex_report.html")
 	params:
 		barcode_by_genome = BARCODE_BY_GENOME,
 		fastq = os.path.join(outdir, "reads_per_genome/fastq"),
 		demultiplex = os.path.join(outdir, "demultiplex"),
-		postdemux = expand(os.path.join(outdir, "reads_per_genome/fastq{post_demux}"), post_demux = post_demux),
+		postdemux = expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}"), filtered = filtered),
 		log = "report_demultiplex.log",
 		outpath = lambda wildcards, output: os.path.dirname(output[0])
 	singularity: guppy_container
 	conda: 'conda/conda_rmarkdown.yaml'
 	script:
 		"report/report_demultiplex.Rmd"
+
+
+##############################
+############# CHECKING VERSION
+
+def github_latest(repo):
+	get_response = requests.get("https://github.com/{repo}/releases/latest".format(repo = repo))
+	version = get_response.url.split("/")[-1]
+	return(version.split("v")[-1])
+
+rule version_guppy:
+	singularity: guppy_container
+	output: temp("check_version/guppy")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(guppy_basecaller --version | cut -d" " -f11 | cut -d"," -f1)
+		echo $version > {output}
+		"""
+
+rule version_deepbinner:
+	singularity: deepbinner_container
+	output: temp("check_version/deepbinner")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(deepbinner --version)
+		echo $version > {output}
+		"""
+
+rule version_minionqc:
+	conda: 'conda/conda_minionqc.yaml'
+	singularity: guppy_container
+	output: temp("check_version/minionqc")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(conda list -r | grep r-minionqc | cut -d"-" -f3 | cut -d" " -f1)
+		echo $version > {output}
+		"""
+
+rule version_multiqc:
+	conda: 'conda/conda_multiqc.yaml'
+	singularity: guppy_container
+	output: temp("check_version/multiqc")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(conda list -r | grep multiqc | cut -d"-" -f2 | cut -d" " -f1)
+		echo $version > {output}
+		"""
+
+rule version_porechop:
+	conda: 'conda/conda_porechop.yaml'
+	singularity: guppy_container
+	output: temp("check_version/porechop")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(conda list -r | grep porechop | cut -d"-" -f2 | cut -d" " -f1)
+		echo $version > {output}
+		"""
+
+rule version_filtlong:
+	conda: 'conda/conda_filtlong.yaml'
+	singularity: guppy_container
+	output: temp("check_version/filtlong")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(conda list -r | grep filtlong | cut -d"-" -f2 | cut -d" " -f1)
+		echo $version > {output}
+		"""
+
+rule check_version_tools:
+	message: "Tools version in current baseDmux and their latest available version"
+	input:
+		guppy = rules.version_guppy.output,
+		minionqc = rules.version_minionqc.output,
+		deepbinner = rules.version_deepbinner.output,
+		multiqc = rules.version_multiqc.output,
+		porechop = rules.version_porechop.output,
+		filtlong = rules.version_filtlong.output
+	params:
+		latest_minionqc = github_latest("roblanf/minion_qc"),
+		latest_multiqc = github_latest("ewels/MultiQC"),
+		latest_deepbinner = github_latest("rrwick/Deepbinner"),
+		latest_porechop = github_latest("rrwick/Porechop"),
+		latest_filtlong = github_latest("rrwick/Filtlong")
+	shell:
+		"""
+		current_guppy=$(cat {input.guppy})
+		current_minionqc=$(cat {input.minionqc})
+		current_deepbinner=$(cat {input.deepbinner})
+		current_multiqc=$(cat {input.multiqc})
+		current_porechop=$(cat {input.porechop})
+		current_filtlong=$(cat {input.filtlong})
+
+		printf "%15s %20s %20s\n" "tool" "current version" "latest version"
+		printf "%15s %20s %20s\n" "GUPPY" $current_guppy "please check https://community.nanoporetech.com/downloads/guppy/release_notes"
+
+		if [ $current_deepbinner == {params.latest_deepbinner} ]; then
+			printf "%15s %20s %20s\n" "Deepbinner" $current_deepbinner {params.latest_deepbinner}; else
+			printf "%15s %20s \033[0;31m%20s\033[0m\n" "Deepbinner" $current_deepbinner {params.latest_deepbinner};
+		fi
+
+		if [ $current_minionqc == {params.latest_minionqc} ]; then
+			printf "%15s %20s %20s\n" "MinIONQC" $current_minionqc {params.latest_minionqc}; else
+			printf "%15s %20s \033[0;31m%20s\033[0m\n" "MinIONQC" $current_minionqc {params.latest_minionqc};
+		fi
+
+		if [ $current_multiqc == {params.latest_multiqc} ]; then
+			printf "%15s %20s %20s\n" "MultiQC" $current_multiqc {params.latest_multiqc}; else
+			printf "%15s %20s \033[0;31m%20s\033[0m\n" "MultiQC" $current_multiqc {params.latest_multiqc};
+		fi
+
+		if [ $current_porechop == {params.latest_porechop} ]; then
+			printf "%15s %20s %20s\n" "Porechop" $current_porechop {params.latest_porechop}; else
+			printf "%15s %20s \033[0;31m%20s\033[0m\n" "Porechop" $current_porechop {params.latest_porechop};
+		fi
+
+		if [ $current_filtlong == {params.latest_filtlong} ]; then
+			printf "%15s %20s %20s\n" "Filtlong" $current_filtlong {params.latest_filtlong}; else
+			printf "%15s %20s \033[0;31m%20s\033[0m\n" "Filtlong" $current_filtlong {params.latest_filtlong};
+		fi
+		"""
+
 
 ##############################
 ############### SOMETHING ELSE
@@ -715,7 +853,7 @@ rule help:
 rule test:
 	shell:
 		"""
-		echo "{n_filtlong}"
+		echo "{cf}"
 		"""
 
 # rule add_slurm_logs:

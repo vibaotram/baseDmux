@@ -3,8 +3,8 @@
 
 ##############################
 ##### input/output directory
-INDIR: "/data3/projects/xanthopore/baotram/test/reads"
-OUTDIR: "/data3/projects/xanthopore/baotram/test/results_scratch"
+INDIR: "test/reads"
+OUTDIR: "test/results"
 NASID: "NAS3" # host name, if indir and outdir in NAS but workdir is not
 
 
@@ -28,22 +28,22 @@ RULE_GUPPY_BASECALLING:
     'CPU_THREADS_PER_CALLER': 12 # number of CPU threads to create for each caller to use
     'GPU_RUNNERS_PER_DEVICE': 4 # number of neural network runners to create per CUDA device ## GPU mode only
     'ADDITION': "--calib_detect --chunks_per_caller 10000" # additional params that do not affect output format ## provide parameters with arguments ## do NOT use --compress_fastq, because next steps use uncompressed fastq
-    'KEEP_LOG_FILES': False # True/False
-    'KEEP_FAIL_READS': False # True/False
+    'KEEP_LOG_FILES': False # True/False, whether to keep guppy log files or not
+    'KEEP_FAIL_READS': False # True/False, whether to keep failed reads or not
     'FAST5_COMPRESSION': "gzip" # "vbz"/"vbz_legacy_v0"/"gzip" ## compression algorithm by fast5_subset (ont_fast5_api) to reduce file size and improve read/write performance
 
 
 ##############################
 ##### choose types of demultiplexer
-DEMULTIPLEXER: ["guppy", "deepbinner"] # "guppy"/"deepbinner"
+DEMULTIPLEXER: ["guppy", "deepbinner"] # "guppy"/"deepbinner", leave `[]` if you do not want demultiplexing
 
 
 ##############################
 ##### guppy_barcoder parameters
 RULE_GUPPY_DEMULTIPLEXING:
-    'CONFIG': "configuration.cfg"
-    'WORKER_THREADS': 12
-    'ADDITION': "--trim_barcodes"
+    'CONFIG': "configuration.cfg" # "a configuration file, which contains details of the barcoding arrangements to attempt to detect"
+    'WORKER_THREADS': 12 # the number of worker threads to spawn for the barcoder to use
+    'ADDITION': "--trim_barcodes" # additional parameters of guppy_barcoder
 
 
 ##############################
@@ -55,20 +55,20 @@ RULE_MULTI_TO_SINGLE_FAST5:
 ##############################
 ##### deepbinner classify parameters
 RULE_DEEPBINNER_CLASSIFICATION:
-    'PRESET': "rapid" # 'native'/'rapid'
-    'OMP_NUM_THREADS': 12 #
-    'ADDITION': ""
+    'PRESET': "rapid" # 'native'/'rapid', `--preset`
+    'OMP_NUM_THREADS': 12 # number of threads to use, `--omp_num_threads`
+    'ADDITION': "" # additional arguments for `deepbinner classify`
 
 
 ##############################
-##### MinIONQC parameters
-RULE_MINIONQC_:
-    'SMALLFIGURES': "FALSE" # 'TRUE'/'FALSE'
-    'PROCESSORS': 12
+##### MinIONQC parameters for basecall results and demultiplex results
+RULE_MINIONQC:
+    'PROCESSORS': 12 # number of threads to use
+    'ADDITION': "-s FALSE" # additional parameters
 
 ##############################
-##### Post-demultiplexing
-POST_DEMULTIPLEXING: [porechop, filtlong1, filtlong_2, filtlong_n3]
+##### Fil tools and parameters
+READS_FILTERING: [porechop, filtlong1, filtlong2, filtlong3]
 # if porechop is called here, it will run once only, after get_reads_per_genome and will be taken as input of any filtlong runs if specified.
 # multiple filtlong runs with different parameters are enable. Name of the runs can be customized by the user, as long as they have a "filtlong" prefix. Parameters for each run must be specified individually under exactly the same key name.
 # for the moment, porechop and filtlong are only available if get_reads_per_genome is called. (will be improve soon so that it can run after basecalling if rule get_reads_per_genome is off.)
@@ -77,16 +77,19 @@ porechop:
     'THREADS': 8
     'PARAMS': "--discard_middle"
 
-filtlong1: "-1"
+filtlong1:
+    'PARAMS': "--min_length 1000 --target_bases 500000000 --keep_percent 90"
 
-filtlong_2: "-2"
+filtlong2:
+    'PARAMS': "--min_length 1000 --target_bases 500000000 --keep_percent 90 --mean_q_weight 10"
 
-filtlong_n3: "-3"
+filtlong3:
+    'PARAMS': "--min_length 1000 --target_bases 500000000 --keep_percent 90 --length_weight 10"
 
 ##############################
 ##### get_reads_per_genome parameters
 RULE_GET_READS_PER_GENOME:
-    'BARCODE_BY_GENOME': "barcodeByGenome_sample.tsv" # it can be blank then this rule will not be excecuted ## information table for subseting fast5 and fastq to genome folder ## if "guppy"/"deepbinner" is specified in "Demultiplexer" on the table, this demultiplexer will still be used for demultiplexing even it is not included by 'DEMULTIPLEXER'
+    'BARCODE_BY_GENOME': "barcodeByGenome_sample.tsv" # it can be blank then this rule will not be excecuted ## information table for subseting fast5 and fastq to genome folder ## if "guppy"/"deepbinner" is specified in "Demultiplexer" on the table, this demultiplexer will still be used for demultiplexing even though it is not included by 'DEMULTIPLEXER'
     'TRANSFERING': "copy" # "copy"/"move"/"symlink"
 
 
