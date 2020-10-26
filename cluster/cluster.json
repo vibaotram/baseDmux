@@ -1,30 +1,28 @@
 {
     "__default__" :
     {
+        "scheduler" : "sbatch --parsable",
         "account" : "--account bioinfo",
-        "cpus-per-task" : "--cpus-per-task {threads}",
-        "gpus" : "--gpus 0",
         "partition" : "--partition short",
+        "cpus-per-task" : "--cpus-per-task {threads}",
         "job-name": "--job-name {rule}_{wildcards}",
-        "output": "-output {SLURM_LOG}/{params.log}_%j",
+        "output": "--output {SLURM_LOG}/{params.log}_%j",
         "error": "--error {SLURM_LOG}/{params.log}_%j",
         "ntasks": "--ntasks 1",
-        "mail-user" : "",
-        "mail-type" : "",
     },
 
     "guppy_basecalling" :
     {
         "partition" : "--partition gpu",
         "account" : "--account gpu_group",
-        "gpus" : "--gpus {NUM_GPUS}",
+        "gpus" : "--gres gpu:{NUM_GPUS}",
     },
 
     "guppy_demultiplexing" :
     {
         "partition" : "--partition gpu",
         "account" : "--account gpu_group",
-        "gpus" : "--gpus {NUM_GPUS}",
+        "gpus" : "--gres gpu:{NUM_GPUS}",
     },
 
     "deepbinner_classification" :
@@ -38,4 +36,3 @@
         "partition" : "--partition highmem"
     }
 }
-
