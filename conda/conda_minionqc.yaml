@@ -5,7 +5,7 @@ channels:
     - defaults
     - biobuilds
 dependencies:
-    - r-minionqc=1.4.1=r36_2
+    - r-minionqc=1.4.2=r36_2
     - mkl-service=2.3.0
     - fonts-conda-forge
     - pandas=1.0.1
