@@ -85,7 +85,7 @@ KEEP_LOG_FILES = config['RULE_GUPPY_BASECALLING']['KEEP_LOG_FILES']
 ## guppy_barcoder parameters
 BARCODER_CONFIG = config['RULE_GUPPY_DEMULTIPLEXING']['CONFIG']
 WORKER_THREADS = config['RULE_GUPPY_DEMULTIPLEXING']['WORKER_THREADS']
-ADDITION = config['RULE_GUPPY_DEMULTIPLEXING']['ADDITION']
+BARCODER_ADDITION = config['RULE_GUPPY_DEMULTIPLEXING']['ADDITION']
 
 ####
 
@@ -317,7 +317,7 @@ rule guppy_demultiplexing:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
-		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} {ADDITION} # --compress_fastq
+		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} {BARCODER_ADDITION} # --compress_fastq
 		Rscript {RENAME_FASTQ_GUPPY_BARCODER} {params.outpath}
 		touch {output.check}
 		"""
@@ -435,7 +435,7 @@ rule minionqc_basecall:
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		MinIONQC.R -i {input} -q {MIN_QSCORE} {ADDITION}
+		MinIONQC.R -i {input} -q {MIN_QSCORE} {MinIONQC_ADDITION}
 		"""
 
 MULTIQC_BASECALL_OUTPUT = os.path.join(outdir, "basecall/multiqc/multiqc_report.html")
@@ -525,7 +525,7 @@ rule minionqc_demultiplex:
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		MinIONQC.R -i {params.inpath} -q {MIN_QSCORE} -p {threads} {ADDITION}
+		MinIONQC.R -i {params.inpath} -q {MIN_QSCORE} -p {threads} {MinIONQC_ADDITION}
 		rm -rf {params.combinedQC}
 		touch {output.check}
 		"""
