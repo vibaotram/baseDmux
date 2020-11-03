@@ -1,0 +1,11 @@
+channels:
+    - bioconda
+    - conda-forge
+    - r
+    - defaults
+    - biobuilds
+dependencies:
+    - r-minionqc=1.4.2
+    - mkl-service=2.3.0
+    - fonts-conda-forge
+    - pandas=1.0.1
