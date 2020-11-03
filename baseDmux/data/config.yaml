@@ -3,9 +3,9 @@
 
 ##############################
 ##### input/output directory
-INDIR: "test/reads"
-OUTDIR: "test/results"
-NASID: "NAS3" # host name, if indir and outdir in NAS but workdir is not
+INDIR: "test/reads" ## absolute path to fast5 files, fast5 files must be stored in run_id (batch) folder under /reads folder
+OUTDIR: "test/results" ## absolute path to output directory
+NASID: "" # host name, if indir and outdir in NAS but workdir is not
 
 
 ##############################
@@ -89,7 +89,7 @@ filtlong3:
 ##############################
 ##### get_reads_per_genome parameters
 RULE_GET_READS_PER_GENOME:
-    'BARCODE_BY_GENOME': "barcodeByGenome_sample.tsv" # it can be blank then this rule will not be excecuted ## information table for subseting fast5 and fastq to genome folder ## if "guppy"/"deepbinner" is specified in "Demultiplexer" on the table, this demultiplexer will still be used for demultiplexing even though it is not included by 'DEMULTIPLEXER'
+    'BARCODE_BY_GENOME': "" # it can be blank then this rule will not be excecuted ## information table for subseting fast5 and fastq to genome folder ## if "guppy"/"deepbinner" is specified in "Demultiplexer" on the table, this demultiplexer will still be used for demultiplexing even though it is not included by 'DEMULTIPLEXER'
     'TRANSFERING': "copy" # "copy"/"move"/"symlink"
 
 

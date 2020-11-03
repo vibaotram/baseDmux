@@ -1,0 +1,25 @@
+##############################
+#####  basic configuration
+configfile: "my/path/new_config.yaml" ## absolute path or relative path of current workdir to the config file for the tools
+use-singularity: true
+singularity-args: "--nv "
+use-conda: true
+cores: "all"
+restart-times: 2
+printshellcmds: true
+verbose: true
+rerun-incomplete: true
+notemp: false
+nolock: true
+show-failed-logs: false
+dry-run: false
+
+
+##############################
+#####  cluster configuration
+local-cores: 0
+latency-wait: 60
+cluster-config: "data/profile/cluster/cluster.json"
+cluster: "python3 data/profile/cluster/submission_wrapper.py"
+cluster-status: false
+immediate-submit: false

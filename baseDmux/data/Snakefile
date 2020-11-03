@@ -4,16 +4,12 @@ import getpass
 import pandas as pd
 import sys
 import re
-import requests
+import baseDmux.singularity as bd_sing
 
-report: "report/workflow.rst"
+report: os.path.abspath("data/report/workflow.rst")
 
-request = sys.argv[:]
-if "--configfile" in request:
-	arg_index = request.index("--configfile")
-	cf = request[arg_index + 1]
-else:
-	cf = "config.yaml"
+# cf = workflow.overwrite_configfiles[-1]
+cf = sys.argv[-1]
 configfile: cf
 
 
@@ -164,21 +160,23 @@ DEMULTIPLEX_REPORT = config['REPORTS']['DEMULTIPLEX_REPORT']
 
 ##############################
 ## use different containers for guppy and deepbinner depending on resources
+guppy_cpu_container = bd_sing.__guppyCPU__
+guppy_gpu_container = bd_sing.__guppyGPU__
 
-guppy_container = by_cond(RESOURCE == 'CPU', 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api', 'shub://vibaotram/singularity-container:guppy4.0.14gpu-conda-api', cond_ext = RESOURCE == 'GPU')
+guppy_container = by_cond(RESOURCE == 'CPU', guppy_cpu_container, guppy_gpu_container, cond_ext = RESOURCE == 'GPU')
 
-deepbinner_container = 'shub://vibaotram/singularity-container:deepbinner-api'
+deepbinner_container = bd_sing.__deepbinner__
 
 
 ##############################
 ## path to scripts
 
-CHOOSE_AVAIL_GPU = 'script/choose_avail_gpu.py'
-FAST5_SUBSET = 'script/fast5_subset.py'
-GET_FASTQ_PER_BARCODE = 'script/get_fastq_per_barcode.py'
-GET_SUMMARY_PER_BARCODE = 'script/get_summary_per_barcode.R'
-RENAME_FASTQ_GUPPY_BARCODER = 'script/rename_fastq_guppy_barcoder.R'
-
+CHOOSE_AVAIL_GPU = os.path.abspath('data/script/choose_avail_gpu.py')
+FAST5_SUBSET = os.path.abspath('data/script/fast5_subset.py')
+GET_FASTQ_PER_BARCODE = os.path.abspath('data/script/get_fastq_per_barcode.py')
+GET_SUMMARY_PER_BARCODE = os.path.abspath('data/script/get_summary_per_barcode.R')
+RENAME_FASTQ_GUPPY_BARCODER = os.path.abspath('data/script/rename_fastq_guppy_barcoder.R')
+DEMULTIPLEX_REPORT_RMD = os.path.abspath('data/report/report_demultiplex.Rmd')
 
 
 ##############################
@@ -425,8 +423,8 @@ rule minionqc_basecall:
 	input: rules.guppy_basecalling.output.summary
 	output:
 		summary = os.path.join(outdir, "basecall/{run}/summary.yaml"),
-		fig = by_cond(REPORT_MINIONQC_BASECALL, report(MINIONQC_BASECALL_FIG, caption = "report/basecall_minionqc.rst", category = "minionqc_basecall"), ())
-	conda: 'conda/conda_minionqc.yaml'
+		fig = by_cond(REPORT_MINIONQC_BASECALL, report(MINIONQC_BASECALL_FIG, caption = os.path.abspath("data/report/basecall_minionqc.rst"), category = "minionqc_basecall"), ())
+	conda: 'data/conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	params:
 	# 	inpath = os.path.join(outdir, "basecall/{run}"),
@@ -449,7 +447,7 @@ rule multiqc_basecall:
 		# os.path.join(outdir, "basecall/multiqc/multiqc_report.html")
 		by_cond(REPORT_MULTIQC_BASECALL, report(MULTIQC_BASECALL_OUTPUT, category = "multiqc_basecall"), MULTIQC_BASECALL_OUTPUT)
 	singularity: guppy_container
-	conda: 'conda/conda_multiqc.yaml'
+	conda: 'data/conda/conda_multiqc.yaml'
 	params:
 		inpath = os.path.join(outdir, "basecall"),
 		outpath = os.path.join(outdir, "basecall/multiqc"),
@@ -478,7 +476,7 @@ rule get_sequencing_summary_per_barcode:
 		barcoding_path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
 		sequencing_file = rules.guppy_basecalling.output.passed_summary,
 		log = "get_sequencing_summary_per_barcode_{demultiplexer}_{run}.log"
-	conda: 'conda/conda_minionqc.yaml'
+	conda: 'data/conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	threads: 1
 	shell:
@@ -513,13 +511,13 @@ rule minionqc_demultiplex:
 	output:
 		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done")),
 		# check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done"),
-		fig = by_cond(REPORT_MINIONQC_DEMULTIPLEX, report(MINIONQC_DEMULTIPLEX_FIG, caption = "report/demultiplex_minionqc.rst", category = "minionqc_demultiplex"), ())
+		fig = by_cond(REPORT_MINIONQC_DEMULTIPLEX, report(MINIONQC_DEMULTIPLEX_FIG, caption = "data/report/demultiplex_minionqc.rst", category = "minionqc_demultiplex"), ())
 	params:
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc"),
 		inpath = rules.get_sequencing_summary_per_barcode.params.barcoding_path,
 		combinedQC = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/combinedQC"),
 		log = "minionqc_demultiplex_{demultiplexer}_{run}.log"
-	conda: 'conda/conda_minionqc.yaml'
+	conda: 'data/conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	threads: PROCESSORS
 	shell:
@@ -540,7 +538,7 @@ rule multiqc_demultiplex:
 		by_cond(REPORT_MULTIQC_DEMULTIPLEX, report(MULTIQC_DEMULTIPLEX_OUTPUT, category = "multiqc_demultiplex"), MULTIQC_DEMULTIPLEX_OUTPUT),
 		# report = directory(os.path.join(outdir, "report"))
 	singularity: guppy_container
-	conda: 'conda/conda_multiqc.yaml'
+	conda: 'data/conda/conda_multiqc.yaml'
 	params:
 		inpath = rules.minionqc_demultiplex.params.inpath,
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc"),
@@ -599,7 +597,7 @@ rule get_reads_per_genome:
 		transfering = TRANSFERING,
 		log = "get_reads_per_genome.log"
 	singularity: guppy_container
-	conda: 'conda/conda_minionqc.yaml'
+	conda: 'data/conda/conda_minionqc.yaml'
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
@@ -617,7 +615,7 @@ rule porechop:
 		porechop = PORECHOP_PARAMS,
 		log = by_cond(len(genome) > 0, "porechop_{genome}.log", "porechop_{run}.log")
 	singularity: guppy_container
-	conda: 'conda/conda_porechop.yaml'
+	conda: 'data/conda/conda_porechop.yaml'
 	threads: config["porechop"]["THREADS"]
 	shell:
 		"""
@@ -659,7 +657,7 @@ rule filtlong:
 		filtlong = filtlong_params,
 		log = by_cond(len(genome) > 0, "{filtlongid}_{genome}.log", "{filtlongid}_{run}.log")
 	singularity: guppy_container
-	conda: 'conda/conda_filtlong.yaml'
+	conda: 'data/conda/conda_filtlong.yaml'
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
@@ -686,135 +684,10 @@ rule report_demultiplex:
 		log = "report_demultiplex.log",
 		outpath = lambda wildcards, output: os.path.dirname(output[0])
 	singularity: guppy_container
-	conda: 'conda/conda_rmarkdown.yaml'
+	conda: 'data/conda/conda_rmarkdown.yaml'
 	script:
-		"report/report_demultiplex.Rmd"
+		DEMULTIPLEX_REPORT_RMD
 
-
-##############################
-############# CHECKING VERSION
-
-def github_latest(repo):
-	get_response = requests.get("https://github.com/{repo}/releases/latest".format(repo = repo))
-	version = get_response.url.split("/")[-1]
-	return(version.split("v")[-1])
-
-rule version_guppy:
-	singularity: guppy_container
-	output: temp("check_version/guppy")
-	shell:
-		"""
-		mkdir -p check_version
-		version=$(guppy_basecaller --version | cut -d" " -f11 | cut -d"," -f1)
-		echo $version > {output}
-		"""
-
-rule version_deepbinner:
-	singularity: deepbinner_container
-	output: temp("check_version/deepbinner")
-	shell:
-		"""
-		mkdir -p check_version
-		version=$(deepbinner --version)
-		echo $version > {output}
-		"""
-
-rule version_minionqc:
-	conda: 'conda/conda_minionqc.yaml'
-	singularity: guppy_container
-	output: temp("check_version/minionqc")
-	shell:
-		"""
-		mkdir -p check_version
-		version=$(conda list -r | grep r-minionqc | cut -d"-" -f3 | cut -d" " -f1)
-		echo $version > {output}
-		"""
-
-rule version_multiqc:
-	conda: 'conda/conda_multiqc.yaml'
-	singularity: guppy_container
-	output: temp("check_version/multiqc")
-	shell:
-		"""
-		mkdir -p check_version
-		version=$(conda list -r | grep multiqc | cut -d"-" -f2 | cut -d" " -f1)
-		echo $version > {output}
-		"""
-
-rule version_porechop:
-	conda: 'conda/conda_porechop.yaml'
-	singularity: guppy_container
-	output: temp("check_version/porechop")
-	shell:
-		"""
-		mkdir -p check_version
-		version=$(conda list -r | grep porechop | cut -d"-" -f2 | cut -d" " -f1)
-		echo $version > {output}
-		"""
-
-rule version_filtlong:
-	conda: 'conda/conda_filtlong.yaml'
-	singularity: guppy_container
-	output: temp("check_version/filtlong")
-	shell:
-		"""
-		mkdir -p check_version
-		version=$(conda list -r | grep filtlong | cut -d"-" -f2 | cut -d" " -f1)
-		echo $version > {output}
-		"""
-
-rule check_version_tools:
-	message: "Tools version in current baseDmux and their latest available version"
-	input:
-		guppy = rules.version_guppy.output,
-		minionqc = rules.version_minionqc.output,
-		deepbinner = rules.version_deepbinner.output,
-		multiqc = rules.version_multiqc.output,
-		porechop = rules.version_porechop.output,
-		filtlong = rules.version_filtlong.output
-	params:
-		latest_minionqc = github_latest("roblanf/minion_qc"),
-		latest_multiqc = github_latest("ewels/MultiQC"),
-		latest_deepbinner = github_latest("rrwick/Deepbinner"),
-		latest_porechop = github_latest("rrwick/Porechop"),
-		latest_filtlong = github_latest("rrwick/Filtlong")
-	shell:
-		"""
-		current_guppy=$(cat {input.guppy})
-		current_minionqc=$(cat {input.minionqc})
-		current_deepbinner=$(cat {input.deepbinner})
-		current_multiqc=$(cat {input.multiqc})
-		current_porechop=$(cat {input.porechop})
-		current_filtlong=$(cat {input.filtlong})
-
-		printf "%15s %20s %20s\n" "tool" "current version" "latest version"
-		printf "%15s %20s %20s\n" "GUPPY" $current_guppy "please check https://community.nanoporetech.com/downloads/guppy/release_notes"
-
-		if [ $current_deepbinner == {params.latest_deepbinner} ]; then
-			printf "%15s %20s %20s\n" "Deepbinner" $current_deepbinner {params.latest_deepbinner}; else
-			printf "%15s %20s \033[0;31m%20s\033[0m\n" "Deepbinner" $current_deepbinner {params.latest_deepbinner};
-		fi
-
-		if [ $current_minionqc == {params.latest_minionqc} ]; then
-			printf "%15s %20s %20s\n" "MinIONQC" $current_minionqc {params.latest_minionqc}; else
-			printf "%15s %20s \033[0;31m%20s\033[0m\n" "MinIONQC" $current_minionqc {params.latest_minionqc};
-		fi
-
-		if [ $current_multiqc == {params.latest_multiqc} ]; then
-			printf "%15s %20s %20s\n" "MultiQC" $current_multiqc {params.latest_multiqc}; else
-			printf "%15s %20s \033[0;31m%20s\033[0m\n" "MultiQC" $current_multiqc {params.latest_multiqc};
-		fi
-
-		if [ $current_porechop == {params.latest_porechop} ]; then
-			printf "%15s %20s %20s\n" "Porechop" $current_porechop {params.latest_porechop}; else
-			printf "%15s %20s \033[0;31m%20s\033[0m\n" "Porechop" $current_porechop {params.latest_porechop};
-		fi
-
-		if [ $current_filtlong == {params.latest_filtlong} ]; then
-			printf "%15s %20s %20s\n" "Filtlong" $current_filtlong {params.latest_filtlong}; else
-			printf "%15s %20s \033[0;31m%20s\033[0m\n" "Filtlong" $current_filtlong {params.latest_filtlong};
-		fi
-		"""
 
 
 ##############################
