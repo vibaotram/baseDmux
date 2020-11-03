@@ -157,12 +157,6 @@ def main():
         dryrun_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} -n --configfile {configfile}'.format(snakefile=snakefile, profile=profile, workdir=workdir, configfile=configfile)
         os.system(dryrun_snakemake)
 
-    if cmd == 'barcodes_by_genome':
-        table = args.tab_file
-        shutil.copyfile(source_barcode_table, table)
-        if args.editor:
-            os.system('{editor} {table}'.format(editor=args.editor, table=table))
-
     if cmd == 'version_tools':
         check_tools = ['snakemake', '-s', snakefile_tools, 'check_version_tools', '--use-singularity', '--use-conda', '-d', workdir, '--quiet']
         subprocess.call(check_tools, stderr=subprocess.DEVNULL)
