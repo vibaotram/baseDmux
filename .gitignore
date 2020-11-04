@@ -16,3 +16,8 @@ test-cluster/*
 *.html
 *.log
 config-test.yaml
+*.egg*
+baseDmux/bin/*
+baseDmux/lib*
+dist/*
+baseDmux/pyvenv.cfg
