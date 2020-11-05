@@ -1,11 +1,12 @@
 import requests
-import baseDmux.singularity as bd_sing
+from snakemake import load_configfile
 
-guppy_cpu_container = bd_sing.__guppyCPU__
-guppy_gpu_container = bd_sing.__guppyGPU__
+container = load_configfile('data/singularity.yaml')
+guppy_cpu_container = container['guppy_conda_api_CPU']
+guppy_gpu_container = container['guppy_conda_api_GPU']
 
-deepbinner_container = bd_sing.__deepbinner__
 
+deepbinner_container = container['deepbinner_api']
 
 ##############################
 ############# CHECKING VERSION
@@ -142,4 +143,3 @@ rule check_version_tools:
 			printf "%15s %20s \033[0;31m%20s\033[0m\n" "Filtlong" $current_filtlong {params.latest_filtlong};
 		fi
 		"""
-

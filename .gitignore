@@ -21,3 +21,4 @@ baseDmux/bin/*
 baseDmux/lib*
 dist/*
 baseDmux/pyvenv.cfg
+build/*

@@ -15,14 +15,14 @@ def version():
 
 def read_outdir(profile):
     with open(os.path.join(profile, "config.yaml"), "r") as yml:
-        profileyml = yaml.safe_load(yml)
+        profileyml = yaml.load(yml)
     with open(profileyml['configfile'], "r") as yml:
-        configyml = yaml.safe_load(yml)
+        configyml = yaml.load(yml)
     return configyml['OUTDIR']
 
 def read_profile(profile, keyword):
     with open(os.path.join(profile, "config.yaml"), "r") as yml:
-        profileyml = yaml.safe_load(yml)
+        profileyml = yaml.load(yml)
     return profileyml[keyword]
 
 def main():

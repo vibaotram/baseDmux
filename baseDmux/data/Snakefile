@@ -4,7 +4,7 @@ import getpass
 import pandas as pd
 import sys
 import re
-import baseDmux.singularity as bd_sing
+from snakemake import load_configfile
 
 report: os.path.abspath("data/report/workflow.rst")
 
@@ -160,12 +160,13 @@ DEMULTIPLEX_REPORT = config['REPORTS']['DEMULTIPLEX_REPORT']
 
 ##############################
 ## use different containers for guppy and deepbinner depending on resources
-guppy_cpu_container = bd_sing.__guppyCPU__
-guppy_gpu_container = bd_sing.__guppyGPU__
+container = load_configfile('data/singularity.yaml')
+guppy_cpu_container = container['guppy_conda_api_CPU']
+guppy_gpu_container = container['guppy_conda_api_GPU']
 
 guppy_container = by_cond(RESOURCE == 'CPU', guppy_cpu_container, guppy_gpu_container, cond_ext = RESOURCE == 'GPU')
 
-deepbinner_container = bd_sing.__deepbinner__
+deepbinner_container = container['deepbinner_api']
 
 
 ##############################
@@ -424,7 +425,7 @@ rule minionqc_basecall:
 	output:
 		summary = os.path.join(outdir, "basecall/{run}/summary.yaml"),
 		fig = by_cond(REPORT_MINIONQC_BASECALL, report(MINIONQC_BASECALL_FIG, caption = os.path.abspath("data/report/basecall_minionqc.rst"), category = "minionqc_basecall"), ())
-	conda: 'data/conda/conda_minionqc.yaml'
+	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	params:
 	# 	inpath = os.path.join(outdir, "basecall/{run}"),
@@ -447,7 +448,7 @@ rule multiqc_basecall:
 		# os.path.join(outdir, "basecall/multiqc/multiqc_report.html")
 		by_cond(REPORT_MULTIQC_BASECALL, report(MULTIQC_BASECALL_OUTPUT, category = "multiqc_basecall"), MULTIQC_BASECALL_OUTPUT)
 	singularity: guppy_container
-	conda: 'data/conda/conda_multiqc.yaml'
+	conda: 'conda/conda_multiqc.yaml'
 	params:
 		inpath = os.path.join(outdir, "basecall"),
 		outpath = os.path.join(outdir, "basecall/multiqc"),
@@ -476,7 +477,7 @@ rule get_sequencing_summary_per_barcode:
 		barcoding_path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
 		sequencing_file = rules.guppy_basecalling.output.passed_summary,
 		log = "get_sequencing_summary_per_barcode_{demultiplexer}_{run}.log"
-	conda: 'data/conda/conda_minionqc.yaml'
+	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	threads: 1
 	shell:
@@ -517,7 +518,7 @@ rule minionqc_demultiplex:
 		inpath = rules.get_sequencing_summary_per_barcode.params.barcoding_path,
 		combinedQC = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/combinedQC"),
 		log = "minionqc_demultiplex_{demultiplexer}_{run}.log"
-	conda: 'data/conda/conda_minionqc.yaml'
+	conda: 'conda/conda_minionqc.yaml'
 	singularity: guppy_container
 	threads: PROCESSORS
 	shell:
@@ -538,7 +539,7 @@ rule multiqc_demultiplex:
 		by_cond(REPORT_MULTIQC_DEMULTIPLEX, report(MULTIQC_DEMULTIPLEX_OUTPUT, category = "multiqc_demultiplex"), MULTIQC_DEMULTIPLEX_OUTPUT),
 		# report = directory(os.path.join(outdir, "report"))
 	singularity: guppy_container
-	conda: 'data/conda/conda_multiqc.yaml'
+	conda: 'conda/conda_multiqc.yaml'
 	params:
 		inpath = rules.minionqc_demultiplex.params.inpath,
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc"),
@@ -597,7 +598,7 @@ rule get_reads_per_genome:
 		transfering = TRANSFERING,
 		log = "get_reads_per_genome.log"
 	singularity: guppy_container
-	conda: 'data/conda/conda_minionqc.yaml'
+	conda: 'conda/conda_minionqc.yaml'
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
@@ -615,7 +616,7 @@ rule porechop:
 		porechop = PORECHOP_PARAMS,
 		log = by_cond(len(genome) > 0, "porechop_{genome}.log", "porechop_{run}.log")
 	singularity: guppy_container
-	conda: 'data/conda/conda_porechop.yaml'
+	conda: 'conda/conda_porechop.yaml'
 	threads: config["porechop"]["THREADS"]
 	shell:
 		"""
@@ -657,7 +658,7 @@ rule filtlong:
 		filtlong = filtlong_params,
 		log = by_cond(len(genome) > 0, "{filtlongid}_{genome}.log", "{filtlongid}_{run}.log")
 	singularity: guppy_container
-	conda: 'data/conda/conda_filtlong.yaml'
+	conda: 'conda/conda_filtlong.yaml'
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
@@ -684,7 +685,7 @@ rule report_demultiplex:
 		log = "report_demultiplex.log",
 		outpath = lambda wildcards, output: os.path.dirname(output[0])
 	singularity: guppy_container
-	conda: 'data/conda/conda_rmarkdown.yaml'
+	conda: 'conda/conda_rmarkdown.yaml'
 	script:
 		DEMULTIPLEX_REPORT_RMD
 

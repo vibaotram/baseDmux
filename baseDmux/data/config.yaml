@@ -3,7 +3,7 @@
 
 ##############################
 ##### input/output directory
-INDIR: "test/reads" ## absolute path to fast5 files, fast5 files must be stored in run_id (batch) folder under /reads folder
+INDIR: "test/reads" ## absolute path to fast5 files, fast5 files must be stored in run_id (batch) folder under /fast5 folder
 OUTDIR: "test/results" ## absolute path to output directory
 NASID: "" # host name, if indir and outdir in NAS but workdir is not
 

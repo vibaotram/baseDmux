@@ -1,0 +1,3 @@
+guppy_conda_api_CPU: 'shub://vibaotram/singularity-container:guppy3.6.0cpu-conda-api'
+guppy_conda_api_GPU: 'shub://vibaotram/singularity-container:guppy4.0.14gpu-conda-api'
+deepbinner_api: 'shub://vibaotram/singularity-container:deepbinner-api'
