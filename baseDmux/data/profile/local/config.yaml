@@ -1,6 +1,6 @@
 ##############################
 #####  basic configuration
-configfile: "my/path/new_config.yaml" ## absolute path or relative path of current workdir to the config file for the tools
+configfile: "test/workflow_parameters.yaml" ## absolute path or relative path of current workdir to the config file for the tools
 use-singularity: true
 singularity-args: "--nv "
 use-conda: true

@@ -1,12 +1,12 @@
 import requests
 from snakemake import load_configfile
 
-container = load_configfile('data/singularity.yaml')
-guppy_cpu_container = container['guppy_conda_api_CPU']
-guppy_gpu_container = container['guppy_conda_api_GPU']
+simg_container = load_configfile(os.path.abspath('data/singularity.yaml'))
+guppy_cpu_container = simg_container['guppy_conda_api_CPU']
+guppy_gpu_container = simg_container['guppy_conda_api_GPU']
 
 
-deepbinner_container = container['deepbinner_api']
+deepbinner_container = simg_container['deepbinner_api']
 
 ##############################
 ############# CHECKING VERSION

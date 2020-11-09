@@ -4,7 +4,7 @@ import shutil
 import sys
 import subprocess
 from ruamel.yaml import YAML
-
+import pkg_resources
 
 yaml=YAML()
 
@@ -26,6 +26,8 @@ def read_profile(profile, keyword):
     return profileyml[keyword]
 
 def main():
+    src = pkg_resources.resource_filename(__name__, '')
+    print(src)
     cwd = os.getcwd()
     __version__ = version()
     parser = argparse.ArgumentParser(description='Run baseDmux version {}... See https://github.com/vibaotram/baseDmux/blob/master/README.md for more details'.format(__version__))
@@ -55,8 +57,9 @@ def main():
     args = parser.parse_args()
     cmd = args.cmd
     # print(args)
-    workdir = os.path.dirname(__file__)
-    # print(workdir)
+    # workdir = os.path.dirname(__file__)
+    workdir = pkg_resources.resource_filename(__name__, '')
+    print(workdir)
     snakefile = os.path.join(workdir, 'data/Snakefile')
     snakefile_tools = os.path.join(workdir, 'data/Snakefile_tools')
     source_config = os.path.join(workdir, 'data/config.yaml')
@@ -67,7 +70,7 @@ def main():
     if cmd == 'configure':
         dir = args.dir
         dir = os.path.join(cwd, dir)
-        os.makedirs(dir)
+        os.makedirs(dir, exist_ok=True)
 
         ## copy barcodeByGenome.tsv if called
         if args.tab_file:
@@ -80,11 +83,16 @@ def main():
         config = os.path.join(dir, 'workflow_parameters.yaml')
         print('copy sample workflow_parameters.yaml of baseDmux to {config}'.format(config=config))
         shutil.copyfile(source_config, config)
-        if args.tab_file:
-            with open(config, 'r') as cf:
-                read_config = yaml.load(cf)
-            read_config['RULE_GET_READS_PER_GENOME']['BARCODE_BY_GENOME'] = table
-            with open(config, 'w') as cf:
+        with open(config, 'r') as cf:
+            read_config = yaml.load(cf)
+            read_config['INDIR'] = os.path.join(dir, 'reads')
+            read_config['OUTDIR'] = os.path.join(dir, 'result')
+            print(read_config['OUTDIR'])
+            if args.tab_file:
+                read_config['RULE_GET_READS_PER_GENOME']['BARCODE_BY_GENOME'] = table
+            else:
+                read_config['RULE_GET_READS_PER_GENOME']['BARCODE_BY_GENOME'] = ''
+        with open(config, 'w') as cf:
                 yaml.dump(read_config, cf)
         if args.editor:
             os.system('{editor} {config}'.format(editor=args.editor, config=config))
@@ -92,7 +100,7 @@ def main():
 
         ## copy profile
         profile = os.path.join(dir, 'profile')
-        os.makedirs(profile)
+        os.makedirs(profile, exist_ok=True)
         print(f'copy sample profile of baseDmux to {profile}')
         profile_config = os.path.join(profile, 'config.yaml')
         if args.mode == 'local':
@@ -119,7 +127,7 @@ def main():
                 profileyml['cluster'] = profileyml['cluster'].replace('data/profile/cluster/submission_wrapper.py', os.path.join(profile, 'submission_wrapper.py'))
             elif args.mode == 'slurm':
                 profileyml['cluster'] = profileyml['cluster'].replace('data/profile/cluster/slurm/slurm_wrapper.py', os.path.join(profile, 'slurm_wrapper.py'))
-                profileyml['cluster'] = profileyml['cluster'].replace('config-test.yaml', config)
+                # profileyml['cluster'] = profileyml['cluster'].replace('config-test.yaml', config)
                 profileyml['cluster-status'] = profileyml['cluster-status'].replace('data/profile/cluster/slurm/slurm_status.py', os.path.join(profile, 'slurm_status.py'))
             else:
                 raise ValueError('impossible')
@@ -139,14 +147,14 @@ def main():
         profile = os.path.join(cwd, profile)
         configfile = read_profile(profile, 'configfile')
         run_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --configfile {configfile}'.format(snakefile=snakefile, profile=profile, workdir=workdir, configfile=configfile)
-        # print(run_snakemake)
-        snakemake_exit = os.system(run_snakemake)
-        if snakemake_exit == 0 and args.report:
-            reportfile = os.path.join(read_outdir(profile), 'report/snakemake_report.html')
-            run_report = 'snakemake -s {snakefile} --profile {profile} --report {reportfile} -d {workdir}'.format(snakefile=snakefile, profile=profile, reportfile=reportfile, workdir=workdir)
-            os.system(run_report)
-        elif snakemake_exit != 0 and args.report:
-            print('No snakemake report is created because baseDmux workflow failed!')
+        print(run_snakemake)
+        # snakemake_exit = os.system(run_snakemake)
+        # if snakemake_exit == 0 and args.report:
+        #     reportfile = os.path.join(read_outdir(profile), 'report/snakemake_report.html')
+        #     run_report = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --report {reportfile}'.format(snakefile=snakefile, profile=profile, reportfile=reportfile, workdir=workdir)
+        #     os.system(run_report)
+        # elif snakemake_exit != 0 and args.report:
+        #     print('No snakemake report is created because baseDmux workflow failed!')
 
 
     if cmd == 'dryrun':
@@ -157,14 +165,10 @@ def main():
         dryrun_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} -n --configfile {configfile}'.format(snakefile=snakefile, profile=profile, workdir=workdir, configfile=configfile)
         os.system(dryrun_snakemake)
 
-    if cmd == 'barcodes_by_genome':
-        table = args.tab_file
-        shutil.copyfile(source_barcode_table, table)
-        if args.editor:
-            os.system('{editor} {table}'.format(editor=args.editor, table=table))
 
     if cmd == 'version_tools':
-        check_tools = ['snakemake', '-s', snakefile_tools, 'check_version_tools', '--use-singularity', '--use-conda', '-d', workdir, '--quiet']
+        check_tools = ['snakemake', '-s', snakefile_tools, 'check_version_tools', '--use-singularity', '--use-conda', '-d', workdir, '--quiet', '--cores', '1']
+        print(' '.join(check_tools))
         subprocess.call(check_tools, stderr=subprocess.DEVNULL)
 
     if cmd == None and len(sys.argv[1:]) == 0:

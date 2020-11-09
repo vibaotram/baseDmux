@@ -22,3 +22,7 @@ baseDmux/lib*
 dist/*
 baseDmux/pyvenv.cfg
 build/*
+*/.conda/*
+*/.snakemake/*
+*/__pycache__/*
+venv/*

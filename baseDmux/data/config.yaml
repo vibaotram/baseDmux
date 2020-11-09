@@ -16,7 +16,7 @@ FLOWCELL: "FLO-MIN106"
 
 ##############################
 ##### resources
-RESOURCE: "GPU" # "CPU"/"GPU" ## resources for running Guppy and Deepbinner
+RESOURCE: "CPU" # "CPU"/"GPU" ## resources for running Guppy and Deepbinner
 NUM_GPUS: 4 # mumber of GPU devices to use # baseDmux will decide CUDA devices based on availability ## GPU mode only
 
 

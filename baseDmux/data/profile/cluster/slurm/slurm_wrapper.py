@@ -38,17 +38,6 @@ except IndexError:
 output = f'--output {logdir}/{log}_%j'
 error = f'--error {logdir}/{log}_%j'
 
-
-# resources = config_properties['RESOURCE']
-# indir = config_properties['INDIR']
-# fast5 = glob.glob(os.path.join(indir, '*', 'fast5/'), recursive = True)
-#
-# mem = 0
-# for f in fast5:
-#     fmem = subprocess.check_output(["du", "-sh", "-B", "G", f])
-#     mem += int(fmem.decode('UTF-8').split('G')[0])
-# mem
-
 resources = config_properties['RESOURCE']
 if resources == 'GPU' and rule in ['guppy_basecalling', 'guppy_demultiplexing', 'deepbinner_classification']:
     partition = '--partition gpu --account gpu_group --mem-per-cpu 1G'
