@@ -148,13 +148,16 @@ def main():
         configfile = read_profile(profile, 'configfile')
         run_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --configfile {configfile}'.format(snakefile=snakefile, profile=profile, workdir=workdir, configfile=configfile)
         print(run_snakemake)
-        # snakemake_exit = os.system(run_snakemake)
-        # if snakemake_exit == 0 and args.report:
-        #     reportfile = os.path.join(read_outdir(profile), 'report/snakemake_report.html')
-        #     run_report = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --report {reportfile}'.format(snakefile=snakefile, profile=profile, reportfile=reportfile, workdir=workdir)
-        #     os.system(run_report)
-        # elif snakemake_exit != 0 and args.report:
-        #     print('No snakemake report is created because baseDmux workflow failed!')
+        snakemake_exit = os.system(run_snakemake)
+        if snakemake_exit == 0 and args.report:
+            reportfile = os.path.join(read_outdir(profile), 'report/snakemake_report.html')
+            run_report = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --report {reportfile} --configfile {configfile}'.format(snakefile=snakefile, profile=profile, reportfile=reportfile, workdir=workdir, configfile=configfile)
+            print(run_report)
+            if not os.path.isdir(os.path.dirname(reportfile)):
+            	os.makedirs(os.path.dirname(reportfile))
+            os.system(run_report)
+        elif snakemake_exit != 0 and args.report:
+            print('No snakemake report is created because baseDmux workflow failed!')
 
 
     if cmd == 'dryrun':

@@ -8,8 +8,8 @@ from snakemake import load_configfile
 
 report: os.path.abspath("data/report/workflow.rst")
 
-# cf = workflow.overwrite_configfiles[-1]
-cf = sys.argv[-1]
+cf = workflow.overwrite_configfiles[-1]
+#cf = sys.argv[-1]
 configfile: cf
 
 
@@ -178,7 +178,7 @@ GET_FASTQ_PER_BARCODE = os.path.abspath('data/script/get_fastq_per_barcode.py')
 GET_SUMMARY_PER_BARCODE = os.path.abspath('data/script/get_summary_per_barcode.R')
 RENAME_FASTQ_GUPPY_BARCODER = os.path.abspath('data/script/rename_fastq_guppy_barcoder.R')
 DEMULTIPLEX_REPORT_RMD = os.path.abspath('data/report/report_demultiplex.Rmd')
-
+GET_READS_PER_GENOME = os.path.abspath('data/script/get_reads_per_genome.R')
 
 ##############################
 ## cluster variables
@@ -602,7 +602,7 @@ rule get_reads_per_genome:
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		Rscript script/get_reads_per_genome.R -b {outdir} -o {params.outpath} -d {params.barcode_by_genome} --{params.transfering}
+		Rscript {GET_READS_PER_GENOME} -b {outdir} -o {params.outpath} -d {params.barcode_by_genome} --{params.transfering}
 		"""
 
 ##############################
