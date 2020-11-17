@@ -46,6 +46,7 @@ library(parallel)
 ```{r demux}
 fastq_folder <- snakemake@params$fastq # "/data3/projects/xanthopore/baotram/test/results_guppy/reads_per_genome/fastq"
 demux_fastq <- list.files(fastq_folder, ".*\\.fastq.gz", full.names = T)
+demux_fastq <- demux_fastq[grep("porechop|filtlong", demux_fastq, invert = T)]
 
 demux <- do.call(rbind, mclapply(demux_fastq, function(fg) {
   fastq <- readDNAStringSet(fg, format = "fastq", seek.first.rec = T, with.qualities = T)
@@ -88,6 +89,8 @@ demux_sum <- merge(demux, sum[c("read_id", "run_id", "ONT_Barcode", "Run_ID", "D
 postdemux_folder <- snakemake@params$postdemux # "/data3/projects/xanthopore/baotram/test/results_guppy/reads_per_genome/fastq_porechop_filtlong"
 if (any(postdemux_folder != demux_folder)) {
   postdemux_fastq <- list.files(postdemux_folder, ".*\\.fastq.gz", full.names = T)
+  postdemux_fastq <- postdemux_fastq[grep("porechop|filtlong", postdemux_fastq)]
+
   postdemux <- do.call(rbind, mclapply(postdemux_fastq, function(fg) {
     fastq <- readDNAStringSet(fg, format = "fastq", seek.first.rec = T, with.qualities = T)
     # phred score
