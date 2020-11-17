@@ -1,11 +1,7 @@
-# BASEcalling and DeMUltipleXing
-## Snakemake workflow for ONT sequencing data
+# BASEcalling and DeMUltipleXing for ONT sequencing data
+## the tool wrapping Snakemake workflow 
 
-Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Multiqc + external report + reads filtering
-
-<p align="center">
-  <img src="./dag/full_dag.svg" width="500" height="500">
-</p>
+Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Multiqc + QC reports + reads filtering
 
 ### Requirements
 - snakemake 5.x
@@ -16,64 +12,119 @@ Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Mult
 ### Installation
 
 ```
-git clone https://github.com/vibaotram/baseDmux.git
+pip install git+https://github.com/vibaotram/baseDmux.git
 ```
 or
 ```
 git clone git@github.com:vibaotram/baseDmux.git
+pip install ./baseDmux
 ```
 
 
 ### Usage
-
-#### 1. Edit [config.yaml](./config.yaml) file
-
-
-#### 2. Run the workflow
-
-**Locally:** (local computer, local node on cluster)
-
 ```
-snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv "
-```
+usage: baseDmux [-h] [-v] {configure,run,dryrun,version_tools} ...
 
-**On cluster mode:** (slurm)
+Run baseDmux version 1.0.1... See
+https://github.com/vibaotram/baseDmux/blob/master/README.md for more details
 
-Modify [cluster.json](./cluster.json) if needed (provide arguments with parameters),  then run this command-line:
+positional arguments:
+  {configure,run,dryrun,version_tools}
+    configure           edit config file and profile
+    run                 run baseDmux
+    dryrun              dryrun baseDmux
+    version_tools       check version for the tools of baseDmux
 
-```
-snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " --latency-wait 60 \
---cluster-config cluster/cluster.json \
---cluster "python3 cluster/submission_wrapper.py"
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
 ```
 
-`submission_wrapper.py` should work for all schedulers (slurm, sge, etc.).  
-But if you are running on slurm, it is better to use `cluster/slurm_wrapper.py` instead, that is more adapted to slurm, with the command below:
+#### 1. Create [workflow config file](baseDmux/data/config.yaml) file and profile folder
+```
+usage: baseDmux configure [-h] [--edit [EDITOR]] --mode {local,cluster,slurm}
+                          [--barcodes_by_genome]
+                          dir
+
+positional arguments:
+  dir                   path to the folder to contain config file and profile
+                        you want to create
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --edit [EDITOR]       optional, open file with editor (nano, vim, gedit,
+                        etc.)
+  --mode {local,cluster,slurm}
+                        local or cluster or slurm
+  --barcodes_by_genome  optional, create a tabular file containing information
+                        of barcodes for each genome)
+```
+This is used to create config file and profile for the snakemake workflow.  
+These files will be created:
+```
+    | project_dir
+            -| workflow_parameter.yaml  
+            -| barcodesByGenome.tsv (if --barcodes_by_genome)
+            -| profile  
+                    -| config.yaml  
+                    -| cluster.json (if --mode cluster or slurm)
+                    -| jobscript.sh (if --mode cluster or slurm)
+                    -| submission_wrapper.py or slurm_wrapper.py (if --mode cluster or slurm)
+                    -| slurm_status.py (if --mode slurm)
+```
+The actual command-line that baseDmux uses to create the workflow is:  
+`snakemake --profile project_dir/profile`
+
+##### Example:
+
+**If you prepare to run snakemake locally** (local computer, local node on cluster), use this command:  
 
 ```
-snakemake --use-singularity --use-conda --cores -p --verbose --singularity-args "--nv " --latency-wait 60 \
---cluster "python3 cluster/slurm_wrapper.py config.yaml" \
---cluster-status "python3 cluster/slurm_status.py"
+baseDmux configure my/path/new_project --edit nano --mode local
 ```
 
-`--cluster-status "python3 cluster/slurm_status.py"` is added to pass job status properly to snakemake (as snakemake does not interpret correctly some slurm job signals).
+Then `workflow_parameter.yaml` and `profile/config.yaml` will be copied to the folder `my/path/new_project`, and pop up in nano editor.
 
-**Note**:
-- If you don't run the workflow on a GPU-support machine, it is not necessary to include `--singularity-args "--nv "` on the command line.
-- `--cores` allows using as many cores as decided in the [config.yaml](./config.yaml) and not more than number of environment available cores.
-- A snakemake profile can be added to the workflow to simplify the command-line, e.g. `snakemake --profile baseDmux`.
-- More information of snakemake usage --> https://snakemake.readthedocs.io
+To get fast5 reads and fastq reads for each genome after demultiplexing, you need a tabular file containing the information of run id, barcode id, genome id, and demultiplexer. 
+By adding `--barcodes_by_genome` option, a formatted file `barcodesByGenome.tsv` will be created in the folder provided (and the path of it will be added in `workflow_parameter.yaml`), and you will modify the table.
+
+`profile/config.yaml` will be created lastly and it will contain `my/path/new_project/workflow_parameter.yaml` as `configfile` for snakemake.
+
+**If you prepare to run snakemake on cluster mode** (slurm, sge, etc.), similarly, run the command below:
+```
+baseDmux configure my/path/new_project --edit nano --mode cluster --barcodes_by_genome
+```
+But along with `config.yaml` file, other files are also copied to the `profile` folder: `cluster.json`, `jobscript.sh`, and `submission_wrapper.py`.
+For basic usage, it is only necessary to modify the `config.yaml` (for snakemake parameters) and `cluster.json` (for cluster parameters).
 
 
-#### 4. Other widgets:
+If you are running on slurm, it is better to use `--mode slurm` that is more adapted to slurm. 
+It will make a copy of `slurm_wrapper.py` instead of `submission_wrapper.py`, and additionally a copy `slurm_status.py` to pass job status properly to snakemake (as snakemake does not interpret correctly some slurm job signals).
 
-`snakemake help`: print README.
+For more information of snakemake profile and other utilities --> https://snakemake.readthedocs.io
 
-`snakemake clean --configfile {your_config.yaml}`: delete output directory.
 
-`script/snakemake_report.py`: create snakemake report, `--help` to see more.
 
-`snakemake check_version_tools --quiet --use-singularity --singularity-args "--nv " --use-conda`: check the current version of tools in baseDmux and the latest available versions.
+#### 2. Run the workflow with the created profile:
+
+```
+usage: baseDmux run [-h] [--snakemake_report] profile_dir
+
+positional arguments:
+  profile_dir         profile folder to run baseDmux
+
+optional arguments:
+  -h, --help          show this help message and exit
+  --snakemake_report  optionally, create snakemake report
+```
+
+Example:  
+You should run `baseDmux dryrun my/path/new_project/profile` for dry-run to check if everything is right, before really execute the workflow.
+```
+baseDmux run my/path/new_project/profile
+``` 
+
+With the option `--snakemake_report`, a report file `snakemake_report.html` will be created in the report folder of output directory (specified as `OUTDIR` in the `workflow_parameters.yaml` file), when snakemake has successfully finished the workflow.
 
 ****
 ### Verbose
@@ -126,7 +177,7 @@ Filter reads by length and by quality. More details is [here](https://github.com
 - Porechop 0.2.4
 - Filtlong 0.2.0
 
-You can decide guppy and deepbinner running on GPU or CPU by specifying 'RESOURCE' in the [config.yaml](./config.yaml) file.
+You can decide guppy and deepbinner running on GPU or CPU by specifying 'RESOURCE' in the [config.yaml](baseDmux/data/config.yaml) file.
 
 #### Singularity containers
 

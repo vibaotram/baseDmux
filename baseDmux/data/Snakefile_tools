@@ -1,0 +1,145 @@
+import requests
+from snakemake import load_configfile
+
+simg_container = load_configfile(os.path.abspath('data/singularity.yaml'))
+guppy_cpu_container = simg_container['guppy_conda_api_CPU']
+guppy_gpu_container = simg_container['guppy_conda_api_GPU']
+
+
+deepbinner_container = simg_container['deepbinner_api']
+
+##############################
+############# CHECKING VERSION
+
+def github_latest(repo):
+	get_response = requests.get("https://github.com/{repo}/releases/latest".format(repo = repo))
+	version = get_response.url.split("/")[-1]
+	return(version.split("v")[-1])
+
+rule version_guppy_cpu:
+	singularity: guppy_cpu_container
+	output: temp("check_version/guppy_cpu")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(guppy_basecaller --version | cut -d" " -f11 | cut -d"," -f1)
+		echo $version > {output}
+		"""
+
+# rule version_guppy_gpu:
+# 	singularity: guppy_gpu_container
+# 	output: temp("check_version/guppy_gpu")
+# 	shell:
+# 		"""
+# 		mkdir -p check_version
+# 		version=$(guppy_basecaller --version | cut -d" " -f11 | cut -d"," -f1)
+# 		echo $version > {output}
+# 		"""
+
+rule version_deepbinner:
+	singularity: deepbinner_container
+	output: temp("check_version/deepbinner")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(deepbinner --version)
+		echo $version > {output}
+		"""
+
+rule version_minionqc:
+	conda: 'conda/conda_minionqc.yaml'
+	singularity: guppy_cpu_container
+	output: temp("check_version/minionqc")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(conda list -r | grep r-minionqc | cut -d"-" -f3 | cut -d" " -f1)
+		echo $version > {output}
+		"""
+
+rule version_multiqc:
+	conda: 'conda/conda_multiqc.yaml'
+	singularity: guppy_cpu_container
+	output: temp("check_version/multiqc")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(conda list -r | grep multiqc | cut -d"-" -f2 | cut -d" " -f1)
+		echo $version > {output}
+		"""
+
+rule version_porechop:
+	conda: 'conda/conda_porechop.yaml'
+	singularity: guppy_cpu_container
+	output: temp("check_version/porechop")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(conda list -r | grep porechop | cut -d"-" -f2 | cut -d" " -f1)
+		echo $version > {output}
+		"""
+
+rule version_filtlong:
+	conda: 'conda/conda_filtlong.yaml'
+	singularity: guppy_cpu_container
+	output: temp("check_version/filtlong")
+	shell:
+		"""
+		mkdir -p check_version
+		version=$(conda list -r | grep filtlong | cut -d"-" -f2 | cut -d" " -f1)
+		echo $version > {output}
+		"""
+
+rule check_version_tools:
+	message: "Tools version in current baseDmux and their latest available version"
+	input:
+		guppy_cpu = rules.version_guppy_cpu.output,
+		# guppy_gpu = rules.version_guppy_gpu.output,
+		minionqc = rules.version_minionqc.output,
+		deepbinner = rules.version_deepbinner.output,
+		multiqc = rules.version_multiqc.output,
+		porechop = rules.version_porechop.output,
+		filtlong = rules.version_filtlong.output
+	params:
+		latest_minionqc = github_latest("roblanf/minion_qc"),
+		latest_multiqc = github_latest("ewels/MultiQC"),
+		latest_deepbinner = github_latest("rrwick/Deepbinner"),
+		latest_porechop = github_latest("rrwick/Porechop"),
+		latest_filtlong = github_latest("rrwick/Filtlong")
+	shell:
+		"""
+		current_guppy_cpu=$(cat {input.guppy_cpu})
+		current_minionqc=$(cat {input.minionqc})
+		current_deepbinner=$(cat {input.deepbinner})
+		current_multiqc=$(cat {input.multiqc})
+		current_porechop=$(cat {input.porechop})
+		current_filtlong=$(cat {input.filtlong})
+
+		printf "%15s %20s %20s\n" "tool" "current version" "latest version"
+		printf "%15s %20s %20s\n" "GUPPY" $current_guppy_cpu "please check https://community.nanoporetech.com/downloads/guppy/release_notes"
+
+		if [ $current_deepbinner == {params.latest_deepbinner} ]; then
+			printf "%15s %20s %20s\n" "Deepbinner" $current_deepbinner {params.latest_deepbinner}; else
+			printf "%15s %20s \033[0;31m%20s\033[0m\n" "Deepbinner" $current_deepbinner {params.latest_deepbinner};
+		fi
+
+		if [ $current_minionqc == {params.latest_minionqc} ]; then
+			printf "%15s %20s %20s\n" "MinIONQC" $current_minionqc {params.latest_minionqc}; else
+			printf "%15s %20s \033[0;31m%20s\033[0m\n" "MinIONQC" $current_minionqc {params.latest_minionqc};
+		fi
+
+		if [ $current_multiqc == {params.latest_multiqc} ]; then
+			printf "%15s %20s %20s\n" "MultiQC" $current_multiqc {params.latest_multiqc}; else
+			printf "%15s %20s \033[0;31m%20s\033[0m\n" "MultiQC" $current_multiqc {params.latest_multiqc};
+		fi
+
+		if [ $current_porechop == {params.latest_porechop} ]; then
+			printf "%15s %20s %20s\n" "Porechop" $current_porechop {params.latest_porechop}; else
+			printf "%15s %20s \033[0;31m%20s\033[0m\n" "Porechop" $current_porechop {params.latest_porechop};
+		fi
+
+		if [ $current_filtlong == {params.latest_filtlong} ]; then
+			printf "%15s %20s %20s\n" "Filtlong" $current_filtlong {params.latest_filtlong}; else
+			printf "%15s %20s \033[0;31m%20s\033[0m\n" "Filtlong" $current_filtlong {params.latest_filtlong};
+		fi
+		"""

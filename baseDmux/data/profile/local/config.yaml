@@ -1,0 +1,15 @@
+##############################
+#####  basic configuration
+configfile: "test/workflow_parameters.yaml" ## absolute path or relative path of current workdir to the config file for the tools
+use-singularity: true
+singularity-args: "--nv "
+use-conda: true
+cores: "all"
+restart-times: 2
+printshellcmds: true
+verbose: true
+rerun-incomplete: true
+notemp: false
+nolock: true
+show-failed-logs: false
+dry-run: false
