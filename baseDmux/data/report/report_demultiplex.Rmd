@@ -72,11 +72,13 @@ summaries <- list.files(demux_folder, "sequencing_summary.txt", recursive = T, f
 sum <- do.call(rbind, lapply(summaries, function(s) {
   sum <- read.table(s, header = T)
   splitted_path <- unlist(strsplit(dirname(s), "/", fixed = T))
-  sum <- data.frame(sum,
-                    "ONT_Barcode" = splitted_path[length(splitted_path)],
-                    "Run_ID" = splitted_path[length(splitted_path) - 1],
-                    "Demultiplexer" = splitted_path[length(splitted_path) - 2],
-                    stringsAsFactors = F)
+  if (nrow(sum) > 0) {
+    sum <- data.frame(sum,
+                      "ONT_Barcode" = splitted_path[length(splitted_path)],
+                      "Run_ID" = splitted_path[length(splitted_path) - 1],
+                      "Demultiplexer" = splitted_path[length(splitted_path) - 2],
+                      stringsAsFactors = F)
+  }
   return(sum)
 }))
 ```
@@ -149,8 +151,9 @@ byrun <- all_sum %>%
 ```
 
 
-# {.tabset .tabset-fade }
-## by run {.tabset .tabset-fade }
+# {.tabset .tabset-fade}
+
+## by run {.tabset .tabset-fade}
 
 ```{r}
 if (nlevels(factor(byrun$Step)) > 1) {
@@ -279,7 +282,7 @@ ggplot(all_sum, aes(x = round(phred.score))) +
         legend.direction = "horizontal", legend.position = "top")
 ```
 
-## by genome {.tabset .tabset-fade }
+## by genome {.tabset .tabset-fade}
 
 ```{r}
 bcgenome_tsv = snakemake@params$barcode_by_genome # "/data3/projects/xanthopore/baotram/baseDmux/barcodeByGenome_sample.tsv"
@@ -439,9 +442,9 @@ if (file.exists(bcgenome_tsv)) {
 ### Quality score distribution
 
 ```{r genome.quality.distribution, fig.width = 16, fig.height = 10}
-ggplot(all_sum, aes(x = round(phred.score))) +
-  geom_line(aes(alpha = Step, color = Demultiplexer), stat = "count") +
-  facet_grid(cols = vars(Genome_ID), rows = vars(Demultiplexer), scales = "fixed") +
+ggplot(merge(all_sum, bygenome, by = c("Run_ID", "ONT_Barcode", "Demultiplexer", "Genome_ID", "Step")), aes(x = round(phred.score))) +
+  geom_line(aes(color = Demultiplexer), stat = "count") +
+  facet_grid(cols = vars(Genome_ID), rows = vars(Step), scales = "fixed") +
   scale_color_viridis_d(option = "E", end = .85) +
   scale_alpha_discrete(range = c(.3, 1)) +
   theme_light() +
