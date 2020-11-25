@@ -96,9 +96,9 @@ RULE_GET_READS_PER_GENOME:
 ##############################
 ##### reports
 REPORTS:
+    'DEMULTIPLEX_REPORT': True
     'SNAKEMAKE_REPORT':
         'MINIONQC_BASECALL': True
         'MINIONQC_DEMULTIPLEX': False
         'MULTIQC_BASECALL': True
         'MULTIQC_DEMULTIPLEX': True
-    'DEMULTIPLEX_REPORT': True

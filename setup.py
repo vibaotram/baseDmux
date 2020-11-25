@@ -5,7 +5,7 @@ with open("README.md", "r") as rm:
     long_description = rm.read()
 
 
-with open("baseDmux/version.py", "r") as vs:
+with open("baseDmux/version", "r") as vs:
       __version__ = vs.read()
 
 setup(name='baseDmux',
