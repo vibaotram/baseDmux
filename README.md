@@ -1,32 +1,69 @@
 # BASEcalling and DeMUltipleXing for ONT sequencing data
-## the tool wrapping Snakemake workflow 
+## the tool wrapping Snakemake workflow
 
 Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Multiqc + QC reports + reads filtering
 
+<p align="center">
+  <img src="./dag/full_dag.svg" width="500" height="500">
+</p>
+
+
 ### Requirements
-- snakemake 5.x
 - singularity >= 2.5
 - conda 4.x
 
 
+### Implemented tools
+- Snakemake 5.30.0
+- Guppy 4.0.14 GPU and 3.6.0 CPU version (to be v4.2.2)
+- Deepbinner 0.2.0
+- MinIONQC 1.4.1
+- Multiqc 1.8
+- Porechop 0.2.4
+- Filtlong 0.2.0
+
+
 ### Installation
-
+Download the package:
 ```
-pip install git+https://github.com/vibaotram/baseDmux.git
-```
-or
-```
-git clone git@github.com:vibaotram/baseDmux.git
-pip install ./baseDmux
+git clone https://github.com/vibaotram/baseDmux.git
+cd ./baseDmux
 ```
 
+Install in a virtualenv
+```
+make install
+source venv/bin/activate
+```
+
+or install in a conda environment
+```
+conda create -n baseDmux -f environment.yaml
+conda activate baseDmux
+pip install .
+```
+
+### Run a test
+You can use the reads fast5 files in `sample/reads` folder for testing
+```
+## copy sample reads to a test folder
+mkdir -p ./test_baseDmux/reads
+cp -r ./baseDmux/sample/reads ./test_baseDmux/reads
+
+## create configuration file for Snakemake and Snakemake profile,
+## and (optional) a tsv file containing information about genomes corresponding to barcode IDs
+baseDmux configure ./test_baseDmux --mode local --barcodes_by_genome
+
+## check the workflow by dryrun, then run
+baseDmux dryrun ./test_baseDmux/profile
+baseDmux run ./test_baseDmux/profile
+```
 
 ### Usage
 ```
 usage: baseDmux [-h] [-v] {configure,run,dryrun,version_tools} ...
 
-Run baseDmux version 1.0.1... See
-https://github.com/vibaotram/baseDmux/blob/master/README.md for more details
+Run baseDmux version 1.0.0... See https://github.com/vibaotram/baseDmux/blob/master/README.md for more details
 
 positional arguments:
   {configure,run,dryrun,version_tools}
@@ -42,66 +79,52 @@ optional arguments:
 
 #### 1. Create [workflow config file](baseDmux/data/config.yaml) file and profile folder
 ```
-usage: baseDmux configure [-h] [--edit [EDITOR]] --mode {local,cluster,slurm}
-                          [--barcodes_by_genome]
-                          dir
+usage: baseDmux configure [-h] --mode {local,cluster,slurm} [--barcodes_by_genome] [--edit [EDITOR]] dir
 
 positional arguments:
-  dir                   path to the folder to contain config file and profile
-                        you want to create
+  dir                   path to the folder to contain config file and profile you want to create
 
 optional arguments:
   -h, --help            show this help message and exit
-  --edit [EDITOR]       optional, open file with editor (nano, vim, gedit,
-                        etc.)
   --mode {local,cluster,slurm}
-                        local or cluster or slurm
-  --barcodes_by_genome  optional, create a tabular file containing information
-                        of barcodes for each genome)
+                        choose the mode of running snakemake, local mode or cluster mode
+  --barcodes_by_genome  optional, create a tabular file containing information of barcodes for each genome)
+  --edit [EDITOR]       optional, open files with editor (nano, vim, gedit, etc.)
 ```
-This is used to create config file and profile for the snakemake workflow.  
+This is used to create config file and profile for the Snakemake workflow.  
 These files will be created:
 ```
-    | project_dir
+    | test_baseDmux
             -| workflow_parameter.yaml  
             -| barcodesByGenome.tsv (if --barcodes_by_genome)
             -| profile  
                     -| config.yaml  
-                    -| cluster.json (if --mode cluster or slurm)
-                    -| jobscript.sh (if --mode cluster or slurm)
-                    -| submission_wrapper.py or slurm_wrapper.py (if --mode cluster or slurm)
-                    -| slurm_status.py (if --mode slurm)
+                    -| cluster.json (if --mode cluster)
 ```
-The actual command-line that baseDmux uses to create the workflow is:  
-`snakemake --profile project_dir/profile`
+*Note*: `slurm` mode might be compatible only with iTrop slurm.
 
 ##### Example:
 
-**If you prepare to run snakemake locally** (local computer, local node on cluster), use this command:  
+**If you prepare to run Snakemake locally** (local computer, local node on cluster), use this command:  
 
 ```
-baseDmux configure my/path/new_project --edit nano --mode local
+baseDmux configure ./test_baseDmux --mode local --barcodes_by_genome
 ```
 
-Then `workflow_parameter.yaml` and `profile/config.yaml` will be copied to the folder `my/path/new_project`, and pop up in nano editor.
+Then `workflow_parameter.yaml` and `profile/config.yaml` will be copied to the folder `./test_baseDmux`, and pop up in nano editor.
 
-To get fast5 reads and fastq reads for each genome after demultiplexing, you need a tabular file containing the information of run id, barcode id, genome id, and demultiplexer. 
-By adding `--barcodes_by_genome` option, a formatted file `barcodesByGenome.tsv` will be created in the folder provided (and the path of it will be added in `workflow_parameter.yaml`), and you will modify the table.
+To get fast5 reads and fastq reads for each genome after demultiplexing, you need a tabular file containing the information of run id, barcode id, genome id, and demultiplexer.
+By adding `--barcodes_by_genome` option, a formatted file `barcodesByGenome.tsv` will be created in the folder provided (and the path of it will be added in `workflow_parameter.yaml`), and you will modify the information on table accordingly. For the testing, you do not need to modify it.
 
-`profile/config.yaml` will be created lastly and it will contain `my/path/new_project/workflow_parameter.yaml` as `configfile` for snakemake.
+`profile/config.yaml` will be created lastly and it will contain `./test_baseDmux/profile/config.yaml` as a set of parameters for Snakemake command-line.
 
-**If you prepare to run snakemake on cluster mode** (slurm, sge, etc.), similarly, run the command below:
+**If you prepare to run Snakemake on cluster mode** (slurm, sge, etc.), similarly, run the command below:
 ```
-baseDmux configure my/path/new_project --edit nano --mode cluster --barcodes_by_genome
+baseDmux configure ./test_baseDmux --edit nano --mode cluster --barcodes_by_genome
 ```
-But along with `config.yaml` file, other files are also copied to the `profile` folder: `cluster.json`, `jobscript.sh`, and `submission_wrapper.py`.
-For basic usage, it is only necessary to modify the `config.yaml` (for snakemake parameters) and `cluster.json` (for cluster parameters).
+On cluster mode, a cluster configuration file will be created, `./test_baseDmux/profile/cluster.json`. baseDmux wraps all the parameters provided in this file to submit Snakemake jobs to cluster.
 
-
-If you are running on slurm, it is better to use `--mode slurm` that is more adapted to slurm. 
-It will make a copy of `slurm_wrapper.py` instead of `submission_wrapper.py`, and additionally a copy `slurm_status.py` to pass job status properly to snakemake (as snakemake does not interpret correctly some slurm job signals).
-
-For more information of snakemake profile and other utilities --> https://snakemake.readthedocs.io
+For more information of Snakemake profile and other utilities --> https://snakemake.readthedocs.io
 
 
 
@@ -119,12 +142,13 @@ optional arguments:
 ```
 
 Example:  
-You should run `baseDmux dryrun my/path/new_project/profile` for dry-run to check if everything is right, before really execute the workflow.
+You can run `baseDmux dryrun ./test_baseDmux/profile` for dry-run to check if everything is right, before really execute the workflow.
 ```
-baseDmux run my/path/new_project/profile
-``` 
+baseDmux run ./test_baseDmux/profile
+```
 
 With the option `--snakemake_report`, a report file `snakemake_report.html` will be created in the report folder of output directory (specified as `OUTDIR` in the `workflow_parameters.yaml` file), when snakemake has successfully finished the workflow.
+
 
 ****
 ### Verbose

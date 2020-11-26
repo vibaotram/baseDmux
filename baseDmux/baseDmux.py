@@ -10,7 +10,7 @@ import pkg_resources
 # yaml=YAML()
 
 def version():
-    version_store = os.path.join(os.path.dirname(__file__), 'version')
+    version_store = os.path.join(os.path.dirname(__file__), 'version.py')
     version = open(version_store, 'r').read()
     return version
 
@@ -48,7 +48,7 @@ def main():
     parser_configure.add_argument(help='path to the folder to contain config file and profile you want to create', dest='dir')
     parser_configure.add_argument('--mode', choices=['local', 'cluster', 'slurm'], help='choose the mode of running Snakemake, local mode or cluster mode', dest='mode', required=True, action='store')
     parser_configure.add_argument('--barcodes_by_genome', help='optional, create a tabular file containing information of barcodes for each genome)', action='store_true', dest='tab_file')
-    parser_configure.add_argument('--edit', help='optional, open file with editor (nano, vim, gedit, etc.)', nargs='?', dest='editor')
+    parser_configure.add_argument('--edit', help='optional, open files with editor (nano, vim, gedit, etc.)', nargs='?', dest='editor')
 
     parser_run = subparsers.add_parser('run', help='run baseDmux')
     parser_run.add_argument(nargs=1, action='store', dest='profile_dir', help='profile folder to run baseDmux')

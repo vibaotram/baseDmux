@@ -190,8 +190,8 @@ HOST_PREFIX = by_cond(nasID, user + '@' + nasID + ':', '')
 
 ##############################
 ## make slurm logs directory
-SLURM_LOG = os.path.join(outdir, "log/slurm")
-os.makedirs(SLURM_LOG, exist_ok=True)
+CLUSTER_LOG = os.path.join(outdir, "log/cluster")
+os.makedirs(CLUSTER_LOG, exist_ok=True)
 
 SNAKEMAKE_LOG = os.path.join(outdir, "log/snakemake")
 os.makedirs(SNAKEMAKE_LOG, exist_ok=True)
