@@ -684,6 +684,7 @@ rule report_demultiplex:
 		postdemux = expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}"), filtered = filtered) if genome else os.path.join(outdir, "basecall"),
 		log = "report_demultiplex.log",
 		outpath = lambda wildcards, output: os.path.dirname(output[0])
+	threads: config["REPORTS"]["DEMULTIPLEX_REPORT_THREADS"]
 	singularity: guppy_container
 	conda: 'conda/conda_rmarkdown.yaml'
 	script:

@@ -27,11 +27,16 @@ if (!requireNamespace("stringr", quietly = TRUE)) install.packages('stringr', re
 if (!requireNamespace("S4Vectors", quietly = TRUE)) install.packages('S4Vectors', repos = "https://cloud.r-project.org")
 # if (!requireNamespace("parallel", quietly = TRUE)) install.packages('parallel', repos = "https://cloud.r-project.org")
 if (!requireNamespace("Biostrings", quietly = TRUE)) {
-  if (!requireNamespace("BiocManager", quietly = TRUE))
-    install.packages("BiocManager", repos = "https://cloud.r-project.org")
-
+  if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", repos = "https://cloud.r-project.org")
   BiocManager::install("Biostrings", update = F, ask = F)
 }
+if (!requireNamespace("qckitfastq", quietly = TRUE)) {
+  if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", repos = "https://cloud.r-project.org")
+  BiocManager::install("qckitfastq")
+}
+
+
+
 
 library(stringr)
 library(ggplot2)
@@ -40,79 +45,172 @@ library(DT)
 library(Biostrings)
 library(S4Vectors)
 library(parallel)
+
+ncores <- as.numeric(snakemake@threads)
+# library(BiocParallel)
+# register(MulticoreParam(workers = ncores, progressbar = TRUE), default = TRUE)
+# register(SnowParam(workers = ncores, progressbar = FALSE))
+# registered()
+
+get_from_fq <- function(fg, step) {
+  fastq <- Biostrings::readDNAStringSet(fg, format = "fastq", seek.first.rec = T, with.qualities = T)
+  #fastq <- Biostrings::readDNAStringSet("/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq/CIX3092.fastq.gz", format = "fastq", seek.first.rec = T, with.qualities = T)
+
+  if (length(fastq) == 0) {
+    warning(fg , " is empty!")
+    return(data.frame())
+  }
+  cat("#####  Processing: ", fg, "\n")
+  seqNames <- names(fastq)
+  seqWidth <- width(fastq)
+  phred <- Biostrings::PhredQuality(mcols(fastq)$qualities)
+  rm(fastq)
+  scores <- sapply(as(phred, "IntegerList"), mean)
+  dt <- data.frame("read_id" = gsub(" .+", "", seqNames),
+                   "run_id" = gsub("(.+ runid=| sampleid.+)", "", seqNames),
+                   "read_length" = seqWidth,
+                   "phred.score" = scores,
+                   "Genome_ID" = gsub("\\.fastq.gz", "", basename(fg)),
+                   "Step" = step,
+                   "id" = seqNames,
+                   stringsAsFactors = F)
+  return(dt)
+}
+
+
+get_from_fq_lw <- function(fg, step) {
+  cat("#####  Processing: ", fg, "\n")
+  fastq <- Biostrings::readDNAStringSet(fg, format = "fastq", seek.first.rec = T, with.qualities = FALSE)
+  if (length(fastq) == 0) {
+    warning(fg , " is empty!")
+    return(data.frame())
+  }
+  seqNames <- names(fastq)
+  seqWidth <- width(fastq)
+  rm(fastq)
+  #sl <- Biostrings::fastq.seqlengths("/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq/CIX3092.fastq.gz")
+  #sq <- qckitfastq::qual_score_per_read("/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq/CIX3092.fastq.gz")$mu_per_read
+  pscores <- qckitfastq::per_read_quality(fg, output_file = "plot")$sequence_mean
+  dt <- data.frame("read_id" = gsub(" .+", "", seqNames),
+                   "run_id" = gsub("(.+ runid=| sampleid.+)", "", seqNames),
+                   "read_length" = seqWidth,
+                   "phred.score" = pscores,
+                   "Genome_ID" = gsub("\\.fastq.gz", "", basename(fg)),
+                   "Step" = step,
+                   "id" = seqNames,
+                   stringsAsFactors = F)
+  return(dt)
+}
+
+
+
+
+#d <- get_from_fq("/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq/CIX4183.fastq.gz", step = "bs")
+#d <- get_from_fq(demux_fastq[24], step = "bs")
+#d <- get_from_fq_lw("/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq/CIX3092.fastq.gz", step = "bs")
+
+
 ```
+
+
+```{r input paths}
+
+fastq_folder <- snakemake@params$fastq # "/data3/projects/xanthopore/baotram/test/results_guppy/reads_per_genome/fastq"
+
+demux_folder <- snakemake@params$demultiplex # "/data3/projects/xanthopore/baotram/test/results_guppy/demultiplex"
+
+postdemux_folder <- snakemake@params$postdemux # "/data3/projects/xanthopore/baotram/test/results_guppy/reads_per_genome/fastq_porechop_filtlong"
+
+bcgenome_tsv <- snakemake@params$barcode_by_genome # "/data3/projects/xanthopore/baotram/baseDmux/barcodeByGenome_sample.tsv"
+
+
+# fastq_folder <- "/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq"
+# demux_folder <- "/data3/projects/xanthopore/seb/bd_output/demultiplex/guppy"
+# postdemux_folder <- "/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq_porechop_filtlong1"
+# bcgenome_tsv <- "/data3/projects/xanthopore/seb/bd_output/config/barcodeByGenome.tsv"
+```
+
+
 
 
 ```{r demux}
-fastq_folder <- snakemake@params$fastq # "/data3/projects/xanthopore/baotram/test/results_guppy/reads_per_genome/fastq"
 demux_fastq <- list.files(fastq_folder, ".*\\.fastq.gz", full.names = T)
 demux_fastq <- demux_fastq[grep("porechop|filtlong", demux_fastq, invert = T)]
 
-demux <- do.call(rbind, mclapply(demux_fastq, function(fg) {
-  fastq <- readDNAStringSet(fg, format = "fastq", seek.first.rec = T, with.qualities = T)
-  # phred score
-  phred <- PhredQuality(mcols(fastq)$qualities)
-  scores <- unlist(lapply(as(phred, "IntegerList"), mean))
+demux <- bind_rows(mclapply(X = demux_fastq, FUN = get_from_fq_lw, step = "demultiplex",
+                            mc.preschedule = FALSE, mc.cores = ncores))
 
-  dt <- data.frame("read_id" = gsub(" .+", "", names(fastq)),
-                   "run_id" = gsub("(.+ runid=| sampleid.+)", "", names(fastq)),
-                   "read_length" = width(fastq),
-                   "phred.score" = scores,
-                   "Genome_ID" = gsub("\\.fastq.gz", "", basename(fg)),
-                   "Step" = "demultiplex",
-                   "id" = names(fastq),
-                   stringsAsFactors = F)
-  return(dt)
-}))
 ```
+
+
+
 
 ```{r sequencing_summary}
-demux_folder <- snakemake@params$demultiplex # "/data3/projects/xanthopore/baotram/test/results_guppy/demultiplex"
 summaries <- list.files(demux_folder, "sequencing_summary.txt", recursive = T, full.names = T)
-sum <- do.call(rbind, lapply(summaries, function(s) {
-  sum <- read.table(s, header = T)
-  splitted_path <- unlist(strsplit(dirname(s), "/", fixed = T))
-  sum <- data.frame(sum,
-                    "ONT_Barcode" = splitted_path[length(splitted_path)],
-                    "Run_ID" = splitted_path[length(splitted_path) - 1],
-                    "Demultiplexer" = splitted_path[length(splitted_path) - 2],
-                    stringsAsFactors = F)
-  return(sum)
-}))
+sum <- bind_rows(
+               mclapply(summaries,
+                        function(s) {
+                          sum <- read.table(s, header = T)
+                          splitted_path <- unlist(strsplit(dirname(s), "/", fixed = T))
+                          if (nrow(sum) > 0) {
+                            sum <- data.frame(sum,
+                                              "ONT_Barcode" = splitted_path[length(splitted_path)],
+                                              "Run_ID" = splitted_path[length(splitted_path) - 1],
+                                              "Demultiplexer" = splitted_path[length(splitted_path) - 2],
+                                              stringsAsFactors = F)
+                            }
+                          return(sum)
+                          }, mc.cores = ncores
+                        )
+               )
+
 ```
+
+
 
 ```{r demux_summary}
 demux_sum <- merge(demux, sum[c("read_id", "run_id", "ONT_Barcode", "Run_ID", "Demultiplexer")], by = c("read_id", "run_id"))
 ```
 
+
+
 ```{r postdemux}
-postdemux_folder <- snakemake@params$postdemux # "/data3/projects/xanthopore/baotram/test/results_guppy/reads_per_genome/fastq_porechop_filtlong"
 if (any(postdemux_folder != demux_folder)) {
   postdemux_fastq <- list.files(postdemux_folder, ".*\\.fastq.gz", full.names = T)
   postdemux_fastq <- postdemux_fastq[grep("porechop|filtlong", postdemux_fastq)]
 
-  postdemux <- do.call(rbind, mclapply(postdemux_fastq, function(fg) {
-    fastq <- readDNAStringSet(fg, format = "fastq", seek.first.rec = T, with.qualities = T)
-    # phred score
-    phred <- PhredQuality(mcols(fastq)$qualities)
-    scores <- unlist(lapply(as(phred, "IntegerList"), mean))
+  # postdemux <- do.call(rbind, mclapply(postdemux_fastq, function(fg) {
+  #   fastq <- readDNAStringSet(fg, format = "fastq", seek.first.rec = T, with.qualities = T)
+  #   # phred score
+  #   phred <- PhredQuality(mcols(fastq)$qualities)
+  #   scores <- unlist(lapply(as(phred, "IntegerList"), mean))
+  #
+  #   dt <- data.frame("read_id" = gsub(" .+", "", names(fastq)),
+  #                    "run_id" = gsub("(.+ runid=| sampleid.+)", "", names(fastq)),
+  #                    "read_length" = width(fastq),
+  #                    "phred.score" = scores,
+  #                    # "Genome_ID" = gsub("\\.fastq.gz", "", basename(fg)),
+  #                    "Step" = gsub("fastq", "demultiplex", basename(dirname(fg))),
+  #                    "id" = names(fastq),
+  #                    stringsAsFactors = F)
+  #   return(dt)
+  # }))
 
-    dt <- data.frame("read_id" = gsub(" .+", "", names(fastq)),
-                     "run_id" = gsub("(.+ runid=| sampleid.+)", "", names(fastq)),
-                     "read_length" = width(fastq),
-                     "phred.score" = scores,
-                     # "Genome_ID" = gsub("\\.fastq.gz", "", basename(fg)),
-                     "Step" = gsub("fastq", "demultiplex", basename(dirname(fg))),
-                     "id" = names(fastq),
-                     stringsAsFactors = F)
-    return(dt)
-  }))
+  postdemux <-  bind_rows(mcmapply(FUN = get_from_fq_lw,
+                            fg = postdemux_fastq,
+                            step = gsub("fastq", "demultiplex", basename(dirname(postdemux_fastq))),
+                            SIMPLIFY = FALSE,
+                            mc.preschedule = FALSE, mc.cores = ncores)
+                   )
+  postdemux$Genome_ID <- NULL
+
 
   postdemux <- merge(postdemux, demux[c("read_id", "run_id", "Genome_ID")], by = c("read_id", "run_id"))
-
   postdemux_sum <- merge(postdemux, sum[c("read_id", "run_id", "ONT_Barcode", "Run_ID", "Demultiplexer")], by = c("read_id", "run_id"))
 }
 ```
+
+
 
 ```{r all_qc}
 if (any(postdemux_folder == demux_folder)) {
@@ -149,8 +247,9 @@ byrun <- all_sum %>%
 ```
 
 
-# {.tabset .tabset-fade }
-## by run {.tabset .tabset-fade }
+# {.tabset .tabset-fade}
+
+## by run {.tabset .tabset-fade}
 
 ```{r}
 if (nlevels(factor(byrun$Step)) > 1) {
@@ -279,10 +378,9 @@ ggplot(all_sum, aes(x = round(phred.score))) +
         legend.direction = "horizontal", legend.position = "top")
 ```
 
-## by genome {.tabset .tabset-fade }
+## by genome {.tabset .tabset-fade}
 
 ```{r}
-bcgenome_tsv = snakemake@params$barcode_by_genome # "/data3/projects/xanthopore/baotram/baseDmux/barcodeByGenome_sample.tsv"
 if (file.exists(bcgenome_tsv)) {
   bcgenome <- read.table(bcgenome_tsv, header = T, sep = "\t", stringsAsFactors = F)
   bygenome <- merge(byrun, bcgenome, by = c("Demultiplexer", "Run_ID", "ONT_Barcode"))
@@ -304,9 +402,10 @@ if (file.exists(bcgenome_tsv)) {
 
 ```{r genome.total.gigabases, fig.width = 16, fig.height = 10}
 if (file.exists(bcgenome_tsv)) {
-  p <- ggplot(bygenome, aes(x = Genome_ID, y = total.gigabases, fill = Run_ID)) +
-    geom_col(position = position_stack(), color = "gray") +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_stack(), vjust = 1.2, size = 3.88*16/nlevels(as.factor(bygenome$Genome_ID))) +
+  p <- ggplot(bygenome, aes(x = Genome_ID, y = total.gigabases, fill = Run_ID, color = ONT_Barcode)) +
+    geom_col(position = position_stack()) +
+    geom_text(aes(label = gsub("[a-z]", "", ONT_Barcode)), color = "#b1bed5", position = position_stack(), vjust = 1.2, size = 3.88*16/nlevels(as.factor(bygenome$Genome_ID))) +
+    scale_color_brewer(palette = "Paired", guide = NULL) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
@@ -316,6 +415,9 @@ if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(f
   p
 }
 ```
+
+
+
 
 ### Total reads
 
@@ -439,15 +541,23 @@ if (file.exists(bcgenome_tsv)) {
 ### Quality score distribution
 
 ```{r genome.quality.distribution, fig.width = 16, fig.height = 10}
-ggplot(all_sum, aes(x = round(phred.score))) +
-  geom_line(aes(alpha = Step, color = Demultiplexer), stat = "count") +
-  facet_grid(cols = vars(Genome_ID), rows = vars(Demultiplexer), scales = "fixed") +
+ggplot(merge(all_sum, bygenome, by = c("Run_ID", "ONT_Barcode", "Demultiplexer", "Genome_ID", "Step")), aes(x = round(phred.score))) +
+  geom_line(aes(color = Demultiplexer), stat = "count") +
+  facet_grid(cols = vars(Genome_ID), rows = vars(Step), scales = "fixed") +
   scale_color_viridis_d(option = "E", end = .85) +
   scale_alpha_discrete(range = c(.3, 1)) +
   theme_light() +
   theme(axis.text.x=element_text(angle=90,hjust=1),
         legend.direction = "horizontal", legend.position = "top")
 ```
+
+
+## Session info
+
+```{r R session info}
+sessionInfo()
+```
+
 
 ## data
 
@@ -460,11 +570,12 @@ if (file.exists(bcgenome_tsv)) {
 ```
 
 ```{r save_workspace, include=FALSE}
+
 if (file.exists(bcgenome_tsv)) {
-  write.table(bygenome, file.path(snakemake@params$outpath, "demultiplex_report.tsv"), sep = "\t", row.names = F, quote = F)
-} else {
-  write.table(byrun, file.path(snakemake@params$outpath, "demultiplex_report.tsv"), sep = "\t", row.names = F, quote = F)
+  write.table(bygenome, file.path(snakemake@params$outpath, "demultiplex_report_bygenome.tsv"), sep = "\t", row.names = F, quote = F)
 }
+write.table(byrun, file.path(snakemake@params$outpath, "demultiplex_report.tsv"), sep = "\t", row.names = F, quote = F)
+
 image_path <- file.path(snakemake@params$outpath, "demultiplex_report.RData")
 remove(p)
 save.image(file = image_path, compress = TRUE)

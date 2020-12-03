@@ -67,7 +67,7 @@ RULE_MINIONQC:
     'ADDITION': "-s FALSE" # additional parameters
 
 ##############################
-##### Fil tools and parameters
+##### Filtering tools and parameters
 READS_FILTERING: [porechop, filtlong1, filtlong2, filtlong3]
 # if porechop is called here, it will run once only, after get_reads_per_genome and will be taken as input of any filtlong runs if specified.
 # multiple filtlong runs with different parameters are enable. Name of the runs can be customized by the user, as long as they have a "filtlong" prefix. Parameters for each run must be specified individually under exactly the same key name.
@@ -102,3 +102,4 @@ REPORTS:
         'MULTIQC_BASECALL': True
         'MULTIQC_DEMULTIPLEX': True
     'DEMULTIPLEX_REPORT': True
+    'DEMULTIPLEX_REPORT_THREADS': 6 # Number of parallel cores to use for the rule generating the custom report.
