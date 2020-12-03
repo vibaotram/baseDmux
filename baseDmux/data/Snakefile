@@ -512,7 +512,7 @@ rule minionqc_demultiplex:
 	output:
 		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done")),
 		# check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done"),
-		fig = by_cond(REPORT_MINIONQC_DEMULTIPLEX, report(MINIONQC_DEMULTIPLEX_FIG, caption = "data/report/demultiplex_minionqc.rst", category = "minionqc_demultiplex"), ())
+		fig = by_cond(REPORT_MINIONQC_DEMULTIPLEX, report(MINIONQC_DEMULTIPLEX_FIG, caption = os.path.abspath("data/report/demultiplex_minionqc.rst"), category = "minionqc_demultiplex"), ())
 	params:
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc"),
 		inpath = rules.get_sequencing_summary_per_barcode.params.barcoding_path,
