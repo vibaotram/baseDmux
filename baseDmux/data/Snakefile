@@ -190,8 +190,8 @@ HOST_PREFIX = by_cond(nasID, user + '@' + nasID + ':', '')
 
 ##############################
 ## make slurm logs directory
-SLURM_LOG = os.path.join(outdir, "log/slurm")
-os.makedirs(SLURM_LOG, exist_ok=True)
+CLUSTER_LOG = os.path.join(outdir, "log/cluster")
+os.makedirs(CLUSTER_LOG, exist_ok=True)
 
 SNAKEMAKE_LOG = os.path.join(outdir, "log/snakemake")
 os.makedirs(SNAKEMAKE_LOG, exist_ok=True)
@@ -674,14 +674,14 @@ REPORT_DEMULTIPLEX_INPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules
 rule report_demultiplex:
 	input:
 		# fast5 = expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome),
-		fastq = expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}/{genome}{filtered}.fastq.gz"), genome = genome, filtered = filtered) if genome else expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done"), demultiplexer = demultiplexer, run = run),
+		fastq = by_cond(len(genome) > 0, expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}/{genome}{filtered}.fastq.gz"), genome = genome, filtered = filtered),  expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done"), demultiplexer = demultiplexer, run = run)),
 	message: "Reporting demultiplex results"
 	output: os.path.join(outdir, "report/demultiplex_report.html")
 	params:
 		barcode_by_genome = BARCODE_BY_GENOME,
-		fastq = os.path.join(outdir, "reads_per_genome/fastq") if genome else os.path.join(outdir, "basecall"),
+		fastq = by_cond(len(genome) > 0, os.path.join(outdir, "reads_per_genome/fastq"), os.path.join(outdir, "basecall")),
 		demultiplex = os.path.join(outdir, "demultiplex"),
-		postdemux = expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}"), filtered = filtered) if genome else os.path.join(outdir, "basecall"),
+		postdemux = by_cond(len(genome) > 0, expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}"), filtered = filtered), os.path.join(outdir, "basecall")),
 		log = "report_demultiplex.log",
 		outpath = lambda wildcards, output: os.path.dirname(output[0])
 	threads: config["REPORTS"]["DEMULTIPLEX_REPORT_THREADS"]

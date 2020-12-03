@@ -6,8 +6,8 @@
         "partition" : "--partition short",
         "cpus-per-task" : "--cpus-per-task {threads}",
         "job-name": "--job-name {rule}_{wildcards}",
-        "output": "--output {SLURM_LOG}/{params.log}_%j",
-        "error": "--error {SLURM_LOG}/{params.log}_%j",
+        "output": "--output {CLUSTER_LOG}/{params.log}_%j",
+        "error": "--error {CLUSTER_LOG}/{params.log}_%j",
         "ntasks": "--ntasks 1",
     },
 

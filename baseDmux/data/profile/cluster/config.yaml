@@ -1,25 +1,35 @@
-##############################
-#####  basic configuration
-configfile: "my/path/new_config.yaml" ## absolute path or relative path of current workdir to the config file for the tools
-use-singularity: true
-singularity-args: "--nv "
-use-conda: true
-cores: "all"
-restart-times: 2
-printshellcmds: true
-verbose: true
-rerun-incomplete: true
-notemp: false
-nolock: true
-show-failed-logs: false
-dry-run: false
+###   This file is for setting parameters for Snakemake command-line in baseDmux workflow.
+###   For more information about Snakemake command-line, please see
+###   https://snakemake.readthedocs.io/en/stable/executing/cli.html#all-options.
 
 
 ##############################
-#####  cluster configuration
-local-cores: 0
-latency-wait: 60
-cluster-config: "data/profile/cluster/cluster.json"
-cluster: "python3 data/profile/cluster/submission_wrapper.py"
-cluster-status: false
+##### EXECUTION
+configfile: "config-test.yaml"    # absolute path or relative path of current workdir to the config file for the tools
+singularity-args: "--nv "   # work on gpu only, to bind NVIDIA to the singularity container
+cores: "all"    # number of cores to use in parallel. "all" to use all available cores
+jobs: "all"   # number of jobs to run in parallel. "all" to run all possible parallel jobs at the same time
+keep-going: true    # keep going on independent jobs even if a job fails
+rerun-incomplete: true    # whether to re-run incomplete jobs or not
+forceall: false   # whether to rerun the whole workflow or not
+
+
+##############################
+##### OUTPUT
+reason: false   # whether to print the reason for each executed rule or not
+printshellcmds: true    # whether to print out the shell commands that will be executed or not
+verbose: true   # whether to print debugging output or not
+
+
+##############################
+##### BEHAVIOR
+nolock: true    # whether to lock working directory or not
+restart-times: 1    # number of times to restart failed jobs
+show-failed-logs: false   # whether to display logs for failed jobs in the console
+latency-wait: 60    # number of seconds to wait for the output file after the job finished
+
+
+##############################
+##### CLUSTER
+cluster-config: "data/profile/cluster/cluster.json"   # configuration file for cluster parameters, baseDmux will automatically wrap them for job submission to cluster
 immediate-submit: false

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 '''
-wrap ...
+wrap sbatch jobs based on Snakemake config file
 '''
 import os
 import sys
@@ -28,7 +28,7 @@ cpus_per_task = '--cpus-per-task ' + str(threads)
 ntasks = '--ntasks 1'
 
 outdir = config_properties['OUTDIR']
-logdir = os.path.join(outdir, 'log/slurm')
+logdir = os.path.join(outdir, 'log/cluster')
 os.makedirs(logdir, exist_ok=True)
 try:
     log = job_properties['params']['log']
