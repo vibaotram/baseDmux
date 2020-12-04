@@ -30,7 +30,7 @@ latency-wait: 60    # number of seconds to wait for the output file after the jo
 
 
 ##############################
-##### CLUSTER - SLURM
-cluster: "python3 data/profile/cluster/slurm/slurm_wrapper.py config-test.yaml"   # available for iTrop slurm only
-cluster-status: "python3 data/profile/cluster/slurm/slurm_status.py"    # available for iTrop slurm only
+##### CLUSTER - ITROP SLURM
+cluster: "python3 data/profile/cluster/iTrop/iTrop_wrapper.py config-test.yaml"   # available for iTrop slurm only
+cluster-status: "python3 data/profile/cluster/iTrop/iTrop_status.py"    # available for iTrop slurm only
 immediate-submit: false

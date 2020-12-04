@@ -14,9 +14,12 @@ jobscript = sys.argv[-1]
 
 job_properties = read_job_properties(jobscript)
 
-submit_params = ''
-for k in job_properties['cluster'].values():
-    submit_params += k + ' '
+submit_params = job_properties['cluster']['scheduler'] + ' '
+for k in job_properties['cluster'].keys():
+    if k == 'scheduler':
+        pass
+    else:
+        submit_params += str(job_properties['cluster'][k]) + ' '
 
 dep_jobid = sys.argv[1:-1]
 if not any(re.match('\d+', j) for j in dep_jobid): # "normal"-submit

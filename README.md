@@ -38,17 +38,17 @@ source venv/bin/activate
 
 or install in a conda environment
 ```
-conda create -n baseDmux -f environment.yaml
+conda env create -n baseDmux -f environment.yaml
 conda activate baseDmux
 pip install .
-```
+``` 
 
 ### Run a test
 You can use the reads fast5 files in `sample/reads` folder for testing
 ```
 ## copy sample reads to a test folder
-mkdir -p ./test_baseDmux/reads
-cp -r ./baseDmux/sample/reads ./test_baseDmux/reads
+mkdir ./test_baseDmux
+cp -r ./baseDmux/sample/reads ./test_baseDmux/
 
 ## create configuration file for Snakemake and Snakemake profile,
 ## and (optional) a tsv file containing information about genomes corresponding to barcode IDs
@@ -58,6 +58,8 @@ baseDmux configure ./test_baseDmux --mode local --barcodes_by_genome
 baseDmux dryrun ./test_baseDmux/profile
 baseDmux run ./test_baseDmux/profile
 ```
+The output will be written in `./test_baseDmux/results` by default
+The first run will take long time for installing conda environments.  
 
 ### Usage
 ```
@@ -91,7 +93,7 @@ optional arguments:
   --barcodes_by_genome  optional, create a tabular file containing information of barcodes for each genome)
   --edit [EDITOR]       optional, open files with editor (nano, vim, gedit, etc.)
 ```
-This is used to create config file and profile for the Snakemake workflow.  
+This is used to create config file (`workflow_parameter.yaml`, to setup input reads, output folder, parameters for the tools) and profile for the Snakemake workflow (`profile/config.yaml`, to set parameters for Snakemake command-line).  
 These files will be created:
 ```
     | test_baseDmux
@@ -111,7 +113,7 @@ These files will be created:
 baseDmux configure ./test_baseDmux --mode local --barcodes_by_genome
 ```
 
-Then `workflow_parameter.yaml` and `profile/config.yaml` will be copied to the folder `./test_baseDmux`, and pop up in nano editor.
+Then `workflow_parameter.yaml` and `profile/config.yaml` will be copied to the folder `./test_baseDmux`.
 
 To get fast5 reads and fastq reads for each genome after demultiplexing, you need a tabular file containing the information of run id, barcode id, genome id, and demultiplexer.
 By adding `--barcodes_by_genome` option, a formatted file `barcodesByGenome.tsv` will be created in the folder provided (and the path of it will be added in `workflow_parameter.yaml`), and you will modify the information on table accordingly. For the testing, you do not need to modify it.

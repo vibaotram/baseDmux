@@ -46,7 +46,7 @@ def main():
 
     parser_configure = subparsers.add_parser('configure', help='edit config file and profile')
     parser_configure.add_argument(help='path to the folder to contain config file and profile you want to create', dest='dir')
-    parser_configure.add_argument('--mode', choices=['local', 'cluster', 'slurm'], help='choose the mode of running Snakemake, local mode or cluster mode', dest='mode', required=True, action='store')
+    parser_configure.add_argument('--mode', choices=['local', 'cluster', 'iTrop'], help='choose the mode of running Snakemake, local mode or cluster mode', dest='mode', required=True, action='store')
     parser_configure.add_argument('--barcodes_by_genome', help='optional, create a tabular file containing information of barcodes for each genome)', action='store_true', dest='tab_file')
     parser_configure.add_argument('--edit', help='optional, open files with editor (nano, vim, gedit, etc.)', nargs='?', dest='editor')
 
@@ -116,10 +116,10 @@ def main():
             source_profile = os.path.join(source_profile, 'cluster')
             # files = ['cluster.json', 'config.yaml', 'jobscript.sh', 'submission_wrapper.py']
             files = ['cluster.json', 'config.yaml']
-        elif args.mode == 'slurm':
+        elif args.mode == 'iTrop':
             source_profile = os.path.join(source_profile, 'cluster')
-            # files = ['cluster.json', 'slurm/config.yaml', 'jobscript.sh', 'slurm/slurm_wrapper.py', 'slurm/slurm_status.py']
-            files = ['slurm/config.yaml']
+            # files = ['cluster.json', 'iTrop/config.yaml', 'jobscript.sh', 'iTrop/iTrop_wrapper.py', 'iTrop/iTrop_status.py']
+            files = ['iTrop/config.yaml']
         for file in files:
             shutil.copy(os.path.join(source_profile, file), os.path.join(profile, os.path.basename(file)))
 
@@ -133,10 +133,10 @@ def main():
             elif args.mode == 'cluster':
                 profileyml['cluster-config'] = profileyml['cluster-config'].replace('data/profile/cluster/cluster.json', os.path.join(profile, 'cluster.json'))
                 # profileyml['cluster'] = profileyml['cluster'].replace('data/profile/cluster/submission_wrapper.py', os.path.join(profile, 'submission_wrapper.py'))
-            elif args.mode == 'slurm':
-                profileyml['cluster'] = profileyml['cluster'].replace('data/profile/cluster/slurm/slurm_wrapper.py', os.path.join(workdir, 'data/profile/cluster/slurm/slurm_wrapper.py'))
+            elif args.mode == 'iTrop':
+                profileyml['cluster'] = profileyml['cluster'].replace('data/profile/cluster/iTrop/iTrop_wrapper.py', os.path.join(workdir, 'data/profile/cluster/iTrop/iTrop_wrapper.py'))
                 profileyml['cluster'] = profileyml['cluster'].replace('config-test.yaml', config)
-                profileyml['cluster-status'] = profileyml['cluster-status'].replace('data/profile/cluster/slurm/slurm_status.py', os.path.join(workdir, 'data/profile/cluster/slurm/slurm_status.py'))
+                profileyml['cluster-status'] = profileyml['cluster-status'].replace('data/profile/cluster/iTrop/iTrop_status.py', os.path.join(workdir, 'data/profile/cluster/iTrop/iTrop_status.py'))
             else:
                 raise ValueError('impossible')
 

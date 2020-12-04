@@ -26,3 +26,4 @@ build/*
 */.snakemake/*
 */__pycache__/*
 venv/*
+test/*
