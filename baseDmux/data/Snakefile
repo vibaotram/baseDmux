@@ -512,7 +512,7 @@ rule minionqc_demultiplex:
 	output:
 		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done")),
 		# check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done"),
-		fig = by_cond(REPORT_MINIONQC_DEMULTIPLEX, report(MINIONQC_DEMULTIPLEX_FIG, caption = "data/report/demultiplex_minionqc.rst", category = "minionqc_demultiplex"), ())
+		fig = by_cond(REPORT_MINIONQC_DEMULTIPLEX, report(MINIONQC_DEMULTIPLEX_FIG, caption = os.path.abspath("data/report/demultiplex_minionqc.rst"), category = "minionqc_demultiplex"), ())
 	params:
 		outpath = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc"),
 		inpath = rules.get_sequencing_summary_per_barcode.params.barcoding_path,
@@ -684,6 +684,7 @@ rule report_demultiplex:
 		postdemux = by_cond(len(genome) > 0, expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}"), filtered = filtered), os.path.join(outdir, "basecall")),
 		log = "report_demultiplex.log",
 		outpath = lambda wildcards, output: os.path.dirname(output[0])
+	threads: config['REPORTS']['DEMULTIPLEX_REPORT_THREADS']
 	singularity: guppy_container
 	conda: 'conda/conda_rmarkdown.yaml'
 	script:
