@@ -89,9 +89,9 @@ filtlong3:
 ##############################
 ##### get_reads_per_genome parameters
 RULE_GET_READS_PER_GENOME:
-    'BARCODE_BY_GENOME': "" # it can be blank then this rule will not be excecuted ## information table for subseting fast5 and fastq to genome folder ## if "guppy"/"deepbinner" is specified in "Demultiplexer" on the table, this demultiplexer will still be used for demultiplexing even though it is not included by 'DEMULTIPLEXER'
+    'BARCODE_BY_GENOME': "" # it can be blank then this rule will not be executed ## information table for subseting fast5 and fastq to genome folder ## if "guppy"/"deepbinner" is specified in "Demultiplexer" on the table, this demultiplexer will still be used for demultiplexing even though it is not included by 'DEMULTIPLEXER'
     'TRANSFERING': "copy" # "copy"/"move"/"symlink"
-
+    'GET_FAST5': False # True/False, whether to get fast5 per genome or not
 
 ##############################
 ##### reports

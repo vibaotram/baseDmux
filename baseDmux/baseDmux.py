@@ -1,3 +1,4 @@
+from __future__ import print_function
 import argparse
 import os
 import shutil
@@ -5,6 +6,8 @@ import sys
 import subprocess
 import ruamel.yaml as yaml
 import pkg_resources
+
+
 
 
 # yaml=YAML()
@@ -65,7 +68,8 @@ def main():
     # print(args)
     # workdir = os.path.dirname(__file__)
     workdir = pkg_resources.resource_filename(__name__, '')
-    print(workdir)
+    # print(workdir)
+    print(workdir, file=sys.stdout)
     snakefile = os.path.join(workdir, 'data/Snakefile')
     snakefile_tools = os.path.join(workdir, 'data/Snakefile_tools')
     source_config = os.path.join(workdir, 'data/config.yaml')
@@ -87,7 +91,7 @@ def main():
 
         ## copy config file
         config = os.path.join(dir, 'workflow_parameters.yaml')
-        print('copy sample workflow_parameters.yaml of baseDmux to {config}'.format(config=config))
+        print('copy sample workflow_parameters.yaml of baseDmux to {config}'.format(config=config), file=sys.stdout)
         shutil.copyfile(source_config, config)
         with open(config, 'r') as cf:
             read_config = yaml.round_trip_load(cf, preserve_quotes=True)
@@ -107,7 +111,7 @@ def main():
         ## copy profile
         profile = os.path.join(dir, 'profile')
         os.makedirs(profile, exist_ok=True)
-        print(f'copy sample profile of baseDmux to {profile}')
+        print(f'copy sample profile of baseDmux to {profile}', file=sys.stdout)
         profile_config = os.path.join(profile, 'config.yaml')
         if args.mode == 'local':
             files = ['config.yaml']
@@ -140,7 +144,7 @@ def main():
             else:
                 raise ValueError('impossible')
 
-        print('profile config: {}'.format(profileyml))
+        print('profile config: {}'.format(profileyml), file=sys.stdout)
         with open(profile_config, 'w') as yml:
             yaml.round_trip_dump(profileyml, yml)
 

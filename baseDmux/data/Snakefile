@@ -169,6 +169,11 @@ guppy_container = by_cond(RESOURCE == 'CPU', guppy_cpu_container, guppy_gpu_cont
 deepbinner_container = simg_container['deepbinner_api']
 
 
+FAST5_PER_GENOME = config['RULE_GET_READS_PER_GENOME']['GET_FAST5']
+
+READS_PER_GENOME = [by_cond(FAST5_PER_GENOME, directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), ()), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)]
+
+
 ##############################
 ## path to scripts
 
@@ -219,7 +224,7 @@ rule finish:
 		# expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer = demultiplexer, run = run),
 		os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), # BASECALLING QC
 		by_cond(DEMULTIPLEX_REPORT and len(demultiplexer) > 0, os.path.join(outdir, "report/demultiplex_report.html"), ()),
-		expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome),
+		by_cond(FAST5_PER_GENOME, expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome), ()),
 		by_cond(len(genome) > 0, expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}/{genome}{filtered}.fastq.gz"), genome = genome, filtered = filtered), expand(os.path.join(outdir, "basecall/{run}/{run}{filtered}.fastq.gz"), run = run, filtered = [''] + filtered))
 
 		# expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)
@@ -586,11 +591,11 @@ GET_READS_PER_GENOME_INPUT = [expand(rules.get_sequencing_summary_per_barcode.in
 rule get_reads_per_genome:
 	input:
 		# indir = outdir,
-		expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run),
+		by_cond(FAST5_PER_GENOME, expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run), ()),
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done"), demultiplexer = get_demultiplexer, run = run)
 	output:
 		# GET_READS_PER_GENOME_OUTPUT
-		fast5_fastq = [directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)],
+		fast5_fastq = [by_cond(FAST5_PER_GENOME, directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), ()), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)],
 		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),

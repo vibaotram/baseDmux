@@ -6,6 +6,7 @@
 #### Loading required packages #####
 suppressPackageStartupMessages(library("optparse"))
 suppressPackageStartupMessages(library("Biostrings"))
+suppressPackageStartupMessages(library("dplyr"))
 
 #### COMMAND LINE ARGUMENTS PARSING ######
 option_list <- list(
@@ -108,23 +109,31 @@ for (i in unique(c(dict$dest_fast5, dest_fastq_dir))) {
   dir.create(i, recursive = T, showWarnings = F)
 }
 
-write.csv(as.matrix(dict), file.path(outdir, "reads_per_genome.csv"), quote = F, row.names = F)
+if all(dir.exists(dict$ori_fast5)) {
+  write.table(dict, file.path(outdir, "reads_per_genome.csv"), quote = F, row.names = F, sep = "\t")
+} else {
+  write.table(dict %>% dplyr::select(-c(ori_fast5, dest_fast5)), file.path(outdir, "reads_per_genome.csv"), quote = F, row.names = F, sep = "\t")
+}
+
 # dict <- data.frame(dict, ori_fast5, ori_fastq, dest_fast5_dir, dest_fastq_dir)
 
-
-for (i in unique(dict$Genome_ID)) {
-  ori_dir = dict[dict$Genome_ID == i, "ori_fast5"]
-  for (o in ori_dir) {
-    ori_files <- list.files(as.character(o), pattern = ".*\\.fast5", full.names = T, recursive = T)
-    for (os in ori_files) {
-      dest_name <- lapply(os, function(x) paste(dict[dict$ori_fast5 == o, "Demultiplexer"], dict[dict$ori_fast5 == o, "Run_ID"], basename(x), sep = "_"))
-      dest_file <- paste(dict[dict$ori_fast5 == o, "dest_fast5"], dest_name, sep = "/")
-      transfer_file <- paste(cmd, os, dest_file, sep = " ")
-      system(transfer_file)
+if (all(dir.exists(dict$ori_fast5))) {
+  for (i in unique(dict$Genome_ID)) {
+    ori_dir = dict[dict$Genome_ID == i, "ori_fast5"]
+    for (o in ori_dir) {
+      ori_files <- list.files(as.character(o), pattern = ".*\\.fast5", full.names = T, recursive = T)
+      for (os in ori_files) {
+        dest_name <- lapply(os, function(x) paste(dict[dict$ori_fast5 == o, "Demultiplexer"], dict[dict$ori_fast5 == o, "Run_ID"], basename(x), sep = "_"))
+        dest_file <- paste(dict[dict$ori_fast5 == o, "dest_fast5"], dest_name, sep = "/")
+        transfer_file <- paste(cmd, os, dest_file, sep = " ")
+        system(transfer_file)
+      }
+      message(paste("\n# [", date(), "]\t", length(ori_files), "fast5 files", transfer_mode, "to", unique(dict[dict$Genome_ID == i, "dest_fast5"]), "\n"))
     }
-    message(paste("\n# [", date(), "]\t", length(ori_files), "fast5 files", transfer_mode, "to", unique(dict[dict$Genome_ID == i, "dest_fast5"]), "\n"))
   }
-  }
+} 
+
+
 
 
 # transfer fastq files
