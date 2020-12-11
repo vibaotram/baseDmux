@@ -608,7 +608,7 @@ rule get_reads_per_genome:
 		# indir = outdir,
 		# by_cond(FAST5_PER_GENOME, expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run), ()),
 		# expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done"), demultiplexer = get_demultiplexer, run = run)
-		all_fastq
+		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex{filtered}.done"), demultiplexer=demultiplexer, run=run, filtered=filtered)
 	output:
 		# GET_READS_PER_GENOME_OUTPUT
 		# fast5_fastq = [by_cond(FAST5_PER_GENOME, directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), ()), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)],
@@ -618,7 +618,7 @@ rule get_reads_per_genome:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),
 		barcode_by_genome = BARCODE_BY_GENOME,
 		transfering = TRANSFERING,
-		log = "get_reads_per_genome_{filtered}.log"
+		log = "get_reads_per_genome.log"
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
 	shell:
