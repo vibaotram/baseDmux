@@ -303,10 +303,11 @@ rule guppy_basecalling:
 ##################### BY GUPPY
 
 
-rule guppy_demultiplexing:
+checkpoint guppy_demultiplexing:
 	message: "GUPPY demultiplexing running on {RESOURCE}"
 	input: rules.guppy_basecalling.output.fastq
 	output:
+		# fastq = os.path.join(outdir, "demultiplex/guppy/{run}/{barcode}/{barcode}.fastq.gz"),
 		demux = os.path.join(outdir, "demultiplex/guppy/{run}/barcoding_summary.txt"),
 		check = temp(os.path.join(outdir, "demultiplex/guppy/{run}/demultiplex.done"))
 	params:
@@ -474,9 +475,11 @@ rule get_sequencing_summary_per_barcode:
 	input:
 		# DEEPBINNER_BIN_OUTPUT,
 		# GUPPY_DEMULTIPLEXING_OUTPUT
-		os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done")
+		# os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done")
+		os.path.join(outdir, "demultiplex/guppy/{run}/{barcode}/{barcode}.fastq.gz")
 	output:
-		temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/get_summary.done"))
+		os.path.join(outdir, "demultiplex/guppy/{run}/{barcode}/sequencing_summary.txt")
+		# temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/get_summary.done"))
 		# os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/get_summary.done")
 	params:
 		barcoding_path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
@@ -493,11 +496,11 @@ rule get_sequencing_summary_per_barcode:
 		"""
 ###
 
-# def summary_per_barcode(wildcards):
-# 	checkpoint_output = checkpoints.demultiplexing_guppy_sequencing_summary.get(**wildcards).output[0]
-#     barcodes=glob_wildcards(os.path.join(os.path.dirname(checkpoint_output), '{barcode}/sequencing_summary.txt')).barcode)
-# 	summaryFilesList=[os.path.dirname(checkpoint_output) + "/{bc}/sequencing_summary.txt".format(bc = barcode) for barcode in barcodes]
-# 	return(summaryFilesList)
+def summary_per_barcode(wildcards):
+	checkpoint_output = checkpoints.guppy_demultiplexing.get(**wildcards).output[0]
+	barcodes = glob_wildcards(os.path.join(os.path.dirname(checkpoint_output), '{barcode}/sequencing_summary.txt')).barcode
+	summaryFilesList=[os.path.dirname(checkpoint_output) + "/{barcode}/sequencing_summary.txt".format(barcode = barcode) for barcode in barcodes]
+	return(summaryFilesList)
 
 ###
 
@@ -513,7 +516,8 @@ REPORT_MINIONQC_DEMULTIPLEX = config['REPORTS']['SNAKEMAKE_REPORT']['MINIONQC_DE
 
 rule minionqc_demultiplex:
 	input:
-		rules.get_sequencing_summary_per_barcode.output
+		# rules.get_sequencing_summary_per_barcode.output
+		summary_per_barcode
 	output:
 		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done")),
 		# check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/minionqc.done"),
@@ -585,7 +589,7 @@ rule get_multi_fast5_per_barcode:
 ################# SUBSET READS
 #################### BY GENOME
 
-GET_READS_PER_GENOME_INPUT = [expand(rules.get_sequencing_summary_per_barcode.input, demultiplexer = get_demultiplexer, run = run),
+GET_READS_PER_GENOME_INPUT = [summary_per_barcode,
                               expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run)]
 
 rule get_reads_per_genome:
