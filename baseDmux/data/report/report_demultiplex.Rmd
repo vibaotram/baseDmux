@@ -26,14 +26,10 @@ if (!requireNamespace("dplyr", quietly = TRUE)) install.packages('dplyr', repos 
 if (!requireNamespace("stringr", quietly = TRUE)) install.packages('stringr', repos = "https://cloud.r-project.org")
 if (!requireNamespace("S4Vectors", quietly = TRUE)) install.packages('S4Vectors', repos = "https://cloud.r-project.org")
 # if (!requireNamespace("parallel", quietly = TRUE)) install.packages('parallel', repos = "https://cloud.r-project.org")
-if (!requireNamespace("Biostrings", quietly = TRUE)) {
-  if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", repos = "https://cloud.r-project.org")
-  BiocManager::install("Biostrings", update = F, ask = F)
-}
-if (!requireNamespace("qckitfastq", quietly = TRUE)) {
-  if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", repos = "https://cloud.r-project.org")
-  BiocManager::install("qckitfastq")
-}
+if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", repos = "https://cloud.r-project.org")
+if (!requireNamespace("Biostrings", quietly = TRUE)) BiocManager::install("Biostrings", update = F, ask = F)
+if (!requireNamespace("qckitfastq", quietly = TRUE)) BiocManager::install("qckitfastq", update = F, ask = F)
+
 
 
 
