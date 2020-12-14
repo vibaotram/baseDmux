@@ -650,7 +650,7 @@ rule porechop:
 if "porechop" in READS_FILTERING:
 	FILTLONG_INPUT = rules.porechop.output.fastq
 else:
-	os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/{barcode}/{barcode}.fastq.gz")
+	FILTLONG_INPUT = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/{barcode}/{barcode}.fastq.gz")
 
 # FILTLONG_OUTPUT
 if "porechop" in READS_FILTERING:
@@ -669,7 +669,7 @@ rule filtlong:
 		fastq = FILTLONG_OUTPUT
 	params:
 		filtlong = filtlong_params,
-		log = by_cond(len(genome) > 0, "{filtlongid}_{genome}.log", "{filtlongid}_{run}.log")
+		log = by_cond(len(genome) > 0, "{filtlongid}_{barcode}.log", "{filtlongid}_{run}.log")
 	singularity: guppy_container
 	conda: 'conda/conda_filtlong.yaml'
 	shell:
