@@ -225,7 +225,7 @@ rule finish:
 		os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), # BASECALLING QC
 		by_cond(DEMULTIPLEX_REPORT and len(demultiplexer) > 0, os.path.join(outdir, "report/demultiplex_report.html"), ()),
 		by_cond(FAST5_PER_GENOME, expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome), ()),
-		by_cond(len(genome) > 0, expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}/{genome}{filtered}.fastq.gz"), genome = genome, filtered = filtered), expand(os.path.join(outdir, "basecall/{run}/{run}{filtered}.fastq.gz"), run = run, filtered = [''] + filtered))
+		expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}/{genome}{filtered}.fastq.gz"), genome = genome, filtered = filtered),
 
 		# expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)
 		# expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
@@ -614,12 +614,12 @@ rule get_reads_per_genome:
 ############## READS FILTERING
 
 rule porechop:
-	input: by_cond(len(genome) > 0, os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), rules.guppy_basecalling.output.compressed_fastq)
+	input: os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz")
 	output:
-		fastq = by_cond(len(genome) > 0, os.path.join(outdir, "reads_per_genome/fastq_porechop/{genome}_porechop.fastq.gz"), os.path.join(outdir, "basecall/{run}/{run}_porechop.fastq.gz"))
+		fastq = os.path.join(outdir, "reads_per_genome/fastq_porechop/{genome}_porechop.fastq.gz")
 	params:
 		porechop = PORECHOP_PARAMS,
-		log = by_cond(len(genome) > 0, "porechop_{genome}.log", "porechop_{run}.log")
+		log = "porechop_{genome}.log"
 	singularity: guppy_container
 	conda: 'conda/conda_porechop.yaml'
 	threads: config["porechop"]["THREADS"]
@@ -633,22 +633,14 @@ rule porechop:
 if "porechop" in READS_FILTERING:
 	FILTLONG_INPUT = rules.porechop.output.fastq
 else:
-	if len(genome) > 0:
-		FILTLONG_INPUT = os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz")
-	else:
-		FILTLONG_INPUT = rules.guppy_basecalling.output.compressed_fastq
+	FILTLONG_INPUT = os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz")
 
 # FILTLONG_OUTPUT
-if len(genome) > 0:
-	if "porechop" in READS_FILTERING:
-		FILTLONG_OUTPUT = os.path.join(outdir, "reads_per_genome/fastq_porechop_{filtlongid}/{genome}_porechop_{filtlongid}.fastq.gz")
-	else:
-		FILTLONG_OUTPUT = os.path.join(outdir, "reads_per_genome/fastq_{filtlongid}/{genome}_{filtlongid}.fastq.gz")
+if "porechop" in READS_FILTERING:
+	FILTLONG_OUTPUT = os.path.join(outdir, "reads_per_genome/fastq_porechop_{filtlongid}/{genome}_porechop_{filtlongid}.fastq.gz")
 else:
-	if "porechop" in READS_FILTERING:
-		FILTLONG_OUTPUT = os.path.join(outdir, "basecall/{run}/{run}_porechop_{filtlongid}.fastq.gz")
-	else:
-		FILTLONG_OUTPUT = os.path.join(outdir, "basecall/{run}/{run}_{filtlongid}.fastq.gz")
+	FILTLONG_OUTPUT = os.path.join(outdir, "reads_per_genome/fastq_{filtlongid}/{genome}_{filtlongid}.fastq.gz")
+
 
 def filtlong_params(wildcards):
 	params = config[wildcards.filtlongid].values()
@@ -661,7 +653,7 @@ rule filtlong:
 		fastq = FILTLONG_OUTPUT
 	params:
 		filtlong = filtlong_params,
-		log = by_cond(len(genome) > 0, "{filtlongid}_{genome}.log", "{filtlongid}_{run}.log")
+		log = "{filtlongid}_{genome}.log"
 	singularity: guppy_container
 	conda: 'conda/conda_filtlong.yaml'
 	shell:
@@ -733,7 +725,7 @@ rule help:
 rule test:
 	shell:
 		"""
-		echo "{cf}"
+		echo "{filtered}"
 		"""
 
 # rule add_slurm_logs:
