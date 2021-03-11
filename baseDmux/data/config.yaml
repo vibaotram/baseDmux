@@ -96,10 +96,11 @@ RULE_GET_READS_PER_GENOME:
 ##############################
 ##### reports
 REPORTS:
-    'SNAKEMAKE_REPORT':
-        'MINIONQC_BASECALL': True
-        'MINIONQC_DEMULTIPLEX': False
-        'MULTIQC_BASECALL': True
-        'MULTIQC_DEMULTIPLEX': True
-    'DEMULTIPLEX_REPORT': True
+    'SNAKEMAKE_REPORT':  # do you want to include the resuls of these rules in the snakemake report? warning: they can make the report file become very big in size
+        'MINIONQC_BASECALL': True # minionqc plots (11 plots/run)
+        'MINIONQC_DEMULTIPLEX': False # minionqc plots (11 plots/barcode)
+        'MULTIQC_BASECALL': True # link to multiqc html report
+        'MULTIQC_DEMULTIPLEX': True # link to multiqc report
+
+    'DEMULTIPLEX_REPORT': True # do you want to create a "collective" report for all the results of demultiplex and filtering?
     'DEMULTIPLEX_REPORT_THREADS': 6 # Number of parallel cores to use for the rule generating the custom report.

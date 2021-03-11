@@ -573,10 +573,11 @@ rule get_multi_fast5_per_barcode:
 	params:
 		path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
 		log = "get_multi_fast5_per_barcode_{demultiplexer}_{run}.log"
+	threads: config[]
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		python3 {FAST5_SUBSET} {input.fast5} {params.path}
+		python3 {FAST5_SUBSET} {input.fast5} {params.path} {threads}
 		touch {output.check}
 		"""
 
