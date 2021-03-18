@@ -180,7 +180,7 @@ GET_FASTQ_PER_BARCODE = os.path.abspath('data/script/get_fastq_per_barcode.py')
 GET_SUMMARY_PER_BARCODE = os.path.abspath('data/script/get_summary_per_barcode.R')
 RENAME_FASTQ_GUPPY_BARCODER = os.path.abspath('data/script/rename_fastq_guppy_barcoder.R')
 DEMULTIPLEX_REPORT_RMD = os.path.abspath('data/report/report_demultiplex.Rmd')
-GET_READS_PER_GENOME = os.path.abspath('data/script/get_reads_per_genome.R')
+GET_READS_PER_GENOME = os.path.abspath('data/script/get_fastq_per_genome.R')
 
 ##############################
 ## cluster variables
@@ -583,12 +583,10 @@ rule multiqc_demultiplex:
 ################# SUBSET READS
 #################### BY GENOME
 
-GET_READS_PER_GENOME_INPUT = [expand(rules.get_sequencing_summary_per_barcode.input, demultiplexer = get_demultiplexer, run = run),
-                              expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run)]
+# GET_READS_PER_GENOME_INPUT = [expand(rules.get_sequencing_summary_per_barcode.input, demultiplexer = get_demultiplexer, run = run),
+#                               expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run)]
 
 FAST5_SUBSET_THREADS = config['RULE_GET_READS_PER_GENOME']['MAX_THREADS']
-# if FAST5_SUBSET_THREADS > len(run):
-# 	FAST5_SUBSET_THREADS = len(run)
 
 def fast5_for_genome(wildcards):
 	genome_info = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Run_ID", "Genome_ID"], squeeze = True)
