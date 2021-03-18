@@ -81,16 +81,18 @@ def main():
         dir = args.dir
         dir = os.path.join(cwd, dir)
         os.makedirs(dir, exist_ok=True)
+        profile = os.path.join(dir, 'profile')
+        os.makedirs(profile, exist_ok=True)
 
         ## copy barcodeByGenome.tsv if called
         if args.tab_file:
-            table = os.path.join(dir, "barcodeByGenome.tsv")
+            table = os.path.join(profile, "barcodeByGenome.tsv")
             shutil.copyfile(source_barcode_table, table)
             if args.editor:
                 os.system('{editor} {table}'.format(editor=args.editor, table=table))
 
         ## copy config file
-        config = os.path.join(dir, 'workflow_parameters.yaml')
+        config = os.path.join(profile, 'workflow_parameters.yaml')
         print('copy sample workflow_parameters.yaml of baseDmux to {config}'.format(config=config), file=sys.stdout)
         shutil.copyfile(source_config, config)
         with open(config, 'r') as cf:
@@ -103,14 +105,12 @@ def main():
             else:
                 read_config['RULE_GET_READS_PER_GENOME']['BARCODE_BY_GENOME'] = ''
         with open(config, 'w') as cf:
-                yaml.round_trip_dump(read_config, cf)
+                yaml.round_trip_dump(read_config, cf, width = 4096)
         if args.editor:
             os.system('{editor} {config}'.format(editor=args.editor, config=config))
 
 
         ## copy profile
-        profile = os.path.join(dir, 'profile')
-        os.makedirs(profile, exist_ok=True)
         print(f'copy sample profile of baseDmux to {profile}', file=sys.stdout)
         profile_config = os.path.join(profile, 'config.yaml')
         if args.mode == 'local':
@@ -146,7 +146,7 @@ def main():
 
         print('profile config: {}'.format(profileyml), file=sys.stdout)
         with open(profile_config, 'w') as yml:
-            yaml.round_trip_dump(profileyml, yml)
+            yaml.round_trip_dump(profileyml, yml, width = 4096)
 
         for file in files:
             if args.editor:
