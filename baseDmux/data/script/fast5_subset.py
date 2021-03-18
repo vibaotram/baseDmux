@@ -1,38 +1,42 @@
 #!/usr/bin/env python3
 
 '''
-take all barcode folders from provided directory (non-recursively)
-then input each to "fast5_subset" command
+run "fast5_subset" command
+in parallel for each "fast5/{run}" as input folder
 '''
 
 import glob
 import os
 import sys
 from multiprocessing import Pool
+import itertools
 
-
-def fast5_subset(summary_file):
-    barcode = os.path.basename(os.path.dirname(summary_file))
-    save_path = os.path.join(path, barcode, "fast5")
-    os.makedirs(save_path, exist_ok=True)
-    id_list = summary_file
-    fast5_subset_cmd = "fast5_subset --input {} --save_path {} --read_id_list {} --filename_base \"{}_\"".format(fast5, save_path, id_list, barcode)
+def fast5_subset(input, save_path, read_id_list):
+    filename_base = os.path.basename(os.path.dirname(input))
+    os.makedirs(save_path, exist_ok = True)
+    fast5_subset_cmd = "fast5_subset --input {} --save_path {} --read_id_list {} --filename_base \"{}_\"".format(input, save_path, read_id_list, filename_base)
+    print(fast5_subset_cmd, '\n')
     try:
         os.system(fast5_subset_cmd)
-        print("multi_reads_fast5 files created and stored in /fast5 folder for {}.".format(barcode))
-        return 1
+        genome = os.path.basename(save_path)
+        return("{}: done".format(fast5_subset_cmd), '\n')
     except ValueError:
-        sys.exit("fast5_subset error at {}".format(barcode))
-        return 0
+        return("{}: failed".format(fast5_subset_cmd), '\n')
 
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input_fast5', nargs = '+', dest = 'inputs')
+    parser.add_argument('-s', '--save_path', nargs = '1', dest = 'save_path')
+    parser.add_argument('-l', '--read_id_list', nargs = '1', dest = 'read_id_list')
+    parser.add_argument('-t', '--threads', nargs = '1', dest = 'threads')
+
+    args = parser.parse_args()
+
+    with Pool(args.threads) as p:
+        save_paths = itertools.repeat(args.save_path, len(args.inputs))
+        read_id_lists = tertools.repeat(args.read_id_list, len(args.inputs))
+        out = p.map(fast5_subset, zip(args.inputs, save_paths, read_id_lists))
+    print(out)
 
 if __name__ == '__main__':
-    fast5 = sys.argv[1] # path to raw fast5 files
-    path = sys.argv[2] # directory containing barcode folders
-    threads = sys.arg[3] # number of threads
-
-    summary = glob.glob(os.path.join(path, "*/sequencing_summary.txt")) # get full paths
-
-    with Pool(threads) as p:
-        times = p.starmap(fast5_subset, summary)
-    print("{} /fast5 folders created for corresponding barcodes.". format(times))print("{} /fast5 folders created for corresponding barcodes.". format(times))
+    main()

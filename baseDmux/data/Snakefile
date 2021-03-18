@@ -110,7 +110,7 @@ API_THREADS = config['RULE_MULTI_TO_SINGLE_FAST5']['THREADS']
 ##############################
 ## get_reads_per_genome
 
-TRANSFERING = config['RULE_GET_READS_PER_GENOME']['TRANSFERING']
+TRANSFERING = config['RULE_GET_READS_PER_GENOME']['FASTQ_TRANSFERING']
 BARCODE_BY_GENOME = config['RULE_GET_READS_PER_GENOME']['BARCODE_BY_GENOME']
 
 
@@ -118,11 +118,8 @@ if not BARCODE_BY_GENOME:
 	genome = []
 	get_demultiplexer = []
 else :
-	if os.path.isfile(BARCODE_BY_GENOME):
-		genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"], squeeze = True).unique()
-		get_demultiplexer = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Demultiplexer"], squeeze = True).unique()
-	else:
-		raise FileNotFoundError(f'"{BARCODE_BY_GENOME}" in BARCODE_BY_GENOME does not exist (configfile line 74)')
+	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"], squeeze = True).unique()
+	get_demultiplexer = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Demultiplexer"], squeeze = True).unique()
 
 GET_READS_PER_GENOME_OUTPUT = [directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)]
 
@@ -562,24 +559,24 @@ rule multiqc_demultiplex:
 ################ ONT_FAST5_API
 
 
-rule get_multi_fast5_per_barcode:
-	input:
-		summary = rules.get_sequencing_summary_per_barcode.output,
-		fast5 = rules.guppy_basecalling.output.fast5
-	output:
-		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"))
-		# check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done")
-	singularity: deepbinner_container
-	params:
-		path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
-		log = "get_multi_fast5_per_barcode_{demultiplexer}_{run}.log"
-	threads: config[]
-	shell:
-		"""
-		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		python3 {FAST5_SUBSET} {input.fast5} {params.path} {threads}
-		touch {output.check}
-		"""
+# rule get_multi_fast5_per_barcode:
+# 	input:
+# 		summary = rules.get_sequencing_summary_per_barcode.output,
+# 		fast5 = rules.guppy_basecalling.output.fast5
+# 	output:
+# 		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"))
+# 		# check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done")
+# 	singularity: deepbinner_container
+# 	params:
+# 		path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
+# 		log = "get_multi_fast5_per_barcode_{demultiplexer}_{run}.log"
+# 	threads: config[]
+# 	shell:
+# 		"""
+# 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
+# 		python3 {FAST5_SUBSET} {input.fast5} {params.path} {threads}
+# 		touch {output.check}
+# 		"""
 
 
 ##############################
@@ -589,26 +586,64 @@ rule get_multi_fast5_per_barcode:
 GET_READS_PER_GENOME_INPUT = [expand(rules.get_sequencing_summary_per_barcode.input, demultiplexer = get_demultiplexer, run = run),
                               expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run)]
 
+FAST5_SUBSET_THREADS = config['RULE_GET_READS_PER_GENOME']['MAX_THREADS']
+# if FAST5_SUBSET_THREADS > len(run):
+# 	FAST5_SUBSET_THREADS = len(run)
+
+def fast5_for_genome(wildcards):
+	genome_info = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Run_ID", "Genome_ID"], squeeze = True)
+	run_list = list(genome_info["Run_ID"][genome_info["Genome_ID"] == wildcards.genome].unique())
+	out = expand(rules.guppy_basecalling.output.fast5, demultiplexer = get_demultiplexer, run = run_list)
+	return unpack(out)
+
+def threads_for_fast5(max_threads, n_fast5):
+	nruns = len(n_fast5)
+	if nruns >= max_threads:
+		return max_threads
+	else:
+		return nruns
+
+def fast5_subset_cmd(genome, fastq, in_fast5, out_fast5):
+	if FAST5_PER_GENOME:
+		threads = len(in_fast5)
+		fast5_subset_cmd = f"""
+		echo -e "\\n##$(date)    Creating folder containing fast5 reads for "{genome}" \\n"
+		id_list={out_fast5}/read_id_list.txt
+		zgrep -oP '(?<=@).*' {fastq} > $id_list
+		python3 {FAST5_SUBSET} -i {in_fast5} -s {out_fast5} -l $id_list -t {threads}
+		rm $id_list
+		"""
+	else:
+		fast5_subset_cmd = ""
+	return fast5_subset_cmd
+
 rule get_reads_per_genome:
 	input:
 		# indir = outdir,
-		by_cond(FAST5_PER_GENOME, expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run), ()),
-		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done"), demultiplexer = get_demultiplexer, run = run)
+		# by_cond(FAST5_PER_GENOME, expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run), ()),
+		demux = expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done"), demultiplexer = get_demultiplexer, run = run),
+		summary = expand(rules.get_sequencing_summary_per_barcode.output, demultiplexer = get_demultiplexer, run = run),
+		fast5 = fast5_for_genome,
 	output:
 		# GET_READS_PER_GENOME_OUTPUT
-		fast5_fastq = [by_cond(FAST5_PER_GENOME, directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), ()), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)],
+		fast5 = by_cond(FAST5_PER_GENOME, directory(os.path.join(outdir, "reads_per_genome/fast5/{genome}")), ()),
+		fastq = os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"),
 		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),
 		barcode_by_genome = BARCODE_BY_GENOME,
 		transfering = TRANSFERING,
+		fast5_subset_cmd = lambda wildcards, output, input, threads: fast5_subset_cmd(wildcards.genome, output.fastq, input.fast5, output.fast5),
 		log = "get_reads_per_genome.log"
+	threads: lambda wc, input: threads_for_fast5(FAST5_SUBSET_THREADS, input.fast5)
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		Rscript {GET_READS_PER_GENOME} -b {outdir} -o {params.outpath} -d {params.barcode_by_genome} --{params.transfering}
+		echo -e "##$(date)    Creating fastq gz for "{wildcards.genome}" \\n"
+		Rscript {GET_READS_PER_GENOME} -b {outdir} -o {params.outpath} -g {wildcards.genome} -d {params.barcode_by_genome} --{params.transfering}
+		{params.fast5_subset_cmd}
 		"""
 
 ##############################
