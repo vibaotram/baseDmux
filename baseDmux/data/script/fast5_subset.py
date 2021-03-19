@@ -12,9 +12,11 @@ from multiprocessing import Pool
 import itertools
 
 def fast5_subset(input, save_path, read_id_list):
-    filename_base = os.path.basename(os.path.dirname(input))
+    run_id = os.path.basename(os.path.dirname(input))
+    barcode_id = os.path.basename(save_path)
+    filename_base = "{barcode_id}_{run_id}_".format(barcode_id = barcode_id, run_id = run_id)
     os.makedirs(save_path, exist_ok = True)
-    fast5_subset_cmd = "fast5_subset --input {} --save_path {} --read_id_list {} --filename_base \"{}_\"".format(input, save_path, read_id_list, filename_base)
+    fast5_subset_cmd = "fast5_subset --input {} --save_path {} --read_id_list {} --filename_base {}".format(input, save_path, read_id_list, filename_base)
     print(fast5_subset_cmd, '\n')
     try:
         os.system(fast5_subset_cmd)
@@ -34,7 +36,7 @@ def main():
 
     with Pool(args.threads) as p:
         save_paths = itertools.repeat(args.save_path, len(args.inputs))
-        read_id_lists = tertools.repeat(args.read_id_list, len(args.inputs))
+        read_id_lists = itertools.repeat(args.read_id_list, len(args.inputs))
         out = p.map(fast5_subset, zip(args.inputs, save_paths, read_id_lists))
     print(out)
 

@@ -5,6 +5,9 @@ import pandas as pd
 import sys
 import re
 from snakemake import load_configfile
+from snakemake.utils import min_version
+
+min_version("5.12.0")
 
 report: os.path.abspath("data/report/workflow.rst")
 

@@ -4,7 +4,7 @@ import os
 import shutil
 import sys
 import subprocess
-import ruamel.yaml as yaml
+import ruamel_yaml as yaml
 import pkg_resources
 
 
