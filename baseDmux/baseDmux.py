@@ -4,7 +4,10 @@ import os
 import shutil
 import sys
 import subprocess
-import ruamel_yaml as yaml
+try:
+    import ruamel.yaml as yaml
+except ModuleNotFoundError:
+    import ruamel_yaml as yaml
 import pkg_resources
 
 
