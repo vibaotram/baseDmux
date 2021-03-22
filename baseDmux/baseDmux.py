@@ -82,7 +82,7 @@ def main():
 
     if cmd == 'configure':
         dir = args.dir
-        dir = os.path.join(cwd, dir)
+        dir = os.path.normpath(os.path.join(cwd, dir))
         os.makedirs(dir, exist_ok=True)
         profile = os.path.join(dir, 'profile')
         os.makedirs(profile, exist_ok=True)
@@ -159,7 +159,7 @@ def main():
     if cmd == 'run':
         print('run baseDmux')
         profile = args.profile_dir[0]
-        profile = os.path.join(cwd, profile)
+        profile = os.path.normpath(os.path.join(cwd, profile))
         # configfile = read_profile(profile, 'configfile')
         run_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --use-singularity --use-conda --local-cores 0'.format(snakefile=snakefile, profile=profile, workdir=workdir)
         with open(os.path.join(profile, "config.yaml"), "r") as yml:
@@ -184,7 +184,7 @@ def main():
     if cmd == 'dryrun':
         print('dryrun baseDmux')
         profile = args.profile_dir[0]
-        profile = os.path.join(cwd, profile)
+        profile = os.path.normpath(os.path.join(cwd, profile))
         # configfile = read_profile(profile, 'configfile')
         dryrun_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --use-singularity --use-conda --local-cores 0 --dryrun --verbose'.format(snakefile=snakefile, profile=profile, workdir=workdir)
         with open(os.path.join(profile, "config.yaml"), "r") as yml:
@@ -202,7 +202,7 @@ def main():
         print(' '.join(check_tools))
         subprocess.call(check_tools, stderr=subprocess.DEVNULL)
 
-    if cmd == None and len(sys.argv[1:]) == 0:
+    if cmd is None and len(sys.argv[1:]) == 0:
         parser.print_help()
 
     # print(cmd)

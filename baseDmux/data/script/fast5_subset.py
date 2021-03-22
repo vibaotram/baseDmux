@@ -5,9 +5,8 @@ run "fast5_subset" command
 in parallel for each "fast5/{run}" as input folder
 '''
 
-import glob
 import os
-import sys
+import argparse
 from multiprocessing import Pool
 import itertools
 
@@ -21,9 +20,9 @@ def fast5_subset(input, save_path, read_id_list):
     try:
         os.system(fast5_subset_cmd)
         genome = os.path.basename(save_path)
-        return("{}: done".format(fast5_subset_cmd), '\n')
+        return "{}: done".format(fast5_subset_cmd), '\n'
     except ValueError:
-        return("{}: failed".format(fast5_subset_cmd), '\n')
+        return "{}: failed".format(fast5_subset_cmd), '\n'
 
 def main():
     parser = argparse.ArgumentParser()
