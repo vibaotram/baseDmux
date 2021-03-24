@@ -1,11 +1,9 @@
 channels:
-    - bioconda
     - conda-forge
     - r
     - defaults
     - biobuilds
 dependencies:
-    - r-base=3.6.1
     - r-essentials=3.6.0
     - mkl-service=2.3.0
     - xorg-libxrender=0.9.10
