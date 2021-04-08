@@ -6,7 +6,6 @@
 ##############################
 ##### EXECUTION
 configfile: "config-test.yaml"    # absolute path or relative path of current workdir to the config file for the tools
-singularity-args: "--nv "   # work on gpu only, to bind NVIDIA to the singularity container
 cores: "all"    # number of cores to use in parallel. "all" to use all available cores
 jobs: "all"   # number of jobs to run in parallel. "all" to run all possible parallel jobs at the same time
 keep-going: true    # keep going on independent jobs even if a job fails

@@ -38,6 +38,20 @@ def snakemake_cluster(profile):
     if 'cluster-config' in profileyml.keys() and 'cluster' not in profileyml.keys(): # cluster mode
         cluster_cmd = ''
 
+def set_singularity_args(profile):
+    with open(os.path.join(profile, "config.yaml"), "r") as pyml:
+        profileyml = yaml.round_trip_load(pyml)
+        configfile = profileyml['configfile']
+    with open(configfile, "r") as cyml:
+        config = yaml.round_trip_load(cyml)
+    resource = config['RESOURCE']
+    indir = config['INDIR']
+    outdir = config['OUTDIR']
+    if resource == 'GPU':
+        simg_args = "'--nv --bind {indir},{outdir}'".format(indir=indir, outdir = outdir)
+    elif resource == 'CPU':
+        simg_args = "'--bind {indir},{outdir}'".format(indir=indir, outdir = outdir)
+    return(simg_args)
 
 def main():
     cwd = os.getcwd()
@@ -160,8 +174,9 @@ def main():
         print('run baseDmux')
         profile = args.profile_dir[0]
         profile = os.path.normpath(os.path.join(cwd, profile))
+        simg_args = set_singularity_args(profile)
         # configfile = read_profile(profile, 'configfile')
-        run_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --use-singularity --use-conda --local-cores 0'.format(snakefile=snakefile, profile=profile, workdir=workdir)
+        run_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --use-singularity --singularity-args {simg_args} --use-conda --local-cores 0'.format(snakefile=snakefile, profile=profile, workdir=workdir, simg_args=simg_args)
         with open(os.path.join(profile, "config.yaml"), "r") as yml:
             profileyml = yaml.round_trip_load(yml)
         if 'cluster-config' in profileyml.keys() and 'cluster' not in profileyml.keys():  # cluster mode
@@ -185,8 +200,9 @@ def main():
         print('dryrun baseDmux')
         profile = args.profile_dir[0]
         profile = os.path.normpath(os.path.join(cwd, profile))
+        simg_args = set_singularity_args(profile)
         # configfile = read_profile(profile, 'configfile')
-        dryrun_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --use-singularity --use-conda --local-cores 0 --dryrun --verbose'.format(snakefile=snakefile, profile=profile, workdir=workdir)
+        dryrun_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --use-singularity --singularity-args {simg_args} --use-conda --local-cores 0 --dryrun --verbose'.format(snakefile=snakefile, profile=profile, workdir=workdir, simg_args=simg_args)
         with open(os.path.join(profile, "config.yaml"), "r") as yml:
             profileyml = yaml.round_trip_load(yml)
         if 'cluster-config' in profileyml.keys() and 'cluster' not in profileyml.keys():  # cluster mode
