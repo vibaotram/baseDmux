@@ -63,8 +63,8 @@ NUM_GPUS = config['NUM_GPUS']
 
 # adjust guppy_basecaller parameters based on RESOURCE
 BASECALLER_OPT = by_cond(cond = RESOURCE == 'CPU',
-                         yes = f"{CONFIG} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} --qscore_filtering {BASECALLER_ADDITION}",
-                         no = f"{CONFIG} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --qscore_filtering --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}",
+                         yes = f"{CONFIG} --num_callers {NUM_CALLERS} --cpu_threads_per_caller {CPU_THREADS_PER_CALLER} --min_qscore {MIN_QSCORE} {BASECALLER_ADDITION}",
+                         no = f"{CONFIG} --num_callers {NUM_CALLERS} --min_qscore {MIN_QSCORE} --gpu_runners_per_device {GPU_RUNNERS_PER_DEVICE} --device $CUDA {BASECALLER_ADDITION}",
                          cond_ext = RESOURCE == 'GPU')
 
 BASECALLER_THREADS = by_cond(cond = RESOURCE == 'CPU',
