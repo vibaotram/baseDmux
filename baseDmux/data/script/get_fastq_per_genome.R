@@ -33,7 +33,7 @@ option_list <- list(
   make_option(c("-S", "--symlink"),
               action = "store_true",
               default = FALSE,
-              help = "Symlink files"),
+              help = "Symlink files")
 )
 
 myArgs <- parse_args(
@@ -58,6 +58,10 @@ if (is.null(outdir)) {
 }
 
 # check transfer mode
+
+# Rather than an upredictable number of flags, would be easier to have a single "action" argument that
+# can take a defined set of values c("copy", "move")
+
 copy = myArgs$copy
 move = myArgs$move
 symlink = myArgs$symlink
