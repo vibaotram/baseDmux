@@ -34,7 +34,8 @@ option_list <- list(
 )
 
 myArgs <- parse_args(
-  OptionParser(usage = "%prog [-b baseDmux output] [-o Outdir] [-d barcodeByGenome] [-transfering option R/M/S]\n", option_list = option_list,
+  OptionParser(usage = "%prog [-b baseDmux output] [-o Outdir] [-d barcodeByGenome] [-transfering option R/M/S]\n",
+               option_list = option_list,
                description = "Description: Create 1 folder for each genome containing corresponding fast5 and fastq from baseDmux output and a 'barcodeByGenome' table annotating demultiplex, runid, barcodeid of genomes/strains.\n\tData table must contain the following columns: \"Demultiplexer\", \"Run_ID\", \"ONT_Barcode\", \"Genome_ID\".\n\tYou can choose only ONE transfering option (copy/move/symlink).")
 )
 
@@ -110,9 +111,11 @@ for (i in unique(c(dict$dest_fast5, dest_fastq_dir))) {
 }
 
 if all(dir.exists(dict$ori_fast5)) {
-  write.table(dict, file.path(outdir, "reads_per_genome.csv"), quote = F, row.names = F, sep = "\t")
+  write.table(dict,
+              file.path(outdir, "reads_per_genome.csv"), quote = F, row.names = F, sep = "\t")
 } else {
-  write.table(dict %>% dplyr::select(-c(ori_fast5, dest_fast5)), file.path(outdir, "reads_per_genome.csv"), quote = F, row.names = F, sep = "\t")
+  write.table(dict %>% dplyr::select(-c(ori_fast5, dest_fast5)),
+              file.path(outdir, "reads_per_genome.csv"), quote = F, row.names = F, sep = "\t")
 }
 
 # dict <- data.frame(dict, ori_fast5, ori_fastq, dest_fast5_dir, dest_fastq_dir)
@@ -123,7 +126,12 @@ if (all(dir.exists(dict$ori_fast5))) {
     for (o in ori_dir) {
       ori_files <- list.files(as.character(o), pattern = ".*\\.fast5", full.names = T, recursive = T)
       for (os in ori_files) {
-        dest_name <- lapply(os, function(x) paste(dict[dict$ori_fast5 == o, "Demultiplexer"], dict[dict$ori_fast5 == o, "Run_ID"], basename(x), sep = "_"))
+        dest_name <- lapply(os,
+                            function(x) paste(dict[dict$ori_fast5 == o, "Demultiplexer"],
+                                              dict[dict$ori_fast5 == o, "Run_ID"],
+                                              basename(x),
+                                              sep = "_")
+        )
         dest_file <- paste(dict[dict$ori_fast5 == o, "dest_fast5"], dest_name, sep = "/")
         transfer_file <- paste(cmd, os, dest_file, sep = " ")
         system(transfer_file)
