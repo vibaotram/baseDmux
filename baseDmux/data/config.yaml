@@ -3,7 +3,7 @@
 
 ##############################
 ##### input/output directory
-INDIR: "test/reads" ## absolute path to fast5 files, fast5 files must be stored in run_id (batch) folder under /fast5 folder
+INDIR: "test/reads" ## absolute path to a single folder holding 'ONT runs folders'. Each of those contains fast5 files stored in a 'fast5' folder
 OUTDIR: "test/results" ## absolute path to output directory
 NASID: "" # host name, if indir and outdir in NAS but workdir is not
 
@@ -89,9 +89,12 @@ filtlong3:
 ##############################
 ##### get_reads_per_genome parameters
 RULE_GET_READS_PER_GENOME:
-    'BARCODE_BY_GENOME': "" # it can be blank then this rule will not be executed ## information table for subseting fast5 and fastq to genome folder ## if "guppy"/"deepbinner" is specified in "Demultiplexer" on the table, this demultiplexer will still be used for demultiplexing even though it is not included by 'DEMULTIPLEXER'
+    'BARCODE_BY_GENOME': ""
+    # Information table for subseting fast5 and fastq to genome folder
+    # if "guppy"/"deepbinner" is specified in "Demultiplexer" on the table, this demultiplexer will be used for demultiplexing even though it is specified in the value of 'DEMULTIPLEXER'
+    # if BARCODE_BY_GENOME is left blank this rule will not be executed and reads belonging to individual barcodes will not be grouped in 'genome' bins#
     'FASTQ_TRANSFERING': "copy" # "copy"/"move"
-    'GET_FAST5': False # True/False, whether to get fast5 per genome or not
+    'GET_FAST5': False # True/False, whether to get and group together reads in fast5 files per genome
     'MAX_THREADS': 2 # maximum number of threads available for fast5 subset. the number of threads actually used will be automatically adjusted based on the number of fast5 inputs for each genome, but not higher than MAX_THREADS
 
 
