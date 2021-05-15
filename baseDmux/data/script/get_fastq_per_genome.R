@@ -113,22 +113,22 @@ dest_fastq_name <- paste0(dict$Genome_ID, ".fastq.gz")
 dict$dest_fastq <- file.path(dest_fastq_dir, dest_fastq_name)
 
 dict_csv <- file.path(outdir, "reads_per_genome.csv")
-if (!file.exists()) {
-  write.table(dict, file.path(outdir, "reads_per_genome.csv"), quote = F, row.names = F, sep = "\t")
+if (!file.exists(dict_csv)) {
+  write.table(dict, dict_csv, quote = F, row.names = F, sep = "\t")
 } 
 
 
 # transfer fastq files
 
-
 ori_file = dict[dict$Genome_ID == myArgs$genome, "ori_fastq"]
-dest_file = file.path(dest_fastq_dir, paste0(i, ".fastq.gz"))
+dir.create(dest_fastq_dir, mode = "0770")
+dest_file = file.path(dest_fastq_dir, paste0(myArgs$genome, ".fastq.gz"))
 if (length(ori_file) == 1) {
   transfer_file = paste(cmd, ori_file, dest_file, sep = " ")
 } else {
   transfer_file = paste("zcat", do.call(paste, as.list(ori_file)), "| gzip >", dest_file)
 }
-message(paste("\n# [", date(), "]\t Preparing compressed fastq file for", i))
+message(paste("\n# [", date(), "]\t Preparing compressed fastq file for", myArgs$genome))
 system(transfer_file)
 message(paste("\n#", length(ori_file), "fastq file(s) copied to", dest_file, "\n"))
 
