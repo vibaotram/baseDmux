@@ -21,7 +21,7 @@ option_list <- list(
               help = "genome ID"),
   make_option(c("-d", "--barcodeByGenome"),
               type = "character",
-              help = "File storing demultiplexer, run_id, barcode_id for each genome_id in csv/tsv format"),
+              help = "File listing demultiplexer, Run_ID, ONT_Barcode for each Genome_ID in csv/tsv format"),
   make_option(c("-R", "--copy"),
               action = "store_true",
               default = FALSE,
