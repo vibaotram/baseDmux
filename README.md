@@ -117,6 +117,8 @@ Then `workflow_parameter.yaml` and `profile/config.yaml` will be copied to the f
 
 To get fast5 reads and fastq reads for each genome after demultiplexing, you need a tabular file containing the information of run id, barcode id, genome id, and demultiplexer.
 By adding `--barcodes_by_genome` option, a formatted file `barcodesByGenome.tsv` will be created in the folder provided (and the path of it will be added in `workflow_parameter.yaml`), and you will modify the information on table accordingly. For the testing, you do not need to modify it.
+It is important that this table contains at least the same columns as those in the provided example `barcodeByGenome_sample.tsv` file.
+In addition, the values in the `Genome_ID` column must be unique for each row.  
 
 `profile/config.yaml` will be created lastly and it will contain `./test_baseDmux/profile/config.yaml` as a set of parameters for Snakemake command-line.
 
