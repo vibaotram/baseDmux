@@ -14,7 +14,10 @@ output: html_document
 }
 </style>
 
-The report provides plots in order to compare demultiplexing results from different runs, and from different demultiplexers (guppy and deepbinner), and for each genome (if the table barcode by genome is provided).
+The report provides plots in order to compare demultiplexing results from different runs, and from different
+ demultiplexers (guppy and deepbinner), and for each genome (if the table barcode by genome is provided).  
+Note that these graphs only consider reads passing the specified quality cutoff.  
+ 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -250,6 +253,9 @@ byrun <- all_sum %>%
 # {.tabset .tabset-fade}
 
 ## by run {.tabset .tabset-fade}
+
+ 
+
 
 ```{r}
 if (nlevels(factor(byrun$Step)) > 1) {
