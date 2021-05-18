@@ -223,7 +223,7 @@ rule finish:
 		expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/multiqc/multiqc_report.html"), demultiplexer = demultiplexer, run = run), # DEMULTIPLEXING QC
 		# expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"), demultiplexer = demultiplexer, run = run),
 		os.path.join(outdir, "basecall/multiqc/multiqc_report.html"), # BASECALLING QC
-		by_cond(DEMULTIPLEX_REPORT and len(demultiplexer) > 0, os.path.join(outdir, "report/demultiplex_report.html"), ()),
+		by_cond(DEMULTIPLEX_REPORT and len(demultiplexer) > 0 and BARCODE_BY_GENOME, os.path.join(outdir, "report/demultiplex_report.html"), ()),
 		by_cond(FAST5_PER_GENOME, expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome), ()),
 		expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}/{genome}{filtered}.fastq.gz"), genome = genome, filtered = filtered),
 
@@ -609,8 +609,9 @@ def fast5_subset_cmd(genome, fastq, in_fast5, out_fast5):
 		threads = len(in_fast5)
 		fast5_subset_cmd = f"""
 		echo -e "\\n##$(date)    Creating folder containing fast5 reads for "{genome}" \\n"
+                mkdir -p {out_fast5} 
 		id_list={out_fast5}/read_id_list.txt
-		zgrep -oP '(?<=@).*' {fastq} > $id_list
+		zgrep -oP '^@([^ ]*)' {fastq} | cut -c 2- > $id_list
 		python3 {FAST5_SUBSET} -i {in_fast5} -s {out_fast5} -l $id_list -t {threads}
 		rm $id_list
 		"""
@@ -635,7 +636,7 @@ rule get_reads_per_genome:
 		barcode_by_genome = BARCODE_BY_GENOME,
 		transfering = TRANSFERING,
 		fast5_subset_cmd = lambda wildcards, output, input, threads: fast5_subset_cmd(wildcards.genome, output.fastq, input.fast5, output.fast5),
-		log = "get_reads_per_genome.log"
+		log = "get_reads_per_genome_{genome}.log"
 	threads: lambda wc, input: threads_for_fast5(FAST5_SUBSET_THREADS, input.fast5)
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'

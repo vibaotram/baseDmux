@@ -27,16 +27,16 @@ def fast5_subset(input, save_path, read_id_list):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input_fast5', nargs = '+', dest = 'inputs')
-    parser.add_argument('-s', '--save_path', nargs = '1', dest = 'save_path')
-    parser.add_argument('-l', '--read_id_list', nargs = '1', dest = 'read_id_list')
-    parser.add_argument('-t', '--threads', nargs = '1', dest = 'threads')
+    parser.add_argument('-s', '--save_path', dest = 'save_path')
+    parser.add_argument('-l', '--read_id_list', dest = 'read_id_list')
+    parser.add_argument('-t', '--threads', type=int, default=0, dest = 'threads')
 
     args = parser.parse_args()
 
     with Pool(args.threads) as p:
-        save_paths = itertools.repeat(args.save_path, len(args.inputs))
-        read_id_lists = itertools.repeat(args.read_id_list, len(args.inputs))
-        out = p.map(fast5_subset, zip(args.inputs, save_paths, read_id_lists))
+        save_paths = itertools.repeat(args.save_path)
+        read_id_lists = itertools.repeat(args.read_id_list)
+        out = p.starmap(fast5_subset, zip(args.inputs, save_paths, read_id_lists))
     print(out)
 
 if __name__ == '__main__':
