@@ -48,9 +48,9 @@ def set_singularity_args(profile):
     indir = config['INDIR']
     outdir = config['OUTDIR']
     if resource == 'GPU':
-        simg_args = "'--nv --bind {indir},{outdir}'".format(indir=indir, outdir = outdir)
+        simg_args = "'--nv --bind {indir},{outdir},{profile}'".format(indir=indir, outdir = outdir, profile = profile)
     elif resource == 'CPU':
-        simg_args = "'--bind {indir},{outdir}'".format(indir=indir, outdir = outdir)
+        simg_args = "'--bind {indir},{outdir},{profile}'".format(indir=indir, outdir = outdir, profile = profile)
     return(simg_args)
 
 def main():
