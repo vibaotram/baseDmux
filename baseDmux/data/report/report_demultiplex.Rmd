@@ -1,10 +1,11 @@
 ---
 title: "Demultiplex report"
-# author: "Tram"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 params:
    rmd: "report_demultiplex.Rmd"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 <style>
@@ -14,10 +15,6 @@ output: html_document
 }
 </style>
 
-The report provides plots in order to compare demultiplexing results from different runs, and from different
- demultiplexers (guppy and deepbinner), and for each genome (if the table barcode by genome is provided).  
-Note that these graphs only consider reads passing the specified quality cutoff.  
- 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
@@ -28,7 +25,6 @@ if (!requireNamespace("ggplot2", quietly = TRUE)) install.packages('ggplot2', re
 if (!requireNamespace("dplyr", quietly = TRUE)) install.packages('dplyr', repos = "https://cloud.r-project.org")
 if (!requireNamespace("stringr", quietly = TRUE)) install.packages('stringr', repos = "https://cloud.r-project.org")
 if (!requireNamespace("S4Vectors", quietly = TRUE)) install.packages('S4Vectors', repos = "https://cloud.r-project.org")
-# if (!requireNamespace("parallel", quietly = TRUE)) install.packages('parallel', repos = "https://cloud.r-project.org")
 if (!requireNamespace("Biostrings", quietly = TRUE)) {
   if (!requireNamespace("BiocManager", quietly = TRUE)) install.packages("BiocManager", repos = "https://cloud.r-project.org")
   BiocManager::install("Biostrings", update = F, ask = F)
@@ -38,9 +34,6 @@ if (!requireNamespace("qckitfastq", quietly = TRUE)) {
   BiocManager::install("qckitfastq")
 }
 
-
-
-
 library(stringr)
 library(ggplot2)
 library(dplyr)
@@ -49,7 +42,6 @@ library(Biostrings)
 library(S4Vectors)
 library(parallel)
 
-ncores <- as.numeric(snakemake@threads)
 # library(BiocParallel)
 # register(MulticoreParam(workers = ncores, progressbar = TRUE), default = TRUE)
 # register(SnowParam(workers = ncores, progressbar = FALSE))
@@ -82,7 +74,7 @@ get_from_fq <- function(fg, step) {
 
 
 get_from_fq_lw <- function(fg, step) {
-  cat("#####  Processing: ", fg, "\n")
+  message("#####  Processing: ", fg, "\n")
   fastq <- Biostrings::readDNAStringSet(fg, format = "fastq", seek.first.rec = T, with.qualities = FALSE)
   if (length(fastq) == 0) {
     warning(fg , " is empty!")
@@ -91,8 +83,6 @@ get_from_fq_lw <- function(fg, step) {
   seqNames <- names(fastq)
   seqWidth <- width(fastq)
   rm(fastq)
-  #sl <- Biostrings::fastq.seqlengths("/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq/CIX3092.fastq.gz")
-  #sq <- qckitfastq::qual_score_per_read("/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq/CIX3092.fastq.gz")$mu_per_read
   pscores <- qckitfastq::per_read_quality(fg, output_file = "plot")$sequence_mean
   dt <- data.frame("read_id" = gsub(" .+", "", seqNames),
                    "run_id" = gsub("(.+ runid=| sampleid.+)", "", seqNames),
@@ -105,18 +95,20 @@ get_from_fq_lw <- function(fg, step) {
   return(dt)
 }
 
-
-
-
-#d <- get_from_fq("/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq/CIX4183.fastq.gz", step = "bs")
-#d <- get_from_fq(demux_fastq[24], step = "bs")
-#d <- get_from_fq_lw("/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq/CIX3092.fastq.gz", step = "bs")
-
-
+find_n50 <- function(x) {
+  thredshold <- sum(x)/2
+  test <- 0
+  for (l in sort(x)) {
+    test <- test + l
+    if (test > thredshold) break
+  }
+  return(l)
+}
 ```
 
 
-```{r input paths}
+```{r getting parameters from snakemake object, eval = T}
+ncores <- as.numeric(snakemake@threads)
 
 fastq_folder <- snakemake@params$fastq # "/data3/projects/xanthopore/baotram/test/results_guppy/reads_per_genome/fastq"
 
@@ -125,30 +117,37 @@ demux_folder <- snakemake@params$demultiplex # "/data3/projects/xanthopore/baotr
 postdemux_folder <- snakemake@params$postdemux # "/data3/projects/xanthopore/baotram/test/results_guppy/reads_per_genome/fastq_porechop_filtlong"
 
 bcgenome_tsv <- snakemake@params$barcode_by_genome # "/data3/projects/xanthopore/baotram/baseDmux/barcodeByGenome_sample.tsv"
-
-
-# fastq_folder <- "/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq"
-# demux_folder <- "/data3/projects/xanthopore/seb/bd_output/demultiplex/guppy"
-# postdemux_folder <- "/data3/projects/xanthopore/seb/bd_output/reads_per_genome/fastq_porechop_filtlong1"
-# bcgenome_tsv <- "/data3/projects/xanthopore/seb/bd_output/config/barcodeByGenome.tsv"
 ```
 
 
+```{r getting parameters for tests, eval = F}
+fastq_folder <- "/home/cunnac/TEMP/test_baseDmux/result/reads_per_genome/fastq"
+demux_folder <- "/home/cunnac/TEMP/test_baseDmux/result/demultiplex"
+postdemux_folder <- "/home/cunnac/TEMP/test_baseDmux/result/reads_per_genome/fastq_porechop_filtlong1"
+bcgenome_tsv <- "/home/cunnac/TEMP/test_baseDmux/configFiles_local/profile/barcodeByGenome_gupdeep.tsv"
+ncores <- 1
+```
+
+# Menu {.tabset .tabset-fade}
 
 
-```{r demux}
-demux_fastq <- list.files(fastq_folder, ".*\\.fastq.gz", full.names = T)
-demux_fastq <- demux_fastq[grep("porechop|filtlong", demux_fastq, invert = T)]
+## session info {.tabset .tabset-fade}
 
-demux <- bind_rows(mclapply(X = demux_fastq, FUN = get_from_fq_lw, step = "demultiplex",
-                            mc.preschedule = FALSE, mc.cores = ncores))
+This report provides views on aggregated read metrics, considering only reads passing the specified basecalling quality cutoff. These metrics are contrasted by a number of factors including the ONT run instance, assigned barcode by the demultiplexer program (guppy and deepbinner), ...  
 
+Note that the graphs in the `sequencing_summary` tab are constructed using data obtained directly from sequencing_summary.txt files.  
+  
+In contrast, graphs in other tabs are constructed with data recomputed using reads in genome/sample bins fastq files. In addition, if those reads were further processed with porechop and/or filtlong, the corresponding data is displayed. Obviously, these graphs only consider reads that could be assigned as belonging to a specific barcode and thus, a genome.  
+
+
+```{r R session info}
+sessionInfo()
 ```
 
 
+## sequencing_summary {.tabset .tabset-fade}
 
-
-```{r sequencing_summary}
+```{r get demultiplexer and barcode specific sequencing_summary files info}
 summaries <- list.files(demux_folder, "sequencing_summary.txt", recursive = T, full.names = T)
 sum <- bind_rows(
                mclapply(summaries,
@@ -165,14 +164,175 @@ sum <- bind_rows(
                           return(sum)
                           }, mc.cores = ncores
                         )
-               )
+               ) %>% as_tibble()
+
+```
+
+
+```{r aggregating seq sum files data}
+seqSumAggregData <- sum %>%
+  dplyr::group_by(Demultiplexer, Run_ID, ONT_Barcode) %>%
+  dplyr::summarise(total.gigabases = sum(sequence_length_template)/10**9,
+                   total.reads = length(sequence_length_template),
+                   mean.length = mean(sequence_length_template),
+                   median.length = median(sequence_length_template),
+                   N50.length = find_n50(sequence_length_template),
+                   mean.quality.score = mean(mean_qscore_template),
+                   median.quality.score = median(mean_qscore_template),
+                   N50.quality.score = find_n50(mean_qscore_template))
+```
+
+
+
+### Total gigabases
+
+```{r seqsum.total.gigabases, fig.width = 16, fig.height = 8}
+ggplot(seqSumAggregData, aes(x = ONT_Barcode, y = total.gigabases, fill = Demultiplexer)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0), stat = "identity") +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1)) +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+### Total reads
+
+```{r seqsum.total.reads, fig.width = 16, fig.height = 8}
+ggplot(seqSumAggregData, aes(x = ONT_Barcode, y = total.reads, fill = Demultiplexer)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1)) +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol=3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+### Mean length
+
+```{r seqsum.mean.length, fig.width = 16, fig.height = 8}
+ggplot(seqSumAggregData, aes(x = ONT_Barcode, y = mean.length, fill = Demultiplexer)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1)) +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+### Median length
+
+```{r seqsum.median.length, fig.width = 16, fig.height = 8}
+ggplot(seqSumAggregData, aes(x = ONT_Barcode, y = median.length, fill = Demultiplexer)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1)) +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x=element_text(angle=90,hjust=1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+### N50 length
+
+```{r seqsum.N50.length, fig.width = 16, fig.height = 8}
+ggplot(seqSumAggregData, aes(x = ONT_Barcode, y = N50.length, fill = Demultiplexer)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1)) +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+### Mean quality score
+
+```{r seqsum.mean.quality, fig.width = 16, fig.height = 8}
+ggplot(seqSumAggregData, aes(x = ONT_Barcode, y = mean.quality.score, fill = Demultiplexer)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1)) +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+### Median quality score
+
+```{r seqsum.median.quality, fig.width = 16, fig.height = 8}
+ggplot(seqSumAggregData, aes(x = ONT_Barcode, y = median.quality.score, fill = Demultiplexer)) +
+  geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
+  scale_fill_viridis_d(option = "E", end = .85) +
+  scale_alpha_discrete(range = c(.3, 1)) +
+  facet_wrap(vars(Run_ID), scales = "fixed", ncol = 3, strip.position = "right") +
+  theme_light() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+
+### Quality score distribution
+
+```{r seqsum.quality.distribution, fig.width = 16, fig.height = 8}
+ggplot(sum, aes(x = round(mean_qscore_template))) +
+  geom_line(aes(color = ONT_Barcode), stat = "count") +
+  facet_grid(cols = vars(Run_ID), rows = vars(Demultiplexer), scales = "fixed") +
+  scale_color_viridis_d(option = "E", end = .85, alpha = 0.8) +
+  theme_light() +
+  theme(axis.text.x=element_text(angle=90,hjust=1),
+        legend.direction = "horizontal", legend.position = "top")
+```
+
+
+```{r export seqsum data, include=FALSE, eval = T}
+image_path <- file.path(snakemake@params$outpath, "demultiplex_report.RData")
+save.image(file = image_path, compress = TRUE)
+```
+
+
+
+## fqs by run {.tabset .tabset-fade}
+
+
+```{r loading barcodeByGenome table, message=TRUE}
+if (!file.exists(bcgenome_tsv)) {
+  message("Cannot find the provided roadmap barcodeByGenome file at this location:\n", bcgenome_tsv)
+  message("This file is needed to proceed... Exiting prematurely!!!\n")
+  knitr::knit_exit()
+}
+roadmap <- read.delim(bcgenome_tsv)
+```
+
+
+
+```{r computing metrics from reads in genome bins fastq files}
+demux_fastq <- list.files(fastq_folder, ".*\\.fastq.gz", full.names = T)
+demux_fastq <- demux_fastq[grep("porechop|filtlong", demux_fastq, invert = T)]
+
+demux <- bind_rows(
+  mclapply(X = demux_fastq, FUN = get_from_fq_lw, step = "demultiplex",
+           mc.preschedule = FALSE, mc.cores = ncores)
+  )
+
+demux <- demux %>% 
+  # figuring out the demultiplexer associated with a given genome
+  left_join(roadmap %>% select(Demultiplexer, Genome_ID) %>% distinct(),
+            by = c("Genome_ID" = "Genome_ID"))
 
 ```
 
 
 
-```{r demux_summary}
-demux_sum <- merge(demux, sum[c("read_id", "run_id", "ONT_Barcode", "Run_ID", "Demultiplexer")], by = c("read_id", "run_id"))
+
+```{r include barcode id in read metrics table}
+demux_sum <- dplyr::inner_join(demux,
+                              dplyr::select(sum, read_id, run_id, ONT_Barcode, Run_ID, Demultiplexer)
+)
 ```
 
 
@@ -205,11 +365,23 @@ if (any(postdemux_folder != demux_folder)) {
                             SIMPLIFY = FALSE,
                             mc.preschedule = FALSE, mc.cores = ncores)
                    )
-  postdemux$Genome_ID <- NULL
+#  postdemux$Genome_ID <- NULL
 
+  postdemux <- postdemux %>% mutate(Genome_ID = gsub(gsub("fastq", "", basename(postdemux_folder)),
+                                        "",
+                                        Genome_ID)
+                       )
+  
+  postdemux <- postdemux %>% 
+  left_join(roadmap %>% select(Demultiplexer, Genome_ID) %>% distinct(),
+            by = c("Genome_ID" = "Genome_ID"))
+  
+  postdemux_sum <- dplyr::inner_join(postdemux,
+                              dplyr::select(sum, read_id, run_id, ONT_Barcode, Run_ID, Demultiplexer)
+                              )
 
-  postdemux <- merge(postdemux, demux[c("read_id", "run_id", "Genome_ID")], by = c("read_id", "run_id"))
-  postdemux_sum <- merge(postdemux, sum[c("read_id", "run_id", "ONT_Barcode", "Run_ID", "Demultiplexer")], by = c("read_id", "run_id"))
+#  postdemux <- merge(postdemux, demux[c("read_id", "run_id", "Genome_ID")], by = c("read_id", "run_id"))
+  # postdemux_sum <- merge(postdemux, sum[c("read_id", "run_id", "ONT_Barcode", "Run_ID", "Demultiplexer")], by = c("read_id", "run_id"))
 }
 ```
 
@@ -222,23 +394,11 @@ if (any(postdemux_folder == demux_folder)) {
   all_sum <- rbind(demux_sum, postdemux_sum)
 }
 
-
 all_sum$Demultiplexer <- factor(all_sum$Demultiplexer, levels = c("guppy", "deepbinner"), ordered = F)
-# all_sum$Step <- factor(all_sum$Step, levels = c(gsub("fastq", "demultiplex", basename(postdemux_folder)), "demultiplex"), ordered = F)
-
-find_n50 <- function(x) {
-  thredshold <- sum(x)/2
-  test <- 0
-  for (l in sort(x)) {
-    test <- test + l
-    if (test > thredshold) break
-  }
-  return(l)
-}
 
 byrun <- all_sum %>%
   # dplyr::filter(Step == "demultiplex") %>%
-  dplyr::group_by(Step, Demultiplexer, Run_ID, ONT_Barcode) %>%
+  dplyr::group_by(Step, Demultiplexer, Run_ID, ONT_Barcode, Genome_ID) %>%
   dplyr::summarise(total.gigabases = sum(read_length)/10**9,
                    total.reads = length(read_length),
                    mean.length = mean(read_length),
@@ -247,17 +407,11 @@ byrun <- all_sum %>%
                    mean.quality.score = mean(phred.score),
                    median.quality.score = median(phred.score),
                    N50.quality.score = find_n50(phred.score))
+
 ```
 
 
-# {.tabset .tabset-fade}
-
-## by run {.tabset .tabset-fade}
-
- 
-
-
-```{r}
+```{r, eval = T}
 if (nlevels(factor(byrun$Step)) > 1) {
   cat("FILTERING PARAMS\n\n")
   if ("porechop" %in% names(snakemake@config)) print(snakemake@config["porechop"])
@@ -384,16 +538,15 @@ ggplot(all_sum, aes(x = round(phred.score))) +
         legend.direction = "horizontal", legend.position = "top")
 ```
 
-## by genome {.tabset .tabset-fade}
+## fqs by genome {.tabset .tabset-fade}
 
 ```{r}
 if (file.exists(bcgenome_tsv)) {
-  bcgenome <- read.table(bcgenome_tsv, header = T, sep = "\t", stringsAsFactors = F)
-  bygenome <- merge(byrun, bcgenome, by = c("Demultiplexer", "Run_ID", "ONT_Barcode"))
+  bygenome <- byrun
 }
 ```
 
-```{r}
+```{r, eval = T}
 if (file.exists(bcgenome_tsv)) {
   if (nlevels(factor(bygenome$Step)) > 1) {
   cat("FILTERING PARAMS\n\n")
@@ -431,7 +584,7 @@ if (!all(is.na(bygenome$Step))) p <- p + facet_wrap(vars(Step), nrow = nlevels(f
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x = Genome_ID, y = total.reads, fill=Run_ID)) +
     geom_col(position = position_stack(), color = "gray") +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_stack(), vjust = 1.2, size = 3.88*16/nlevels(as.factor(bygenome$Genome_ID))) +
+    geom_text(aes(label = gsub("[a-z]", "", ONT_Barcode)), color = "#b1bed5", position = position_stack(), vjust = 1.2, size = 3.88*16/nlevels(as.factor(bygenome$Genome_ID))) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
@@ -448,7 +601,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x = Genome_ID, y = mean.length, fill = Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    geom_text(aes(label = gsub("[a-z]", "", ONT_Barcode)), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*2/nlevels(as.factor(bygenome$Step))) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
@@ -465,7 +618,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x = Genome_ID, y = median.length, fill = Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    geom_text(aes(label = gsub("[a-z]", "", ONT_Barcode)), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*2/nlevels(as.factor(bygenome$Step))) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
@@ -482,7 +635,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x = Genome_ID, y = N50.length, fill = Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    geom_text(aes(label = gsub("[a-z]", "", ONT_Barcode)), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*2/nlevels(as.factor(bygenome$Step))) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
@@ -499,7 +652,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x = Genome_ID, y = mean.quality.score, fill = Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    geom_text(aes(label = gsub("[a-z]", "", ONT_Barcode)), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*2/nlevels(as.factor(bygenome$Step))) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
@@ -516,7 +669,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x = Genome_ID, y = median.quality.score, fill = Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    geom_text(aes(label = gsub("[a-z]", "", ONT_Barcode)), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*2/nlevels(as.factor(bygenome$Step))) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
@@ -533,7 +686,7 @@ if (file.exists(bcgenome_tsv)) {
 if (file.exists(bcgenome_tsv)) {
   p <- ggplot(bygenome, aes(x = Genome_ID, y = N50.quality.score, fill = Run_ID)) +
     geom_col(position = position_dodge2(preserve = "single", padding = 0)) +
-    geom_text(aes(label = ONT_Barcode), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*8/nlevels(as.factor(bygenome$Step))) +
+    geom_text(aes(label = gsub("[a-z]", "", ONT_Barcode)), color = "#b1bed5", position = position_dodge2(width = 1, preserve = "single", padding = 0), angle = 90, vjust= .5, hjust = 1, size = 3.88*2/nlevels(as.factor(bygenome$Step))) +
     scale_fill_viridis_d(option = "C") +
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, hjust = 1),
@@ -547,7 +700,8 @@ if (file.exists(bcgenome_tsv)) {
 ### Quality score distribution
 
 ```{r genome.quality.distribution, fig.width = 16, fig.height = 10}
-ggplot(merge(all_sum, bygenome, by = c("Run_ID", "ONT_Barcode", "Demultiplexer", "Genome_ID", "Step")), aes(x = round(phred.score))) +
+if (file.exists(bcgenome_tsv)) {
+  ggplot(all_sum, aes(x = round(phred.score))) +  
   geom_line(aes(color = Demultiplexer), stat = "count") +
   facet_grid(cols = vars(Genome_ID), rows = vars(Step), scales = "fixed") +
   scale_color_viridis_d(option = "E", end = .85) +
@@ -555,14 +709,10 @@ ggplot(merge(all_sum, bygenome, by = c("Run_ID", "ONT_Barcode", "Demultiplexer",
   theme_light() +
   theme(axis.text.x=element_text(angle=90,hjust=1),
         legend.direction = "horizontal", legend.position = "top")
+}
 ```
 
 
-## Session info
-
-```{r R session info}
-sessionInfo()
-```
 
 
 ## data
@@ -575,13 +725,10 @@ if (file.exists(bcgenome_tsv)) {
 }
 ```
 
-```{r save_workspace, include=FALSE}
-
+```{r export all data, include=FALSE, eval = T}
 if (file.exists(bcgenome_tsv)) {
-  write.table(bygenome, file.path(snakemake@params$outpath, "demultiplex_report_bygenome.tsv"), sep = "\t", row.names = F, quote = F)
+  write.table(byrun, file.path(snakemake@params$outpath, "demultiplex_report_fastqs.tsv"), sep = "\t", row.names = F, quote = F)
 }
-write.table(byrun, file.path(snakemake@params$outpath, "demultiplex_report.tsv"), sep = "\t", row.names = F, quote = F)
-
 image_path <- file.path(snakemake@params$outpath, "demultiplex_report.RData")
 remove(p)
 save.image(file = image_path, compress = TRUE)

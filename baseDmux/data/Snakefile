@@ -710,7 +710,19 @@ rule report_demultiplex:
 	input:
 		# fast5 = expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome),
 		fastq = by_cond(len(genome) > 0, expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}/{genome}{filtered}.fastq.gz"), genome = genome, filtered = filtered),  expand(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/demultiplex.done"), demultiplexer = demultiplexer, run = run)),
-	message: "Reporting demultiplex results"
+	message:
+		"""
+		"Reporting demultiplex results"
+		input:
+			fastq : {input.fastq}
+		params:
+			barcode_by_genome : {params.barcode_by_genome}
+			fastq : {params.fastq}
+			demultiplex : {params.demultiplex}
+			postdemux : {params.postdemux}
+			log : {params.log}
+			outpath : {params.outpath}
+		"""
 	output: os.path.join(outdir, "report/demultiplex_report.html")
 	params:
 		barcode_by_genome = BARCODE_BY_GENOME,
