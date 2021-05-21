@@ -612,7 +612,7 @@ def fast5_subset_cmd(genome, fastq, in_fast5, out_fast5):
 		echo -e "\\n##$(date)    Creating folder containing fast5 reads for "{genome}" \\n"
                 mkdir -p {out_fast5} 
 		id_list={out_fast5}/read_id_list.txt
-		zgrep -oP '^@([^ ]*)' {fastq} | cut -c 2- > $id_list
+		zgrep --no-group-separator -C0 'runid=' {fastq} | cut -d ' ' -f 1 | cut -d '@' -f 2 > $id_list
 		python3 {FAST5_SUBSET} -i {in_fast5} -s {out_fast5} -l $id_list -t {threads}
 		#rm $id_list
 		"""
@@ -630,7 +630,7 @@ rule get_reads_per_genome:
 	output:
 		# GET_READS_PER_GENOME_OUTPUT
 		fast5 = by_cond(FAST5_PER_GENOME, directory(os.path.join(outdir, "reads_per_genome/fast5/{genome}")), ()),
-		names_mapping = by_cond(FAST5_PER_GENOME, directory(os.path.join(outdir, "reads_per_genome/fast5/{genome}/filename_mapping.txt")), ()),
+		names_mapping = by_cond(FAST5_PER_GENOME, os.path.join(outdir, "reads_per_genome/fast5/{genome}/filename_mapping.txt"), ()),
 		fastq = os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"),
 		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
