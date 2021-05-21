@@ -148,7 +148,8 @@ else:
 	else:
 		for i in n_filtlong:
 			if re.match("filtlong.+", i):
-				filtered.append("_" + i)
+				pwd\
+                    .append("_" + i)
 
 
 PORECHOP_PARAMS = config["porechop"]["PARAMS"]
@@ -613,7 +614,7 @@ def fast5_subset_cmd(genome, fastq, in_fast5, out_fast5):
 		id_list={out_fast5}/read_id_list.txt
 		zgrep -oP '^@([^ ]*)' {fastq} | cut -c 2- > $id_list
 		python3 {FAST5_SUBSET} -i {in_fast5} -s {out_fast5} -l $id_list -t {threads}
-		rm $id_list
+		#rm $id_list
 		"""
 	else:
 		fast5_subset_cmd = ""
