@@ -630,6 +630,7 @@ rule get_reads_per_genome:
 	output:
 		# GET_READS_PER_GENOME_OUTPUT
 		fast5 = by_cond(FAST5_PER_GENOME, directory(os.path.join(outdir, "reads_per_genome/fast5/{genome}")), ()),
+		names_mapping = by_cond(FAST5_PER_GENOME, directory(os.path.join(outdir, "reads_per_genome/fast5/{genome}/filename_mapping.txt")), ()),
 		fastq = os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"),
 		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
