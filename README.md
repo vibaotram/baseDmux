@@ -270,8 +270,9 @@ baseDmux run ./test_baseDmux/profile
 ```
 
 The output will be written in `./test_baseDmux/results` by default
-The first run will take long time for installing conda environments.  
-
+The first run may take a long time for the conda environments to be installed.  
+On a personnal computer with only a few CPU, even with this very minimal dataset,
+guppy basecalling may also take several minutes...
 
 
 ### Input and Output
