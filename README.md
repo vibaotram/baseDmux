@@ -1,5 +1,5 @@
 # BASEcalling and DeMUltipleXing for ONT sequencing data
-## the tool wrapping Snakemake workflow
+## A Snakemake workflow for basecalling and gathering ONT reads originating from disparate runs and barcodes
 
 Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Multiqc + QC reports + reads aggregation into bins + fastq reads trimming + filtering
 
@@ -126,6 +126,10 @@ Because configuring snakemake workflows can be a bit intimidating, we try to cla
 - **Configuring a specific 'flavor' of the workflow**
 
 This is done primarilly by adjusting the parameters listed in the workflow config file `profile/workflow_parameters.yaml` or the [config.yaml](baseDmux/data/config.yaml) -- **BTW COULD IT BE RENAMED workflow_parameters.yaml FOR CONSISTENCY? VERY CONFUSING...** -- which corresponds to the typical Snakemake 'config.yaml' file. It enables to setup input reads, output folder, parameters for the tools, reports generation, etc... It is suggested to refer to the comments in this file for further details on individual parameters.
+
+Note however, that Deepbinner is not longer maintained and that [Deepbinner models](https://github.com/rrwick
+/Deepbinner/tree/master/models) are limited to specific 'earlier' flow cells and barcoding kits. One should therefore
+ ensure that that Deepbinner is a adequate for the data at hand.  
 
 baseDmux takes as input a folder with internal ONT 'run' folders that each contain a 'fast5' folder. This is the typical file hierarchy when sequencing with a MinION. baseDmux can therefore process a virtually unlimited number of (multiplexed) sequencing runs.
 
