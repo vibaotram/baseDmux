@@ -1,5 +1,5 @@
 # BASEcalling and DeMUltipleXing for ONT sequencing data
-## the tool wrapping Snakemake workflow
+## A Snakemake workflow for basecalling and gathering ONT reads originating from disparate runs and barcodes
 
 Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Multiqc + QC reports + reads aggregation into bins + fastq reads trimming + filtering
 
