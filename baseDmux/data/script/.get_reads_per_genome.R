@@ -160,7 +160,7 @@ for (i in unique(dict$Genome_ID)) {
 }
 
 
-# Rscript /home/baotram/tal/workflow/script/get_reads_per_genome.R \
+# Rscript /home/baotram/tal/workflow/script/.get_reads_per_genome.R \
 # -b /home/baotram/tal/workflow/test \
 # -o /home/baotram/tal/workflow/test/Cul_input1 \
 # -d /home/baotram/tal/workflow/test/reads/barcodeByGenome_sample.tsv \
