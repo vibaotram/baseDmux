@@ -1,3 +1,4 @@
+name: baseDmux
 channels:
     - bioconda
     - conda-forge
