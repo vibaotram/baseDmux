@@ -5,7 +5,7 @@
 
 #### Loading required packages #####
 suppressPackageStartupMessages(library("optparse"))
-suppressPackageStartupMessages(library("Biostrings"))
+#suppressPackageStartupMessages(library("Biostrings"))
 suppressPackageStartupMessages(library("dplyr"))
 
 #### COMMAND LINE ARGUMENTS PARSING ######
