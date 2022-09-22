@@ -5,8 +5,8 @@ channels:
     - defaults
     - anaconda
 dependencies:
-    - snakemake = 6.0.0
+    - snakemake = 7.14.0
     - pygraphviz = 1.7
     - python = 3.8
-    - ruamel.yaml = 0.16.12
-    - pandas = 1.1.4
+    - ruamel.yaml = 0.17.21
+    - pandas = 1.5.0

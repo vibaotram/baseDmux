@@ -1,6 +1,6 @@
 conda==4.3.16
-ruamel_yaml==0.16.12
-snakemake==6.0.0
+ruamel_yaml==0.17.21
+snakemake==7.14.0
 setuptools
 pygraphviz==1.6
-pandas==1.1.4
+pandas==1.5.0
