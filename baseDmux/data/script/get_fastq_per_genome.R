@@ -23,7 +23,7 @@ option_list <- list(
               help = "genome ID"),
   make_option(c("-d", "--barcodeByGenome"),
               type = "character",
-              help = "File listing demultiplexer, Run_ID, ONT_Barcode for each Genome_ID in csv/tsv format"),
+              help = "File listing demultiplexer, Run_ID, ONT_Barcode for each Genome_ID in csv/tsv format")
   # make_option(c("-R", "--copy"),
   #             action = "store_true",
   #             default = FALSE,
@@ -111,7 +111,7 @@ message(paste("\n#", length(ori_file), "fastq file(s) copied to", dest_file, "\n
 
 fqPath <- dest_file
 fqCon <- XVector::open_input_files(fqPath)
-idsFilePath <- file.path(dest_fastq_dir, "read_id_list.txt")
+idsFilePath <- file.path(dest_fastq_dir, paste0("read_id_list_", myArgs$genome, ".txt"))
 idsFileCon <- file(idsFilePath, open = "w")
 while (TRUE) {
   titles <- names(Biostrings::readDNAStringSet(fqCon, format = "fastq", nrec = 10000))

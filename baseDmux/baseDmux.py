@@ -207,7 +207,7 @@ def main():
         profile = os.path.normpath(os.path.join(cwd, profile))
         simg_args = set_singularity_args(profile)
         # configfile = read_profile(profile, 'configfile')
-        dryrun_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --use-singularity --singularity-args {simg_args} --use-conda --local-cores 0 --dryrun --verbose'.format(snakefile=snakefile, profile=profile, workdir=workdir, simg_args=simg_args)
+        dryrun_snakemake = 'snakemake -s {snakefile} -d {workdir} --profile {profile} --use-singularity --singularity-args {simg_args} --use-conda --conda-frontend mamba --local-cores 0 --dryrun --verbose'.format(snakefile=snakefile, profile=profile, workdir=workdir, simg_args=simg_args)
         with open(os.path.join(profile, "config.yaml"), "r") as yml:
             profileyml = yaml.round_trip_load(yml)
         if 'cluster-config' in profileyml.keys() and 'cluster' not in profileyml.keys():  # cluster mode

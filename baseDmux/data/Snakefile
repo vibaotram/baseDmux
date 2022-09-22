@@ -89,7 +89,7 @@ BARCODER_ADDITION = config['RULE_GUPPY_DEMULTIPLEXING']['ADDITION']
 
 ####
 
-DEVICE = by_cond(RESOURCE == 'CPU', None, f'--device $CUDA')
+DEVICE = by_cond(RESOURCE == 'CPU', '', f'--device $CUDA')
 
 
 
@@ -192,7 +192,6 @@ GET_READS_PER_GENOME = os.path.abspath('data/script/get_fastq_per_genome.R')
 ## cluster variables
 
 user = getpass.getuser()
-
 nasID = config['NASID']
 HOST_PREFIX = by_cond(nasID, user + '@' + nasID + ':', '')
 
@@ -279,7 +278,7 @@ rule guppy_basecalling:
 		fi
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		### Unsucessfully trying to solve issues with CUDA_VISIBLE_DEVICES with slurm --gre gpu:n#
-		if [ -z "${CUDA_VISIBLE_DEVICES+x}" ]
+		if [ -z "${{CUDA_VISIBLE_DEVICES+x}}" ]
 		then
 			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
 		else
@@ -288,7 +287,7 @@ rule guppy_basecalling:
 			#export CUDA_VISIBLE_DEVICES=""
 			echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES'."
 			echo "##  Overwritting the value \"$CUDA\" in \$CUDA with \$CUDA_VISIBLE_DEVICES value.."
-			CUDA="cuda:${CUDA_VISIBLE_DEVICES}"
+			CUDA="cuda:${{CUDA_VISIBLE_DEVICES}}"
 		fi
 		####
 		guppy_basecaller -i $temp_indir -s $temp_outdir {BASECALLER_OPT}
@@ -338,7 +337,7 @@ rule guppy_demultiplexing:
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		### Unsucessfully trying to solve issues with CUDA_VISIBLE_DEVICES with slurm --gre gpu:n#
-		if [ -z "${CUDA_VISIBLE_DEVICES+x}" ]
+		if [ -z "${{CUDA_VISIBLE_DEVICES+x}}" ]
 		then
 			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
 		else
@@ -347,7 +346,7 @@ rule guppy_demultiplexing:
 			#export CUDA_VISIBLE_DEVICES=""
 			echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES'."
 			echo "##  Overwritting the value \"$CUDA\" in \$CUDA with \$CUDA_VISIBLE_DEVICES value.."
-			CUDA="cuda:${CUDA_VISIBLE_DEVICES}"
+			CUDA="cuda:${{CUDA_VISIBLE_DEVICES}}"
 		fi
 		####
 		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} {BARCODER_ADDITION} # --compress_fastq
@@ -639,8 +638,8 @@ def fast5_subset_cmd(genome, fastq, in_fast5, out_fast5):
 		fast5_subset_cmd = f"""
 		echo -e "\\n##$(date)    Creating folder containing fast5 reads for "{genome}" \\n"
                 mkdir -p {out_fast5} 
-		id_list={out_fast5}/read_id_list.txt
-		zgrep --no-group-separator -C0 'runid=' {fastq} | cut -d ' ' -f 1 | cut -d '@' -f 2 > $id_list
+		id_list="{in_fast5}/read_id_list_{genome}.txt"
+#		zgrep --no-group-separator -C0 'runid=' {fastq} | cut -d ' ' -f 1 | cut -d '@' -f 2 > $id_list
 		python3 {FAST5_SUBSET} -i {in_fast5} -s {out_fast5} -l $id_list -t {threads}
 		#rm $id_list
 		"""
@@ -660,6 +659,7 @@ rule get_reads_per_genome:
 		fast5 = by_cond(FAST5_PER_GENOME, directory(os.path.join(outdir, "reads_per_genome/fast5/{genome}")), ()),
 		names_mapping = by_cond(FAST5_PER_GENOME, os.path.join(outdir, "reads_per_genome/fast5/{genome}/filename_mapping.txt"), ()),
 		fastq = os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"),
+		# NEED TO MAKE SURE THE TSV file output by fast5_sbset is there
 		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),
@@ -674,7 +674,15 @@ rule get_reads_per_genome:
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		echo -e "##$(date)    Creating fastq gz for "{wildcards.genome}" \\n"
 		Rscript {GET_READS_PER_GENOME} -b {outdir} -o {params.outpath} -g {wildcards.genome} -d {params.barcode_by_genome}
-		{params.fast5_subset_cmd}
+		echo "FAST5_PER_GENOME is = {FAST5_PER_GENOME}"
+        if [ "{FAST5_PER_GENOME}" == "True" ]; then
+            echo -e "\\n##$(date)    Creating {output.fast5} folder containing fast5 reads for "{wildcards.genome}" \\n"
+            mkdir -p {output.fast5}
+            id_list="$(dirname "{output.fastq}")/read_id_list_{wildcards.genome}.txt"
+            python3 {FAST5_SUBSET} -i {input.fast5} -s {output.fast5} -l $id_list -t {threads} --filename_base "{wildcards.genome}_"
+        fi
+
+		#{params.fast5_subset_cmd}
 		"""
 
 ##############################
@@ -749,7 +757,7 @@ rule report_demultiplex:
 			fastq : {params.fastq}
 			demultiplex : {params.demultiplex}
 			postdemux : {params.postdemux}
-			log : {params.log}
+			log : {log}
 			outpath : {params.outpath}
 		"""
 	output: os.path.join(outdir, "report/demultiplex_report.html")

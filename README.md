@@ -139,7 +139,14 @@ You can decide whether guppy and deepbinner should run on GPU or CPU by specifyi
 A typical usage case for baseDmux is to prepare filtered sequencing reads in individual fastq files for genome assembly (or transcripts analysis) when users have a number of genomic DNA (or RNA) preparations sequenced with the same library preparation protocol and flowcell typoe but over several runs with various sets of multiplex barcodes. For this, it is necessary to run the complete workflow.
 
 To this end, users need to prepare a [`Barcode by genome`](/baseDmux/data/barcodeByGenome_sample.tsv) file. This is a roadmap table for subseting fastq and fast5 reads, demultiplexed with guppy and/or deepbinner, and coming from disparate runs and barcodes, in bins corresponding to individual 'genomes' (or samples).
-It must contain at least the follwing columns: Demultiplexer, Run_ID, ONT_Barcode, Genome_ID. Values in the `Genome_ID` column must be UNIQUE for each row and correspond to the labels of the bin into which reads will eventually be grouped.
+It must contain at least the follwing columns: Demultiplexer, Run_ID, ONT_Barcode, Genome_ID. Values in the
+ `Genome_ID` correspond to the labels of the bin into which reads will eventually be grouped. **Make sure** that this
+  labels do NOT contain spaces " " or other special characters like '|' '$' ':'. As separators, the safest options
+   are to use "_" or "-".  
+Likewise, `Run_ID` values should not contain special characters. In addition, these values must match the names of the
+ top
+ folders in the input fast5 directory.
+  
 Importantly, the `Barcode by genome` file does not only enable to group reads, it is necessary to provide such a file for the porechop and filtlong rules to be executed.
 
 

@@ -23,6 +23,6 @@ verbose: true   # whether to print debugging output or not
 ##############################
 ##### BEHAVIOR
 nolock: true    # whether to lock working directory or not
-restart-times: 1    # number of times to restart failed jobs
+restart-times: 0    # number of times to restart failed jobs
 show-failed-logs: false   # whether to display logs for failed jobs in the console
 latency-wait: 60    # number of seconds to wait for the output file after the job finished
