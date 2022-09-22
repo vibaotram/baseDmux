@@ -585,37 +585,10 @@ rule multiqc_demultiplex:
 		"""
 
 
-##############################
-################# FAST5_SUBSET
-################ ONT_FAST5_API
-
-
-# rule get_multi_fast5_per_barcode:
-# 	input:
-# 		summary = rules.get_sequencing_summary_per_barcode.output,
-# 		fast5 = rules.guppy_basecalling.output.fast5
-# 	output:
-# 		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"))
-# 		# check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done")
-# 	singularity: deepbinner_container
-# 	params:
-# 		path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
-# 		log = "get_multi_fast5_per_barcode_{demultiplexer}_{run}.log"
-# 	threads: config[]
-# 	shell:
-# 		"""
-# 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-# 		python3 {FAST5_SUBSET} {input.fast5} {params.path} {threads}
-# 		touch {output.check}
-# 		"""
-
 
 ##############################
 ################# SUBSET READS
 #################### BY GENOME
-
-# GET_READS_PER_GENOME_INPUT = [expand(rules.get_sequencing_summary_per_barcode.input, demultiplexer = get_demultiplexer, run = run),
-#                               expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run)]
 
 FAST5_SUBSET_THREADS = config['RULE_GET_READS_PER_GENOME']['MAX_THREADS']
 
@@ -632,20 +605,6 @@ def threads_for_fast5(max_threads, n_fast5):
 	else:
 		return nruns
 
-def fast5_subset_cmd(genome, fastq, in_fast5, out_fast5):
-	if FAST5_PER_GENOME:
-		threads = len(in_fast5)
-		fast5_subset_cmd = f"""
-		echo -e "\\n##$(date)    Creating folder containing fast5 reads for "{genome}" \\n"
-                mkdir -p {out_fast5} 
-		id_list="{in_fast5}/read_id_list_{genome}.txt"
-#		zgrep --no-group-separator -C0 'runid=' {fastq} | cut -d ' ' -f 1 | cut -d '@' -f 2 > $id_list
-		python3 {FAST5_SUBSET} -i {in_fast5} -s {out_fast5} -l $id_list -t {threads}
-		#rm $id_list
-		"""
-	else:
-		fast5_subset_cmd = ""
-	return fast5_subset_cmd
 
 rule get_reads_per_genome:
 	input:
@@ -659,12 +618,10 @@ rule get_reads_per_genome:
 		fast5 = by_cond(FAST5_PER_GENOME, directory(os.path.join(outdir, "reads_per_genome/fast5/{genome}")), ()),
 		names_mapping = by_cond(FAST5_PER_GENOME, os.path.join(outdir, "reads_per_genome/fast5/{genome}/filename_mapping.txt"), ()),
 		fastq = os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"),
-		# NEED TO MAKE SURE THE TSV file output by fast5_sbset is there
 		# csv = os.path.join(outdir, "reads_per_genome/reads_per_genome.csv")
 	params:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),
 		barcode_by_genome = BARCODE_BY_GENOME,
-		fast5_subset_cmd = lambda wildcards, output, input, threads: fast5_subset_cmd(wildcards.genome, output.fastq, input.fast5, output.fast5),
 		log = "get_reads_per_genome_{genome}.log"
 	threads: lambda wc, input: threads_for_fast5(FAST5_SUBSET_THREADS, input.fast5)
 	singularity: guppy_container
@@ -678,11 +635,9 @@ rule get_reads_per_genome:
         if [ "{FAST5_PER_GENOME}" == "True" ]; then
             echo -e "\\n##$(date)    Creating {output.fast5} folder containing fast5 reads for "{wildcards.genome}" \\n"
             mkdir -p {output.fast5}
-            id_list="$(dirname "{output.fastq}")/read_id_list_{wildcards.genome}.txt"
-            python3 {FAST5_SUBSET} -i {input.fast5} -s {output.fast5} -l $id_list -t {threads} --filename_base "{wildcards.genome}_"
+            id_list="$(dirname '{output.fastq}')/read_id_list_{wildcards.genome}.txt"
+            python3 {FAST5_SUBSET} -t {threads} -i {input.fast5} -s {output.fast5} -l $id_list # --filename_base "{wildcards.genome}_"
         fi
-
-		#{params.fast5_subset_cmd}
 		"""
 
 ##############################
