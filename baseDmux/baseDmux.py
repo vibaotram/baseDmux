@@ -66,7 +66,7 @@ def main():
 
     parser_configure = subparsers.add_parser('configure', help='edit config file and profile')
     parser_configure.add_argument(help='path to the folder to contain config file and profile you want to create', dest='dir')
-    parser_configure.add_argument('--mode', choices=['local', 'cluster', 'iTrop'], help='choose the mode of running Snakemake, local mode or cluster mode', dest='mode', required=True, action='store')
+    parser_configure.add_argument('--mode', choices=['local', 'slurm', 'cluster', 'iTrop'], help='choose the mode of running Snakemake, local mode or cluster mode', dest='mode', required=True, action='store')
     parser_configure.add_argument('--barcodes_by_genome', help='optional, create a tabular file containing information of barcodes for each genome)', action='store_true', dest='tab_file')
     parser_configure.add_argument('--edit', help='optional, open files with editor (nano, vim, gedit, etc.)', nargs='?', dest='editor')
 
@@ -133,6 +133,9 @@ def main():
         if args.mode == 'local':
             files = ['config.yaml']
             source_profile = os.path.join(source_profile, 'local')
+        elif args.mode == 'slurm':
+            source_profile = os.path.join(source_profile, 'slurm')
+            files = ['config.yaml', 'cluster_config.yaml', 'CookieCutter.py', 'settings.json', 'slurm-jobscript.sh', 'slurm-status.py', 'slurm-submit.py', 'slurm_utils.py']
         elif args.mode == 'cluster':
             source_profile = os.path.join(source_profile, 'cluster')
             # files = ['cluster.json', 'config.yaml', 'jobscript.sh', 'submission_wrapper.py']
@@ -151,6 +154,8 @@ def main():
             profileyml['configfile'] = '{}'.format(config)
             if args.mode == 'local':
                 pass
+            elif args.mode == 'slurm':
+                pass
             elif args.mode == 'cluster':
                 profileyml['cluster-config'] = profileyml['cluster-config'].replace('data/profile/cluster/cluster.json', os.path.join(profile, 'cluster.json'))
                 # profileyml['cluster'] = profileyml['cluster'].replace('data/profile/cluster/submission_wrapper.py', os.path.join(profile, 'submission_wrapper.py'))
@@ -159,7 +164,7 @@ def main():
                 profileyml['cluster'] = profileyml['cluster'].replace('config-test.yaml', config)
                 profileyml['cluster-status'] = profileyml['cluster-status'].replace('data/profile/cluster/iTrop/iTrop_status.py', os.path.join(workdir, 'data/profile/cluster/iTrop/iTrop_status.py'))
             else:
-                raise ValueError('impossible')
+                raise ValueError('The value passed to the "--mode" argument is not recognized!!')
 
         print('profile config: {}'.format(profileyml), file=sys.stdout)
         with open(profile_config, 'w') as yml:
