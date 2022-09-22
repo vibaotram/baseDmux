@@ -1,0 +1,6 @@
+{
+    "SBATCH_DEFAULTS": "--export=ALL --exclude=node15",
+    "CLUSTER_NAME": "",
+    "CLUSTER_CONFIG": "cluster_config.yaml",
+    "ADVANCED_ARGUMENT_CONVERSION": "no"
+}
