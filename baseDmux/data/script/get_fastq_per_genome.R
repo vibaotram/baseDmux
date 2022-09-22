@@ -5,16 +5,18 @@
 
 #### Loading required packages #####
 suppressPackageStartupMessages(library("optparse"))
-#suppressPackageStartupMessages(library("Biostrings"))
+suppressPackageStartupMessages(library("Biostrings"))
 suppressPackageStartupMessages(library("dplyr"))
 
 #### COMMAND LINE ARGUMENTS PARSING ######
 option_list <- list(
   make_option(c("-b", "--baseDmux_outdir"),
               type = "character",
+              default = NULL,
               help = "Path to the output folder of baseDmux"),
   make_option(c("-o", "--outdir"),
               type = "character",
+              default = NULL,
               help = "Output directory"),
   make_option(c("-g", "--genome"),
               type = "character",
@@ -22,23 +24,23 @@ option_list <- list(
   make_option(c("-d", "--barcodeByGenome"),
               type = "character",
               help = "File listing demultiplexer, Run_ID, ONT_Barcode for each Genome_ID in csv/tsv format"),
-  make_option(c("-R", "--copy"),
-              action = "store_true",
-              default = FALSE,
-              help = "Copy files"),
-  make_option(c("-M", "--move"),
-              action = "store_true",
-              default = FALSE,
-              help = "Move files"),
-  make_option(c("-S", "--symlink"),
-              action = "store_true",
-              default = FALSE,
-              help = "Symlink files")
+  # make_option(c("-R", "--copy"),
+  #             action = "store_true",
+  #             default = FALSE,
+  #             help = "Copy files"),
+  # make_option(c("-M", "--move"),
+  #             action = "store_true",
+  #             default = FALSE,
+  #             help = "Move files"),
+  # make_option(c("-S", "--symlink"),
+  #             action = "store_true",
+  #             default = FALSE,
+  #             help = "Symlink files")
 )
 
 myArgs <- parse_args(
   OptionParser(usage = "%prog [-b baseDmux output] [-o Outdir] [-d barcodeByGenome] [-transfering option R/M/S]\n", option_list = option_list,
-               description = "Description: Create 1 folder for each genome containing corresponding fast5 and fastq from baseDmux output and a 'barcodeByGenome' table annotating demultiplex, runid, barcodeid of genomes/strains.\n\tData table must contain the following columns: \"Demultiplexer\", \"Run_ID\", \"ONT_Barcode\", \"Genome_ID\".\n\tYou can choose only ONE transfering option (copy/move/symlink).")
+               description = "Description: Create 1 folder for each genome and create a fastq file with corresponding reads from baseDmux output and a 'barcodeByGenome' table annotating demultiplex, runid, barcodeid of genomes/strains.\n\tData table must contain the following columns: \"Demultiplexer\", \"Run_ID\", \"ONT_Barcode\", \"Genome_ID\".")
 )
 
 
@@ -50,48 +52,21 @@ if (is.null(baseDmux_outdir)) {
   stop("Output directory of baseDmux does not exist.\n")
 }
 
-
 # check outdir argument
 outdir = myArgs$outdir
 if (is.null(outdir)) {
   stop("Missing output directory.\n")
 }
 
-# check transfer mode
-
-# Rather than an upredictable number of flags, would be easier to have a single "action" argument that
-# can take a defined set of values c("copy", "move")
-
-copy = myArgs$copy
-move = myArgs$move
-symlink = myArgs$symlink
-
-transfer <- c(copy, move, symlink)
-check = length(transfer[transfer == FALSE])
-if (check == 3) {
-  stop("Oups... Transfer mode is not specified.\n")
-} else if (check <= 1) {
-  stop("More than 1 transfer modes are specified.\n")
-}
-
-if (myArgs$copy == TRUE) {
-  cmd = "rsync -avrP"
-  transfer_mode = "copied"
-} else if (myArgs$move == TRUE) {
-  cmd = "mv"
-  transfer_mode = "moved"
-} else {
-  cmd = "ln -s"
-  transfer_mode = "symlinked"
-}
-
-# check data table
+# check barcodeByGenome table
 barcodeByGenome = myArgs$barcodeByGenome
 if (is.null(barcodeByGenome)) {
   stop("Missing barcodeByGenome file.\n")
 } else if (!file.exists(barcodeByGenome)) {
   stop("barcodeByGenome table does not exist.\n")
 }
+
+# Load barcodeByGenome table
 dict <- read.csv(barcodeByGenome, header = T, sep = "\t")
 stdColnames <- c("Demultiplexer", "Run_ID", "ONT_Barcode", "Genome_ID")
 if (!all(stdColnames %in% colnames(dict))) {
@@ -100,7 +75,7 @@ if (!all(stdColnames %in% colnames(dict))) {
 
 # search for original file paths
 barcode_folder <- file.path(baseDmux_outdir, "demultiplex", dict$Demultiplexer, dict$Run_ID, dict$ONT_Barcode)
-# dict$ori_fast5 <- file.path(barcode_folder, "fast5")
+
 fastq <- list.files(barcode_folder, pattern = "barcode\\d*.fastq.gz", full.names = T, recursive = T)
 dict$ori_fastq <- file.path(barcode_folder, paste0(dict$ONT_Barcode, ".fastq.gz"))
 
@@ -131,6 +106,21 @@ if (length(ori_file) == 1) {
 message(paste("\n# [", date(), "]\t Preparing compressed fastq file for", myArgs$genome))
 system(transfer_file)
 message(paste("\n#", length(ori_file), "fastq file(s) copied to", dest_file, "\n"))
+
+# Create read ids list
+
+fqPath <- dest_file
+fqCon <- XVector::open_input_files(fqPath)
+idsFilePath <- file.path(dest_fastq_dir, "read_id_list.txt")
+idsFileCon <- file(idsFilePath, open = "w")
+while (TRUE) {
+  titles <- names(Biostrings::readDNAStringSet(fqCon, format = "fastq", nrec = 10000))
+  if (length(titles) == 0L) break
+  writeLines(gsub("^(.*)[ ]runid=.*$", "\\1", titles), con = idsFileCon)
+}
+close(idsFileCon)
+
+quit(save = "no", status = 0, runLast = FALSE)
 
 
 

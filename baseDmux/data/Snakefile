@@ -17,9 +17,10 @@ configfile: cf
 
 
 indir = config['INDIR']
-
 outdir = config['OUTDIR']
 
+
+# Listing input folders and create associated 'run' variable 
 fast5_files = glob.glob(os.path.join(indir, "*/fast5"))
 run = []
 for f in fast5_files:
@@ -113,8 +114,9 @@ API_THREADS = config['RULE_MULTI_TO_SINGLE_FAST5']['THREADS']
 ##############################
 ## get_reads_per_genome
 
-TRANSFERING = config['RULE_GET_READS_PER_GENOME']['FASTQ_TRANSFERING']
 BARCODE_BY_GENOME = config['RULE_GET_READS_PER_GENOME']['BARCODE_BY_GENOME']
+
+## Would need a mecanism that checks that the content of 'run' matches (is included in) the content of BARCODE_BY_GENOME$runID
 
 
 if not BARCODE_BY_GENOME:
@@ -277,14 +279,16 @@ rule guppy_basecalling:
 		fi
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		### Unsucessfully trying to solve issues with CUDA_VISIBLE_DEVICES with slurm --gre gpu:n#
-		if [ -z "$CUDA_VISIBLE_DEVICES" ]
+		if [ -z "${CUDA_VISIBLE_DEVICES+x}" ]
 		then
-			echo "##  \$CUDA_VISIBLE_DEVICES is empty. Fine."
+			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
 		else
 			#echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES' replaced with '${{CUDA:5}}'."
 			#export CUDA_VISIBLE_DEVICES="${{CUDA//cuda:}}"
 			#export CUDA_VISIBLE_DEVICES=""
 			echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES'."
+			echo "##  Overwritting the value \"$CUDA\" in \$CUDA with \$CUDA_VISIBLE_DEVICES value.."
+			CUDA="cuda:${CUDA_VISIBLE_DEVICES}"
 		fi
 		####
 		guppy_basecaller -i $temp_indir -s $temp_outdir {BASECALLER_OPT}
@@ -334,14 +338,16 @@ rule guppy_demultiplexing:
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		### Unsucessfully trying to solve issues with CUDA_VISIBLE_DEVICES with slurm --gre gpu:n#
-		if [ -z "$CUDA_VISIBLE_DEVICES" ]
+		if [ -z "${CUDA_VISIBLE_DEVICES+x}" ]
 		then
-			echo "##  \$CUDA_VISIBLE_DEVICES is empty. Fine."
+			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
 		else
 			#echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES' replaced with '${{CUDA:5}}'."
 			#export CUDA_VISIBLE_DEVICES="${{CUDA//cuda:}}"
 			#export CUDA_VISIBLE_DEVICES=""
 			echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES'."
+			echo "##  Overwritting the value \"$CUDA\" in \$CUDA with \$CUDA_VISIBLE_DEVICES value.."
+			CUDA="cuda:${CUDA_VISIBLE_DEVICES}"
 		fi
 		####
 		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} {BARCODER_ADDITION} # --compress_fastq
@@ -658,7 +664,6 @@ rule get_reads_per_genome:
 	params:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),
 		barcode_by_genome = BARCODE_BY_GENOME,
-		transfering = TRANSFERING,
 		fast5_subset_cmd = lambda wildcards, output, input, threads: fast5_subset_cmd(wildcards.genome, output.fastq, input.fast5, output.fast5),
 		log = "get_reads_per_genome_{genome}.log"
 	threads: lambda wc, input: threads_for_fast5(FAST5_SUBSET_THREADS, input.fast5)
@@ -668,7 +673,7 @@ rule get_reads_per_genome:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		echo -e "##$(date)    Creating fastq gz for "{wildcards.genome}" \\n"
-		Rscript {GET_READS_PER_GENOME} -b {outdir} -o {params.outpath} -g {wildcards.genome} -d {params.barcode_by_genome} --{params.transfering}
+		Rscript {GET_READS_PER_GENOME} -b {outdir} -o {params.outpath} -g {wildcards.genome} -d {params.barcode_by_genome}
 		{params.fast5_subset_cmd}
 		"""
 
@@ -753,11 +758,11 @@ rule report_demultiplex:
 		fastq = by_cond(len(genome) > 0, os.path.join(outdir, "reads_per_genome/fastq"), os.path.join(outdir, "basecall")),
 		demultiplex = os.path.join(outdir, "demultiplex"),
 		postdemux = by_cond(len(genome) > 0, expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}"), filtered = filtered), os.path.join(outdir, "basecall")),
-		log = "report_demultiplex.log",
 		outpath = lambda wildcards, output: os.path.dirname(output[0])
 	threads: config['REPORTS']['DEMULTIPLEX_REPORT_THREADS']
 	singularity: guppy_container
 	conda: 'conda/conda_rmarkdown.yaml'
+	log: os.path.join(SNAKEMAKE_LOG, "report_demultiplex.log")
 	script:
 		DEMULTIPLEX_REPORT_RMD
 
