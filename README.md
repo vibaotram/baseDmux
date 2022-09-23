@@ -10,7 +10,7 @@ Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Mult
 
 ### Requirements
 - singularity >= 2.5
-- conda 4.x
+- conda 4.x + Mamba
 
 
 ### Implemented tools
@@ -281,7 +281,7 @@ baseDmux run ./test_baseDmux/profile
 ```
 
 The output will be written in `./test_baseDmux/results` by default
-The first run may take a long time for the conda environments to be installed.  
+The first run may take a long time for the conda environments to be installed even if using Mamba.  
 On a personnal computer with only a few CPU, even with this very minimal dataset,
 guppy basecalling may also take several minutes...
 

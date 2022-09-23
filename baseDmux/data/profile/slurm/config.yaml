@@ -15,7 +15,8 @@ jobs: 20 # OPTIONAL, number of jobs to run in parallel. "all" to run all possibl
 max-jobs-per-second: 1 # OPTIONAL
 max-status-checks-per-second: 10 # OPTIONAL
 local-cores: 1 # OPTIONAL, Number of cores allocated to the snakemake process controlling the baseDmux wrokflow. If run as a job in scheduler system on HPC, this should ideally be inferior or equal to the number of cores allocated to the baseDmux master job.
-
+use-conda: "True" # Currently redoundant with what BaseDmux does
+use-singularity: "True" # Currently redoundant with what BaseDmux does
 
 ##############################
 ##### Job Scheduler submission
@@ -23,6 +24,7 @@ local-cores: 1 # OPTIONAL, Number of cores allocated to the snakemake process co
 jobscript: "slurm-jobscript.sh" # REQUIRED for job submission with a HPC job scheduler only.
 cluster: "slurm-submit.py" # REQUIRED for job submission with a HPC job scheduler only.
 cluster-status: "slurm-status.py" # REQUIRED for job submission with a HPC job scheduler only.
+cluster-cancel: "scancel"
 immediate-submit: false # OPTIONAL for job submission with a HPC job scheduler only.
 
 

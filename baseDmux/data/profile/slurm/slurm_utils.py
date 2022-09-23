@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
-import os
-import sys
-from os.path import dirname
-import re
-import math
 import argparse
+import math
+import os
+import re
 import subprocess as sp
+import sys
+from datetime import timedelta
+from os.path import dirname
+from time import time as unix_time
+from typing import Union
+from uuid import uuid4
+import shlex
 from io import StringIO
 
+from CookieCutter import CookieCutter
 from snakemake import io
+from snakemake.exceptions import WorkflowError
 from snakemake.io import Wildcards
-from snakemake.utils import SequenceFormatter
+from snakemake.logging import logger
 from snakemake.utils import AlwaysQuotedFormatter
 from snakemake.utils import QuotedFormatter
-from snakemake.exceptions import WorkflowError
-from snakemake.logging import logger
-
-from CookieCutter import CookieCutter
+from snakemake.utils import SequenceFormatter
 
 
 def _convert_units_to_mb(memory):
@@ -28,10 +32,7 @@ def _convert_units_to_mb(memory):
     m = regex.match(memory)
     if m is None:
         logger.error(
-            (
-                f"unsupported memory specification '{memory}';"
-                "  allowed suffixes: [K|M|G|T]"
-            )
+            (f"unsupported memory specification '{memory}';" "  allowed suffixes: [K|M|G|T]")
         )
         sys.exit(1)
     factor = siunits[m.group(2)]
@@ -47,7 +48,7 @@ def parse_jobscript():
 
 def parse_sbatch_defaults(parsed):
     """Unpack SBATCH_DEFAULTS."""
-    d = parsed.split() if type(parsed) == str else parsed
+    d = shlex.split(parsed) if type(parsed) == str else parsed
     args = {}
     for keyval in [a.split("=") for a in d]:
         k = keyval[0].strip().strip("-")
@@ -96,7 +97,7 @@ def format(_pattern, _quote_all=False, **kwargs):  # noqa: A001
 
 #  adapted from Job.format_wildcards in snakemake.jobs
 def format_wildcards(string, job_properties):
-    """ Format a string with variables from the job. """
+    """Format a string with variables from the job."""
 
     class Job(object):
         def __init__(self, job_properties):
@@ -113,21 +114,15 @@ def format_wildcards(string, job_properties):
     else:
         job._format_wildcards = None
     _variables = dict()
-    _variables.update(
-        dict(params=job._format_params, wildcards=job._format_wildcards)
-    )
+    _variables.update(dict(params=job._format_params, wildcards=job._format_wildcards))
     if hasattr(job, "rule"):
         _variables.update(dict(rule=job.rule))
     try:
         return format(string, **_variables)
     except NameError as ex:
-        raise WorkflowError(
-            "NameError with group job {}: {}".format(job.jobid, str(ex))
-        )
+        raise WorkflowError("NameError with group job {}: {}".format(job.jobid, str(ex)))
     except IndexError as ex:
-        raise WorkflowError(
-            "IndexError with group job {}: {}".format(job.jobid, str(ex))
-        )
+        raise WorkflowError("IndexError with group job {}: {}".format(job.jobid, str(ex)))
 
 
 # adapted from ClusterExecutor.cluster_params function in snakemake.executor
@@ -157,6 +152,19 @@ def convert_job_properties(job_properties, resource_mapping=None):
 
     if "threads" in job_properties:
         options["cpus-per-task"] = job_properties["threads"]
+
+    slurm_opts = resources.get("slurm", "")
+    if not isinstance(slurm_opts, str):
+        raise ValueError(
+            "The `slurm` argument to resources must be a space-separated string"
+        )
+
+    for opt in slurm_opts.split():
+        kv = opt.split("=", maxsplit=1)
+        k = kv[0]
+        v = None if len(kv) == 1 else kv[1]
+        options[k.lstrip("-").replace("_", "-")] = v
+
     return options
 
 
@@ -198,61 +206,6 @@ def submit_job(jobscript, **sbatch_options):
     return jobid
 
 
-def advanced_argument_conversion(arg_dict):
-    """Experimental adjustment of sbatch arguments to the given or default partition."""
-    # Currently not adjusting for multiple node jobs
-    nodes = int(arg_dict.get("nodes", 1))
-    if nodes > 1:
-        return arg_dict
-    partition = arg_dict.get("partition", None) or _get_default_partition()
-    constraint = arg_dict.get("constraint", None)
-    ncpus = int(arg_dict.get("cpus-per-task", 1))
-    runtime = arg_dict.get("time", None)
-    memory = _convert_units_to_mb(arg_dict.get("mem", 0))
-    config = _get_cluster_configuration(partition, constraint, memory)
-    mem = arg_dict.get("mem", ncpus * min(config["MEMORY_PER_CPU"]))
-    mem = _convert_units_to_mb(mem)
-    if mem > max(config["MEMORY"]):
-        logger.info(
-            f"requested memory ({mem}) > max memory ({max(config['MEMORY'])}); "
-            "adjusting memory settings"
-        )
-        mem = max(config["MEMORY"])
-
-    # Calculate available memory as defined by the number of requested
-    # cpus times memory per cpu
-    AVAILABLE_MEM = ncpus * min(config["MEMORY_PER_CPU"])
-    # Add additional cpus if memory is larger than AVAILABLE_MEM
-    if mem > AVAILABLE_MEM:
-        logger.info(
-            f"requested memory ({mem}) > "
-            f"ncpus x MEMORY_PER_CPU ({AVAILABLE_MEM}); "
-            "trying to adjust number of cpus up"
-        )
-        ncpus = int(math.ceil(mem / min(config["MEMORY_PER_CPU"])))
-    if ncpus > max(config["CPUS"]):
-        logger.info(
-            f"ncpus ({ncpus}) > available cpus ({max(config['CPUS'])}); "
-            "adjusting number of cpus down"
-        )
-        ncpus = min(int(max(config["CPUS"])), ncpus)
-    adjusted_args = {"mem": int(mem), "cpus-per-task": ncpus}
-
-    # Update time. If requested time is larger than maximum allowed time, reset
-    if runtime:
-        runtime = time_to_minutes(runtime)
-        time_limit = max(config["TIMELIMIT_MINUTES"])
-        if runtime > time_limit:
-            logger.info(
-                f"time (runtime) > time limit {time_limit}; " "adjusting time down"
-            )
-            adjusted_args["time"] = time_limit
-
-    # update and return
-    arg_dict.update(adjusted_args)
-    return arg_dict
-
-
 timeformats = [
     re.compile(r"^(?P<days>\d+)-(?P<hours>\d+):(?P<minutes>\d+):(?P<seconds>\d+)$"),
     re.compile(r"^(?P<days>\d+)-(?P<hours>\d+):(?P<minutes>\d+)$"),
@@ -292,54 +245,159 @@ def time_to_minutes(time):
     return minutes
 
 
-def _get_default_partition():
-    """Retrieve default partition for cluster"""
-    cluster = CookieCutter.get_cluster_option()
-    cmd = f"sinfo -O partition {cluster}"
-    res = sp.check_output(cmd.split())
-    m = re.search(r"(?P<partition>\S+)\*", res.decode(), re.M)
-    partition = m.group("partition")
-    return partition
+class InvalidTimeUnitError(Exception):
+    pass
 
 
-def _get_cluster_configuration(partition, constraints=None, memory=0):
-    """Retrieve cluster configuration.
+class Time:
+    _nanosecond_size = 1
+    _microsecond_size = 1000 * _nanosecond_size
+    _millisecond_size = 1000 * _microsecond_size
+    _second_size = 1000 * _millisecond_size
+    _minute_size = 60 * _second_size
+    _hour_size = 60 * _minute_size
+    _day_size = 24 * _hour_size
+    _week_size = 7 * _day_size
+    units = {
+        "s": _second_size,
+        "m": _minute_size,
+        "h": _hour_size,
+        "d": _day_size,
+        "w": _week_size,
+    }
+    pattern = re.compile(rf"(?P<val>\d+(\.\d*)?|\.\d+)(?P<unit>[a-zA-Z])")
 
-    Retrieve cluster configuration for a partition filtered by
-    constraints, memory and cpus
+    def __init__(self, duration: str):
+        self.duration = Time._from_str(duration)
 
-    """
-    try:
-        import pandas as pd
-    except ImportError:
-        print(
-            "Error: currently advanced argument conversion "
-            "depends on 'pandas'.", file=sys.stderr
+    def __str__(self) -> str:
+        return Time._timedelta_to_slurm(self.duration)
+
+    def __repr__(self):
+        return str(self)
+
+    @staticmethod
+    def _timedelta_to_slurm(delta: Union[timedelta, str]) -> str:
+        if isinstance(delta, timedelta):
+            d = dict()
+            d["hours"], rem = divmod(delta.seconds, 3600)
+            d["minutes"], d["seconds"] = divmod(rem, 60)
+            d["hours"] += delta.days * 24
+            return "{hours}:{minutes:02d}:{seconds:02d}".format(**d)
+        elif isinstance(delta, str):
+            return delta
+        else:
+            raise ValueError("Time is in an unknown format '{}'".format(delta))
+
+    @staticmethod
+    def _from_str(duration: str) -> Union[timedelta, str]:
+        """Parse a duration string to a datetime.timedelta"""
+
+        matches = Time.pattern.finditer(duration)
+
+        total = 0
+        n_matches = 0
+        for m in matches:
+            n_matches += 1
+            value = m.group("val")
+            unit = m.group("unit").lower()
+            if unit not in Time.units:
+                raise InvalidTimeUnitError(
+                    "Unknown unit '{}' in time {}".format(unit, duration)
+                )
+
+            total += float(value) * Time.units[unit]
+
+        if n_matches == 0:
+            return duration
+
+        microseconds = total / Time._microsecond_size
+        return timedelta(microseconds=microseconds)
+
+
+class JobLog:
+    def __init__(self, job_props: dict):
+        self.job_properties = job_props
+        self.uid = str(uuid4())
+
+    @property
+    def wildcards(self) -> dict:
+        return self.job_properties.get("wildcards", dict())
+
+    @property
+    def wildcards_str(self) -> str:
+        return (
+            ".".join("{}={}".format(k, v) for k, v in self.wildcards.items())
+            or "unique"
         )
-        sys.exit(1)
 
-    if constraints:
-        constraint_set = set(constraints.split(","))
-    cluster = CookieCutter.get_cluster_option()
-    cmd = f"sinfo -e -o %all -p {partition} {cluster}".split()
-    try:
-        output = sp.Popen(" ".join(cmd), shell=True, stdout=sp.PIPE).communicate()
-    except Exception as e:
-        print(e)
-        raise
-    data = re.sub("^CLUSTER:.+\n", "", re.sub(" \\|", "|", output[0].decode()))
-    df = pd.read_csv(StringIO(data), sep="|")
-    try:
-        df["TIMELIMIT_MINUTES"] = df["TIMELIMIT"].apply(time_to_minutes)
-        df["MEMORY_PER_CPU"] = df["MEMORY"] / df["CPUS"]
-        df["FEATURE_SET"] = df["AVAIL_FEATURES"].str.split(",").apply(set)
-    except Exception as e:
-        print(e)
-        raise
-    if constraints:
-        constraint_set = set(constraints.split(","))
-        i = df["FEATURE_SET"].apply(lambda x: len(x.intersection(constraint_set)) > 0)
-        df = df.loc[i]
-    memory = min(_convert_units_to_mb(memory), max(df["MEMORY"]))
-    df = df.loc[df["MEMORY"] >= memory]
-    return df
+    @property
+    def rule_name(self) -> str:
+        if not self.is_group_jobtype:
+            return self.job_properties.get("rule", "nameless_rule")
+        return self.groupid
+
+    @property
+    def groupid(self) -> str:
+        return self.job_properties.get("groupid", "group")
+
+    @property
+    def is_group_jobtype(self) -> bool:
+        return self.job_properties.get("type", "") == "group"
+
+    @property
+    def short_uid(self) -> str:
+        return self.uid.split("-")[0]
+
+    def pattern_replace(self, s: str) -> str:
+        """
+        %r - rule name. If group job, will use the group ID instead
+        %i - snakemake job ID
+        %w - wildcards. e.g., wildcards A and B will be concatenated as 'A=<val>.B=<val>'
+        %U - a random universally unique identifier
+        %S - shortened version od %U
+        %T - Unix time, aka seconds since epoch (rounded to an integer)
+        """
+        replacement = {
+            "%r": self.rule_name,
+            "%i": self.jobid,
+            "%w": self.wildcards_str,
+            "%U": self.uid,
+            "%T": str(int(unix_time())),
+            "%S": self.short_uid,
+        }
+        for old, new in replacement.items():
+            s = s.replace(old, new)
+
+        return s
+
+    @property
+    def jobname(self) -> str:
+        jobname_pattern = CookieCutter.get_cluster_jobname()
+        if not jobname_pattern:
+            return ""
+
+        return self.pattern_replace(jobname_pattern)
+
+    @property
+    def jobid(self) -> str:
+        """The snakemake jobid"""
+        if self.is_group_jobtype:
+            return self.job_properties.get("jobid", "").split("-")[0]
+        return str(self.job_properties.get("jobid"))
+
+    @property
+    def logpath(self) -> str:
+        logpath_pattern = CookieCutter.get_cluster_logpath()
+        if not logpath_pattern:
+            return ""
+
+        return self.pattern_replace(logpath_pattern)
+
+    @property
+    def outlog(self) -> str:
+        return self.logpath + ".out"
+
+    @property
+    def errlog(self) -> str:
+        return self.logpath + ".err"
