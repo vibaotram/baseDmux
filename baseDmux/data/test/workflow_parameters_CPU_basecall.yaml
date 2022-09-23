@@ -3,8 +3,8 @@
 
 ##############################
 ##### input/output directory
-INDIR: "test/reads" ## absolute path to a single folder holding 'ONT runs folders'. Each of those contains fast5 files stored in a 'fast5' folder
-OUTDIR: "test/results" ## absolute path to output directory
+INDIR: "/home/cunnac/TEMP/bdmtests/localprofile/reads" ## absolute path to a single folder holding 'ONT runs folders'. Each of those contains fast5 files stored in a 'fast5' folder
+OUTDIR: "/home/cunnac/TEMP/bdmtests/localprofile/result" ## absolute path to output directory
 NASID: "" # host name, if indir and outdir in NAS but workdir is not
 
 
@@ -35,7 +35,7 @@ RULE_GUPPY_BASECALLING:
 
 ##############################
 ##### choose types of demultiplexer
-DEMULTIPLEXER: ["guppy", "deepbinner"] # "guppy"/"deepbinner", leave `[]` if you do not want demultiplexing
+DEMULTIPLEXER: [] # "guppy"/"deepbinner", leave `[]` if you do not want demultiplexing
 
 
 ##############################

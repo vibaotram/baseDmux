@@ -3,8 +3,8 @@
 
 ##############################
 ##### input/output directory
-INDIR: "test/reads" ## absolute path to a single folder holding 'ONT runs folders'. Each of those contains fast5 files stored in a 'fast5' folder
-OUTDIR: "test/results" ## absolute path to output directory
+INDIR: "/home/cunnac/TEMP/bdmtests/localprofile/reads" ## absolute path to a single folder holding 'ONT runs folders'. Each of those contains fast5 files stored in a 'fast5' folder
+OUTDIR: "/home/cunnac/TEMP/bdmtests/localprofile/result" ## absolute path to output directory
 NASID: "" # host name, if indir and outdir in NAS but workdir is not
 
 
@@ -87,7 +87,7 @@ filtlong3:
 ##############################
 ##### get_reads_per_genome parameters
 RULE_GET_READS_PER_GENOME:
-    'BARCODE_BY_GENOME': ""
+    'BARCODE_BY_GENOME': "/home/cunnac/TEMP/bdmtests/localprofile/profile/barcodeByGenome.tsv"
     # Information table for subseting fast5 and fastq to genome folders.
     # The demultiplexer specification in the table takes precedence over the value of the 'DEMULTIPLEXER' parameter above
     # (eg if "guppy" or "deepbinner" is specified in "Demultiplexer" on the table, this demultiplexer will be used
