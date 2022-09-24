@@ -717,7 +717,7 @@ rule report_demultiplex:
 			fastq : {params.fastq}
 			demultiplex : {params.demultiplex}
 			postdemux : {params.postdemux}
-			log : os.path.basename({log})
+			log : "XXXX?"
 			outpath : {params.outpath}
 		"""
 	output: os.path.join(outdir, "report/demultiplex_report.html")
@@ -726,7 +726,8 @@ rule report_demultiplex:
 		fastq = by_cond(len(genome) > 0, os.path.join(outdir, "reads_per_genome/fastq"), os.path.join(outdir, "basecall")),
 		demultiplex = os.path.join(outdir, "demultiplex"),
 		postdemux = by_cond(len(genome) > 0, expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}"), filtered = filtered), os.path.join(outdir, "basecall")),
-		outpath = lambda wildcards, output: os.path.dirname(output[0])
+		outpath = lambda wildcards, output: os.path.dirname(output[0]),
+		log = "report_demultiplex.log"
 	threads: config['REPORTS']['DEMULTIPLEX_REPORT_THREADS']
 	singularity: guppy_container
 	conda: 'conda/conda_rmarkdown.yaml'
