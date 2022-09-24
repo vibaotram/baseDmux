@@ -21,7 +21,7 @@ Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Mult
 - Porechop
 - Filtlong  
 
-We try to update the tools regularly. See versions in the [folder](`./baseDmux/containers`) containning conda
+We try to update the tools regularly. See versions in the [folder](`baseDmux/data/containers`) containning conda
  environment and singularity container recipie files.
 
 
@@ -70,13 +70,13 @@ Filter reads by length and by quality. More details is [here](https://github.com
 
 ### Singularity containers
 
-The whole workflow runs inside Singularity images (see [our Singularity Recipe files](https://github.com/vibaotram/singularity-container.git)). Depending on type of 'RESOURCE' (CPU/GPU), corresponding containers will be selected and pulled.
-
-Custom Singularity images can be specified by editing the [`./baseDmux/data/singularity.yaml`](baseDmux/data/singularity.yaml) file right after clonning the github repository or directly in your baseDmux installation (see below) location.
+The whole workflow runs inside Singularity images (see [our Singularity Recipe files](`baseDmux/data/containers`). Depending on type of 'RESOURCE' (CPU/GPU), corresponding containers will be selected and pulled.
 
 **Now that shub is no longer active and until we create Docker files, the location of the singularity image of the
  latest versions of guppy will have to be manually specified in the `singularity.yaml` file.** While we come up with
   a solution, the latest Singularity image files can be downloaded from [IRD Drive](https://drive.ird.fr/s/nTsw45jnW67tCw7).
+
+Custom Singularity images can be specified by editing the [`./baseDmux/data/singularity.yaml`](baseDmux/data/singularity.yaml) file right after clonning the github repository or directly in your baseDmux installation (see below) location.
 
 
 ### Conda environments
