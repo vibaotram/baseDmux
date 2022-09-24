@@ -72,9 +72,8 @@ Filter reads by length and by quality. More details is [here](https://github.com
 
 The whole workflow runs inside Singularity images (see [our Singularity Recipe files](`baseDmux/data/containers`). Depending on type of 'RESOURCE' (CPU/GPU), corresponding containers will be selected and pulled.
 
-**Now that shub is no longer active and until we create Docker files, the location of the singularity image of the
- latest versions of guppy will have to be manually specified in the `singularity.yaml` file.** While we come up with
-  a solution, the latest Singularity image files can be downloaded from [IRD Drive](https://drive.ird.fr/s/nTsw45jnW67tCw7).
+The latest containers will be automatically downloaded and intalled in the baseDmux environement installation
+ directory. They can anyhow be manually downloaded from [IRD Drive](https://drive.ird.fr/s/nTsw45jnW67tCw7).
 
 Custom Singularity images can be specified by editing the [`./baseDmux/data/singularity.yaml`](baseDmux/data/singularity.yaml) file right after clonning the github repository or directly in your baseDmux installation (see below) location.
 
@@ -109,6 +108,14 @@ conda env create -n baseDmux -f environment.yaml
 conda activate baseDmux
 pip install .
 ``` 
+
+It is recommended to first run the local test below with the toy dataset to make sure everything works well. On the
+ first invokation, this will download and install the Singularity images and setup the Conda environment. This
+  process takes time, so be patient. Note also that in the end, this setup amounts to a total of about 12GB of files
+  , so you need some room on the installation disk.
+  
+
+
 
 ### Usage
 ```
@@ -156,12 +163,6 @@ Likewise, `Run_ID` values should not contain special characters. In addition, th
  folders in the input fast5 directory.
   
 Importantly, the `Barcode by genome` file does not only enable to group reads, it is necessary to provide such a file for the porechop and filtlong rules to be executed.
-
-
-Although it is possible to only basecall and possibly demultiplex reads, s
-Basecalling only
-
-
 
 
 

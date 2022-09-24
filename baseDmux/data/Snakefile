@@ -261,6 +261,8 @@ rule guppy_basecalling:
 		keep_log_files = by_cond(KEEP_LOG_FILES, 'true', 'false'),
 		# fast5_name = "{run}_",
 		log = "guppy_basecalling_{run}.log"
+	resources:
+		ngpudevices = {NUM_GPUS},
 	threads: BASECALLER_THREADS
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'

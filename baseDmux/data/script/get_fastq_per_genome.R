@@ -96,7 +96,7 @@ if (!file.exists(dict_csv)) {
 # transfer fastq files
 
 ori_file = dict[dict$Genome_ID == myArgs$genome, "ori_fastq"]
-dir.create(dest_fastq_dir, mode = "0770")
+dir.create(dest_fastq_dir, showWarnings = FALSE, mode = "0770")
 dest_file = file.path(dest_fastq_dir, paste0(myArgs$genome, ".fastq.gz"))
 if (length(ori_file) == 1) {
   transfer_file = paste(cmd, ori_file, dest_file, sep = " ")
@@ -122,17 +122,3 @@ close(idsFileCon)
 
 quit(save = "no", status = 0, runLast = FALSE)
 
-
-
-# Rscript /home/baotram/tal/workflow/script/.get_reads_per_genome.R \
-# -b /home/baotram/tal/workflow/test \
-# -o /home/baotram/tal/workflow/test/Cul_input1 \
-# -d /home/baotram/tal/workflow/test/reads/barcodeByGenome_sample.tsv \
-# -R
-
-# baseDmux_outdir = "/home/baotram/tal/workflow/test"
-# barcodeByGenome = "/home/baotram/tal/workflow/test/reads/barcodeByGenome_sample.tsv"
-# outdir = "/home/baotram/tal/workflow/test/Cul_input"
-# copy = FALSE
-# move = FALSE
-# symlink = TRUE
