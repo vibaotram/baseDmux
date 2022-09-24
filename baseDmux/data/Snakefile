@@ -261,14 +261,15 @@ rule guppy_basecalling:
 		keep_log_files = by_cond(KEEP_LOG_FILES, 'true', 'false'),
 		# fast5_name = "{run}_",
 		log = "guppy_basecalling_{run}.log"
-	resources:
-		ngpudevices = NUM_GPUS
+	# resources:
+	# 	ngpudevices = NUM_GPUS
 	threads: BASECALLER_THREADS
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
+		rm -R {params.outpath}/*
 		host_prefix='{HOST_PREFIX}'
 		if [ -z $host_prefix ]; then
 			temp_indir={input}
@@ -633,7 +634,7 @@ rule get_reads_per_genome:
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		echo -e "##$(date)    Creating fastq gz for "{wildcards.genome}" \\n"
 		Rscript {GET_READS_PER_GENOME} -b {outdir} -o {params.outpath} -g {wildcards.genome} -d {params.barcode_by_genome}
-		echo "FAST5_PER_GENOME is = {FAST5_PER_GENOME}"
+		echo -e "##$(date)    FAST5_PER_GENOME is = {FAST5_PER_GENOME}"
         if [ "{FAST5_PER_GENOME}" == "True" ]; then
             echo -e "\\n##$(date)    Creating {output.fast5} folder containing fast5 reads for "{wildcards.genome}" \\n"
             mkdir -p {output.fast5}
