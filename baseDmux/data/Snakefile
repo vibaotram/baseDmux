@@ -123,8 +123,8 @@ if not BARCODE_BY_GENOME:
 	genome = []
 	get_demultiplexer = []
 else :
-	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"], squeeze = True).unique()
-	get_demultiplexer = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Demultiplexer"], squeeze = True).unique()
+	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t").squeeze("Genome_ID").unique()
+	get_demultiplexer = pd.read_csv(BARCODE_BY_GENOME, sep = "\t").squeeze("Demultiplexer").unique()
 
 GET_READS_PER_GENOME_OUTPUT = [directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)]
 
@@ -593,7 +593,7 @@ rule multiqc_demultiplex:
 FAST5_SUBSET_THREADS = config['RULE_GET_READS_PER_GENOME']['MAX_THREADS']
 
 def fast5_for_genome(wildcards):
-	genome_info = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Run_ID", "Genome_ID"], squeeze = True)
+	genome_info = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Run_ID", "Genome_ID"])
 	run_list = list(genome_info["Run_ID"][genome_info["Genome_ID"] == wildcards.genome].unique())
 	out = expand(rules.guppy_basecalling.output.fast5, demultiplexer = get_demultiplexer, run = run_list)
 	return unpack(out)
