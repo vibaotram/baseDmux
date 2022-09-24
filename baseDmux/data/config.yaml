@@ -5,7 +5,7 @@
 ##### input/output directory
 INDIR: "test/reads" ## absolute path to a single folder holding 'ONT runs folders'. Each of those contains fast5 files stored in a 'fast5' folder
 OUTDIR: "test/results" ## absolute path to output directory
-NASID: "" # host name, if indir and outdir in NAS but workdir is not
+NASID: "" ## host name, if indir and outdir in NAS but workdir is not
 
 
 ##############################
@@ -27,7 +27,10 @@ RULE_GUPPY_BASECALLING:
     'NUM_CALLERS': 4 # number of parallel basecallers to create ## recommended: NUM_CALLERS=2*NUM_GPUS
     'CPU_THREADS_PER_CALLER': 2 # number of CPU threads to create for each caller to use
     'GPU_RUNNERS_PER_DEVICE': 4 # number of neural network runners to create per CUDA device ## GPU mode only
-    'ADDITION': "--calib_detect --chunks_per_caller 10000 --config dna_r9.4.1_450bps_fast.cfg --disable_trim_barcodes" # additional params that do not affect output format ## provide parameters with arguments ## do NOT use --compress_fastq, because next steps use uncompressed fastq
+     ## additional params that do not affect output format :
+     ## - do NOT use --compress_fastq, because next steps use uncompressed fastq
+     ## - recommended to use '--disable_trim_barcodes' if demultiplexing afterwards
+    'ADDITION': "--calib_detect --chunks_per_caller 10000 --config dna_r9.4.1_450bps_fast.cfg --do_read_splitting --max_read_split_depth 2 --disable_trim_barcodes"
     'KEEP_LOG_FILES': False # True/False, whether to keep guppy log files or not
     'KEEP_FAIL_READS': False # True/False, whether to keep failed reads or not
     'FAST5_COMPRESSION': "gzip" # "vbz"/"vbz_legacy_v0"/"gzip" ## compression algorithm by fast5_subset (ont_fast5_api) to reduce file size and improve read/write performance
