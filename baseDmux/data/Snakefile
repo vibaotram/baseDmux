@@ -269,7 +269,9 @@ rule guppy_basecalling:
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-		rm -R {params.outpath}/*
+		if [ -f {params.outpath} ]; then
+            rm -R {params.outpath}/*
+        fi
 		host_prefix='{HOST_PREFIX}'
 		if [ -z $host_prefix ]; then
 			temp_indir={input}
