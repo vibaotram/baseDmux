@@ -698,7 +698,7 @@ rule filtlong:
 ##############################
 ####################### REPORT
 
-#REPORT_DEMULTIPLEX_INPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules.multiqc_demultiplex.output, demultiplexer = demultiplexer, run = run), no = ())
+REPORT_DEMULTIPLEX_INPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules.multiqc_demultiplex.output, demultiplexer = demultiplexer, run = run), no = ())
 
 rule report_demultiplex:
 	input:
@@ -714,7 +714,7 @@ rule report_demultiplex:
 			fastq : {params.fastq}
 			demultiplex : {params.demultiplex}
 			postdemux : {params.postdemux}
-			log : os.path.basename({log})
+			log : {log}
 			outpath : {params.outpath}
 		"""
 	output: os.path.join(outdir, "report/demultiplex_report.html")
