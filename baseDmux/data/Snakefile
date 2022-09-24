@@ -123,8 +123,8 @@ if not BARCODE_BY_GENOME:
 	genome = []
 	get_demultiplexer = []
 else :
-	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t").squeeze("Genome_ID").unique()
-	get_demultiplexer = pd.read_csv(BARCODE_BY_GENOME, sep = "\t").squeeze("Demultiplexer").unique()
+	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"]).squeeze('columns').unique()
+	get_demultiplexer = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Demultiplexer"]).squeeze('columns').unique()
 
 GET_READS_PER_GENOME_OUTPUT = [directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)]
 
