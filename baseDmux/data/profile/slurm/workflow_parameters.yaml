@@ -1,0 +1,65 @@
+# config file for snakemake
+# adjust variables berfore running baseDmux workflow
+
+##############################
+##### input/output directory
+INDIR: "/data3/projects/xanthopore/seb/bdm_tests/slurmprofile/reads"
+OUTDIR: "/data3/projects/xanthopore/seb/bdm_tests/slurmprofile/result"
+NASID: ""
+KIT: "SQK-RBK004"
+FLOWCELL: "FLO-MIN106"
+RESOURCE: "GPU"
+NUM_GPUS: 4
+RULE_GUPPY_BASECALLING:
+    'MIN_QSCORE': 7 # basecalling will filter reads based on minimum q-score specified here
+    'NUM_CALLERS': 4 # number of parallel basecallers to create ## recommended: NUM_CALLERS=2*NUM_GPUS
+    'CPU_THREADS_PER_CALLER': 2 # number of CPU threads to create for each caller to use
+    'GPU_RUNNERS_PER_DEVICE': 4 # number of neural network runners to create per CUDA device ## GPU mode only
+    'ADDITION': "--calib_detect --chunks_per_caller 10000 --config dna_r9.4.1_450bps_sup.cfg --do_read_splitting --max_read_split_depth 2 --disable_trim_barcodes" # additional params that do not affect output format ## provide parameters with arguments ## do NOT use --compress_fastq, because next steps use uncompressed fastq
+    'KEEP_LOG_FILES': False # True/False, whether to keep guppy log files or not
+    'KEEP_FAIL_READS': False # True/False, whether to keep failed reads or not
+    'FAST5_COMPRESSION': "gzip" # "vbz"/"vbz_legacy_v0"/"gzip" ## compression algorithm by fast5_subset (ont_fast5_api) to reduce file size and improve read/write performance
+  
+  
+  
+  
+DEMULTIPLEXER: ["guppy", "deepbinner"] # "guppy"/"deepbinner", leave `[]` if you do not want demultiplexing
+
+
+##############################
+##### guppy_barcoder parameters
+RULE_GUPPY_DEMULTIPLEXING:
+  'CONFIG': "configuration.cfg"
+  'WORKER_THREADS': 12
+  'ADDITION': ""
+RULE_MULTI_TO_SINGLE_FAST5:
+  'THREADS': 12
+RULE_DEEPBINNER_CLASSIFICATION:
+  'PRESET': "rapid"
+  'OMP_NUM_THREADS': 12
+  'ADDITION': ""
+RULE_MINIONQC:
+  'PROCESSORS': 4
+  'ADDITION': "-s FALSE"
+READS_FILTERING: [porechop, filtlong1, filtlong2, filtlong3]
+porechop:
+  'THREADS': 2
+  'PARAMS': "--discard_middle"
+filtlong1:
+  'PARAMS': "--min_length 1000 --target_bases 500000000 --keep_percent 90"
+filtlong2:
+  'PARAMS': "--min_length 1000 --target_bases 500000000 --keep_percent 90 --mean_q_weight 10"
+filtlong3:
+  'PARAMS': "--min_length 1000 --target_bases 500000000 --keep_percent 90 --length_weight 10"
+RULE_GET_READS_PER_GENOME:
+  'BARCODE_BY_GENOME': "/data3/projects/xanthopore/seb/bdm_tests/slurmprofile/profile/barcodeByGenome.tsv"
+  'GET_FAST5': "True"
+  'MAX_THREADS': 2
+REPORTS:
+  'SNAKEMAKE_REPORT':    # do you want to include the resuls of these rules in the snakemake report? warning: they can make the report file become very big in size
+    'MINIONQC_BASECALL': False
+    'MINIONQC_DEMULTIPLEX': false
+    'MULTIQC_BASECALL': true
+    'MULTIQC_DEMULTIPLEX': true
+  'DEMULTIPLEX_REPORT': true
+  'DEMULTIPLEX_REPORT_THREADS': 6

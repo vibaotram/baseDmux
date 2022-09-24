@@ -17,9 +17,10 @@ configfile: cf
 
 
 indir = config['INDIR']
-
 outdir = config['OUTDIR']
 
+
+# Listing input folders and create associated 'run' variable 
 fast5_files = glob.glob(os.path.join(indir, "*/fast5"))
 run = []
 for f in fast5_files:
@@ -88,7 +89,7 @@ BARCODER_ADDITION = config['RULE_GUPPY_DEMULTIPLEXING']['ADDITION']
 
 ####
 
-DEVICE = by_cond(RESOURCE == 'CPU', None, f'--device $CUDA')
+DEVICE = by_cond(RESOURCE == 'CPU', '', f'--device $CUDA')
 
 
 
@@ -113,16 +114,17 @@ API_THREADS = config['RULE_MULTI_TO_SINGLE_FAST5']['THREADS']
 ##############################
 ## get_reads_per_genome
 
-TRANSFERING = config['RULE_GET_READS_PER_GENOME']['FASTQ_TRANSFERING']
 BARCODE_BY_GENOME = config['RULE_GET_READS_PER_GENOME']['BARCODE_BY_GENOME']
+
+## Would need a mecanism that checks that the content of 'run' matches (is included in) the content of BARCODE_BY_GENOME$runID
 
 
 if not BARCODE_BY_GENOME:
 	genome = []
 	get_demultiplexer = []
 else :
-	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"], squeeze = True).unique()
-	get_demultiplexer = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Demultiplexer"], squeeze = True).unique()
+	genome = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Genome_ID"]).squeeze('columns').unique()
+	get_demultiplexer = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Demultiplexer"]).squeeze('columns').unique()
 
 GET_READS_PER_GENOME_OUTPUT = [directory(expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)), expand(os.path.join(outdir, "reads_per_genome/fastq/{genome}.fastq.gz"), genome = genome)]
 
@@ -190,7 +192,6 @@ GET_READS_PER_GENOME = os.path.abspath('data/script/get_fastq_per_genome.R')
 ## cluster variables
 
 user = getpass.getuser()
-
 nasID = config['NASID']
 HOST_PREFIX = by_cond(nasID, user + '@' + nasID + ':', '')
 
@@ -260,12 +261,17 @@ rule guppy_basecalling:
 		keep_log_files = by_cond(KEEP_LOG_FILES, 'true', 'false'),
 		# fast5_name = "{run}_",
 		log = "guppy_basecalling_{run}.log"
+	# resources:
+	# 	ngpudevices = NUM_GPUS
 	threads: BASECALLER_THREADS
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
 	shell:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
+		if [ -f {params.outpath} ]; then
+            rm -R {params.outpath}/*
+        fi
 		host_prefix='{HOST_PREFIX}'
 		if [ -z $host_prefix ]; then
 			temp_indir={input}
@@ -277,14 +283,16 @@ rule guppy_basecalling:
 		fi
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		### Unsucessfully trying to solve issues with CUDA_VISIBLE_DEVICES with slurm --gre gpu:n#
-		if [ -z "$CUDA_VISIBLE_DEVICES" ]
+		if [ -z "${{CUDA_VISIBLE_DEVICES+x}}" ]
 		then
-			echo "##  \$CUDA_VISIBLE_DEVICES is empty. Fine."
+			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
 		else
 			#echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES' replaced with '${{CUDA:5}}'."
 			#export CUDA_VISIBLE_DEVICES="${{CUDA//cuda:}}"
 			#export CUDA_VISIBLE_DEVICES=""
 			echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES'."
+			echo "##  Overwritting the value \"$CUDA\" in \$CUDA with \$CUDA_VISIBLE_DEVICES value.."
+			CUDA="cuda:${{CUDA_VISIBLE_DEVICES}}"
 		fi
 		####
 		guppy_basecaller -i $temp_indir -s $temp_outdir {BASECALLER_OPT}
@@ -334,14 +342,16 @@ rule guppy_demultiplexing:
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		### Unsucessfully trying to solve issues with CUDA_VISIBLE_DEVICES with slurm --gre gpu:n#
-		if [ -z "$CUDA_VISIBLE_DEVICES" ]
+		if [ -z "${{CUDA_VISIBLE_DEVICES+x}}" ]
 		then
-			echo "##  \$CUDA_VISIBLE_DEVICES is empty. Fine."
+			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
 		else
 			#echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES' replaced with '${{CUDA:5}}'."
 			#export CUDA_VISIBLE_DEVICES="${{CUDA//cuda:}}"
 			#export CUDA_VISIBLE_DEVICES=""
 			echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES'."
+			echo "##  Overwritting the value \"$CUDA\" in \$CUDA with \$CUDA_VISIBLE_DEVICES value.."
+			CUDA="cuda:${{CUDA_VISIBLE_DEVICES}}"
 		fi
 		####
 		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} {BARCODER_ADDITION} # --compress_fastq
@@ -580,42 +590,15 @@ rule multiqc_demultiplex:
 		"""
 
 
-##############################
-################# FAST5_SUBSET
-################ ONT_FAST5_API
-
-
-# rule get_multi_fast5_per_barcode:
-# 	input:
-# 		summary = rules.get_sequencing_summary_per_barcode.output,
-# 		fast5 = rules.guppy_basecalling.output.fast5
-# 	output:
-# 		check = temp(os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done"))
-# 		# check = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}/fast5_per_barcode.done")
-# 	singularity: deepbinner_container
-# 	params:
-# 		path = os.path.join(outdir, "demultiplex/{demultiplexer}/{run}"),
-# 		log = "get_multi_fast5_per_barcode_{demultiplexer}_{run}.log"
-# 	threads: config[]
-# 	shell:
-# 		"""
-# 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
-# 		python3 {FAST5_SUBSET} {input.fast5} {params.path} {threads}
-# 		touch {output.check}
-# 		"""
-
 
 ##############################
 ################# SUBSET READS
 #################### BY GENOME
 
-# GET_READS_PER_GENOME_INPUT = [expand(rules.get_sequencing_summary_per_barcode.input, demultiplexer = get_demultiplexer, run = run),
-#                               expand(rules.get_multi_fast5_per_barcode.output, demultiplexer = get_demultiplexer, run = run)]
-
 FAST5_SUBSET_THREADS = config['RULE_GET_READS_PER_GENOME']['MAX_THREADS']
 
 def fast5_for_genome(wildcards):
-	genome_info = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Run_ID", "Genome_ID"], squeeze = True)
+	genome_info = pd.read_csv(BARCODE_BY_GENOME, sep = "\t", usecols = ["Run_ID", "Genome_ID"])
 	run_list = list(genome_info["Run_ID"][genome_info["Genome_ID"] == wildcards.genome].unique())
 	out = expand(rules.guppy_basecalling.output.fast5, demultiplexer = get_demultiplexer, run = run_list)
 	return unpack(out)
@@ -627,20 +610,6 @@ def threads_for_fast5(max_threads, n_fast5):
 	else:
 		return nruns
 
-def fast5_subset_cmd(genome, fastq, in_fast5, out_fast5):
-	if FAST5_PER_GENOME:
-		threads = len(in_fast5)
-		fast5_subset_cmd = f"""
-		echo -e "\\n##$(date)    Creating folder containing fast5 reads for "{genome}" \\n"
-                mkdir -p {out_fast5} 
-		id_list={out_fast5}/read_id_list.txt
-		zgrep --no-group-separator -C0 'runid=' {fastq} | cut -d ' ' -f 1 | cut -d '@' -f 2 > $id_list
-		python3 {FAST5_SUBSET} -i {in_fast5} -s {out_fast5} -l $id_list -t {threads}
-		#rm $id_list
-		"""
-	else:
-		fast5_subset_cmd = ""
-	return fast5_subset_cmd
 
 rule get_reads_per_genome:
 	input:
@@ -658,8 +627,6 @@ rule get_reads_per_genome:
 	params:
 		outpath = directory(os.path.join(outdir, "reads_per_genome")),
 		barcode_by_genome = BARCODE_BY_GENOME,
-		transfering = TRANSFERING,
-		fast5_subset_cmd = lambda wildcards, output, input, threads: fast5_subset_cmd(wildcards.genome, output.fastq, input.fast5, output.fast5),
 		log = "get_reads_per_genome_{genome}.log"
 	threads: lambda wc, input: threads_for_fast5(FAST5_SUBSET_THREADS, input.fast5)
 	singularity: guppy_container
@@ -668,8 +635,14 @@ rule get_reads_per_genome:
 		"""
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		echo -e "##$(date)    Creating fastq gz for "{wildcards.genome}" \\n"
-		Rscript {GET_READS_PER_GENOME} -b {outdir} -o {params.outpath} -g {wildcards.genome} -d {params.barcode_by_genome} --{params.transfering}
-		{params.fast5_subset_cmd}
+		Rscript {GET_READS_PER_GENOME} -b {outdir} -o {params.outpath} -g {wildcards.genome} -d {params.barcode_by_genome}
+		echo -e "##$(date)    FAST5_PER_GENOME is = {FAST5_PER_GENOME}"
+        if [ "{FAST5_PER_GENOME}" == "True" ]; then
+            echo -e "\\n##$(date)    Creating {output.fast5} folder containing fast5 reads for "{wildcards.genome}" \\n"
+            mkdir -p {output.fast5}
+            id_list="$(dirname '{output.fastq}')/read_id_list_{wildcards.genome}.txt"
+            python3 {FAST5_SUBSET} -t {threads} -i {input.fast5} -s {output.fast5} -l $id_list # --filename_base "{wildcards.genome}_"
+        fi
 		"""
 
 ##############################
@@ -728,7 +701,7 @@ rule filtlong:
 ##############################
 ####################### REPORT
 
-REPORT_DEMULTIPLEX_INPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules.multiqc_demultiplex.output, demultiplexer = demultiplexer, run = run), no = ())
+#REPORT_DEMULTIPLEX_INPUT = by_cond(cond = DEMULTIPLEX_REPORT, yes = expand(rules.multiqc_demultiplex.output, demultiplexer = demultiplexer, run = run), no = ())
 
 rule report_demultiplex:
 	input:
@@ -744,7 +717,7 @@ rule report_demultiplex:
 			fastq : {params.fastq}
 			demultiplex : {params.demultiplex}
 			postdemux : {params.postdemux}
-			log : {params.log}
+			log : "XXXX?"
 			outpath : {params.outpath}
 		"""
 	output: os.path.join(outdir, "report/demultiplex_report.html")
@@ -753,11 +726,12 @@ rule report_demultiplex:
 		fastq = by_cond(len(genome) > 0, os.path.join(outdir, "reads_per_genome/fastq"), os.path.join(outdir, "basecall")),
 		demultiplex = os.path.join(outdir, "demultiplex"),
 		postdemux = by_cond(len(genome) > 0, expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}"), filtered = filtered), os.path.join(outdir, "basecall")),
-		log = "report_demultiplex.log",
-		outpath = lambda wildcards, output: os.path.dirname(output[0])
+		outpath = lambda wildcards, output: os.path.dirname(output[0]),
+		log = "report_demultiplex.log"
 	threads: config['REPORTS']['DEMULTIPLEX_REPORT_THREADS']
 	singularity: guppy_container
 	conda: 'conda/conda_rmarkdown.yaml'
+	log: os.path.join(SNAKEMAKE_LOG, "report_demultiplex.log")
 	script:
 		DEMULTIPLEX_REPORT_RMD
 

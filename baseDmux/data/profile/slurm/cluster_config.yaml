@@ -1,0 +1,26 @@
+
+__default__:
+    cpus-per-task : {threads}
+    account : "bioinfo"
+    partition : "highmemdell,highmem,normal"
+    job-name : "{rule}_{wildcards}"
+    output : "/data3/projects/xanthopore/seb/bdm_tests/slurmprofile/result/log/cluster/{params.log}_%j"
+    error : "/data3/projects/xanthopore/seb/bdm_tests/slurmprofile/result/log/cluster/{params.log}_%j"
+    ntasks : 1
+
+guppy_basecalling :
+    partition : "gpu"
+    account : "gpu_group"
+#    gres : gpu:1
+
+
+guppy_demultiplexing :
+    partition : "gpu"
+    account : "gpu_group"
+#    gres : gpu:1
+
+
+multi_to_single_fast5 :
+    partition : "highmem"
+    mem-per-cpu : 1
+

@@ -10,17 +10,20 @@ Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Mult
 
 ### Requirements
 - singularity >= 2.5
-- conda 4.x
-
+- conda >=4.3 + Mamba
 
 ### Implemented tools
-- Snakemake 5.30.0
-- Guppy 4.0.14 GPU and 3.6.0 CPU version (to be v4.2.2)
-- Deepbinner 0.2.0
-- MinIONQC 1.4.1
-- Multiqc 1.8
-- Porechop 0.2.4
-- Filtlong 0.2.0
+- Snakemake
+- Guppy
+- Deepbinner
+- MinIONQC
+- Multiqc
+- Porechop
+- Filtlong  
+
+We try to update the tools regularly. See versions in the [folder](`baseDmux/data/containers`) containning conda
+ environment and singularity container recipie files.
+
 
 
 ### More details about individual snakemake Rules
@@ -42,9 +45,6 @@ Classify passed fastq based on classification file, then subset fastq to barcode
 - **Get sequencing summary per barcode**\
 Subset `passed_sequencing_summary.txt` according to barcode ids, preparing for minionqc/multiqc of each barcode and subseting fast5 reads per barcode (get multi fast5 per barcode).
 
-- **Get multi fast5 per barcode**\
-Filter fast5 for each corresponding barcode by the `sequencing_summary.txt` per barcode.
-
 - **MinIONQC and Multiqc**\
 After basecalling, MinIONQC is performed for each run, and Multiqc reports all run collectively.
 On the other hand, after demultiplexing, MinIONQC runs for each barcode separately then Multiqc aggregates MinIONQC results of all barcodes.
@@ -53,7 +53,13 @@ On the other hand, after demultiplexing, MinIONQC runs for each barcode separate
 Compare demultiplexing results from different runs, and from different demultiplexers (guppy and/or deepbinner) by analyzing information of `multiqc_minionqc.txt`. It is only available when demultiplexing rules are executed.
 
 - **Get reads per genome (optional)**\
-Combine and concatenate fast5 and fastq from designed barcodes for genomes individually, preparing for further genome assembly, according to `barcodeByGenome_sample.tsv` (column names of this table should not be modified).\ **Caution**: if guppy or deepbinner is on Demultiplexer of the barcodeByGenome table, it will be executed even it is not specified in config['DEMULTIPLEXER'].
+Combine and concatenate fast5 and fastq barcodes for genomes individually based on the demultiplexer program, preparing
+ for
+ further genome assembly
+, following the information in the `barcodeByGenome_sample.tsv` tabulated file (column names of this table should not be
+ modified).  
+ **Caution**: if guppy or deepbinner is on Demultiplexer of the barcodeByGenome table, it will be
+  executed even it is not specified in config['DEMULTIPLEXER'].
 
 - **Porechop (optional)**\
 Find and remove adapters from reads. See [here](https://github.com/rrwick/Porechop) for more information.
@@ -64,11 +70,13 @@ Filter reads by length and by quality. More details is [here](https://github.com
 
 ### Singularity containers
 
-The whole workflow runs inside Singularity images (see [our Singularity Recipe files](https://github.com/vibaotram/singularity-container.git)). Depending on type of 'RESOURCE' (CPU/GPU), corresponding containers will be selected and pulled.
+The whole workflow runs inside Singularity images (see [our Singularity Recipe files](`baseDmux/data/containers`). Depending on type of 'RESOURCE' (CPU/GPU), corresponding containers will be selected and pulled.
+
+The latest containers will be automatically downloaded and intalled in the baseDmux environement installation
+ directory. They can anyhow be manually downloaded from [IRD Drive](https://drive.ird.fr/s/nTsw45jnW67tCw7).
 
 Custom Singularity images can be specified by editing the [`./baseDmux/data/singularity.yaml`](baseDmux/data/singularity.yaml) file right after clonning the github repository or directly in your baseDmux installation (see below) location.
 
-**Now that shub is no longer active and until we create Docker files, the location of the singularity image of the latest versions of guppy will have to be manually specified in the `singularity.yaml` file.**
 
 ### Conda environments
 
@@ -101,11 +109,18 @@ conda activate baseDmux
 pip install .
 ``` 
 
+It is recommended to first run the local test below with the toy dataset to make sure everything works well. On the
+ first invokation, this will download and install the Singularity images and setup the Conda environment. This
+  process takes time, so be patient. Note also that in the end, this setup amounts to a total of about 12GB of files
+  , so you need some room on the installation disk.
+  
+
+
+
 ### Usage
 ```
-usage: baseDmux [-h] [-v] {configure,run,dryrun,version_tools} ...
-
-Run baseDmux version 1.0.0... See https://github.com/vibaotram/baseDmux/blob/master/README.md for more details
+Run baseDmux version 1.1.0 ... See https://github.com/vibaotram/baseDmux/blob/master/README.md for more
+details
 
 positional arguments:
   {configure,run,dryrun,version_tools}
@@ -114,7 +129,7 @@ positional arguments:
     dryrun              dryrun baseDmux
     version_tools       check version for the tools of baseDmux
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -v, --version         show program's version number and exit
 ```
@@ -125,7 +140,7 @@ Because configuring snakemake workflows can be a bit intimidating, we try to cla
 
 - **Configuring a specific 'flavor' of the workflow**
 
-This is done primarilly by adjusting the parameters listed in the workflow config file `profile/workflow_parameters.yaml` or the [config.yaml](baseDmux/data/config.yaml) -- **BTW COULD IT BE RENAMED workflow_parameters.yaml FOR CONSISTENCY? VERY CONFUSING...** -- which corresponds to the typical Snakemake 'config.yaml' file. It enables to setup input reads, output folder, parameters for the tools, reports generation, etc... It is suggested to refer to the comments in this file for further details on individual parameters.
+This is done primarilly by adjusting the parameters listed in the workflow config file `profile/workflow_parameters.yaml` or the [config.yaml](baseDmux/data/config.yaml) which corresponds to the typical Snakemake 'config.yaml' file. It enables to setup input reads, output folder, parameters for the tools, reports generation, etc... It is suggested to refer to the comments in this file for further details on individual parameters.
 
 Note however, that Deepbinner is not longer maintained and that [Deepbinner models](https://github.com/rrwick
 /Deepbinner/tree/master/models) are limited to specific 'earlier' flow cells and barcoding kits. One should therefore
@@ -139,14 +154,15 @@ You can decide whether guppy and deepbinner should run on GPU or CPU by specifyi
 A typical usage case for baseDmux is to prepare filtered sequencing reads in individual fastq files for genome assembly (or transcripts analysis) when users have a number of genomic DNA (or RNA) preparations sequenced with the same library preparation protocol and flowcell typoe but over several runs with various sets of multiplex barcodes. For this, it is necessary to run the complete workflow.
 
 To this end, users need to prepare a [`Barcode by genome`](/baseDmux/data/barcodeByGenome_sample.tsv) file. This is a roadmap table for subseting fastq and fast5 reads, demultiplexed with guppy and/or deepbinner, and coming from disparate runs and barcodes, in bins corresponding to individual 'genomes' (or samples).
-It must contain at least the follwing columns: Demultiplexer, Run_ID, ONT_Barcode, Genome_ID. Values in the `Genome_ID` column must be UNIQUE for each row and correspond to the labels of the bin into which reads will eventually be grouped.
+It must contain at least the follwing columns: Demultiplexer, Run_ID, ONT_Barcode, Genome_ID. Values in the
+ `Genome_ID` correspond to the labels of the bin into which reads will eventually be grouped. **Make sure** that this
+  labels do NOT contain spaces " " or other special characters like '|' '$' ':'. As separators, the safest options
+   are to use "_" or "-".  
+Likewise, `Run_ID` values should not contain special characters. In addition, these values must match the names of the
+ top
+ folders in the input fast5 directory.
+  
 Importantly, the `Barcode by genome` file does not only enable to group reads, it is necessary to provide such a file for the porechop and filtlong rules to be executed.
-
-
-Although it is possible to only basecall and possibly demultiplex reads, s
-Basecalling only
-
-
 
 
 
@@ -167,21 +183,24 @@ to set specific HPC job scheduler parameters for jobs derived from individual ru
 To simplify configuration, the `baseDmux configure` command generates 'template' configuration profiles for general use cases. These files can subsequently be modified to fit specific situations.
 
 ```
-usage: baseDmux configure [-h] --mode {local,cluster,slurm} [--barcodes_by_genome] [--edit [EDITOR]] dir
+usage: baseDmux configure [-h] --mode {local,slurm,cluster,iTrop} [--barcodes_by_genome]
+                          [--edit [EDITOR]]
+                          dir
 
 positional arguments:
   dir                   path to the folder to contain config file and profile you want to create
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  --mode {local,cluster,slurm}
-                        choose the mode of running snakemake, local mode or cluster mode
-  --barcodes_by_genome  optional, create a tabular file containing information of barcodes for each genome)
+  --mode {local,slurm,cluster,iTrop}
+                        choose the mode of running Snakemake, local mode or cluster mode
+  --barcodes_by_genome  optional, create a tabular file containing information of barcodes for each
+                        genome)
   --edit [EDITOR]       optional, open files with editor (nano, vim, gedit, etc.)
 ```
 
 
-**THE HELP MESSAGE ABOVE IS NOT WHAT IS DISPLAYED WITH THE CURRENT VERSION**: the 'mode' argument is not listed anymore? 
+
 
 These files will be created:
 ```
@@ -190,11 +209,9 @@ These files will be created:
                   -| config.yaml  
                   -| workflow_parameter.yaml  
                   -| barcodesByGenome.tsv (if --barcodes_by_genome)
-                  -| cluster.json (if --mode cluster)
+                  -| ... (if mode slurm)
 ```
-*Note*: `slurm` mode might be compatible only with iTrop slurm.
-**IS THIS FILE HIERARCHY VALID?**
-**WAS CLUSTER MODE TESTED AT ALL?**
+*Note*: the 'iTRop' and 'cluster' modes are obsolete and will be eventually removed.
 
 
 ##### **an exemple to prepare to run Snakemake locally** (local computer, local node on cluster)
@@ -212,17 +229,19 @@ The `--barcodes_by_genome` option, a formatted file `barcodesByGenome.tsv` will 
 
 `profile/config.yaml` will be created lastly and it will contain `./test_baseDmux/profile/config.yaml` as a set of parameters for Snakemake command-line.
 
-##### **an exemple to prepare to run Snakemake on a HPC** with slurm, sge, etc.
+##### **an exemple to prepare to run Snakemake on a HPC** with slurm.
 
 Similarly, run the command below:
 ```
-baseDmux configure ./test_baseDmux --edit nano --mode cluster --barcodes_by_genome
+baseDmux configure ./test_baseDmux --edit nano --mode slurm --barcodes_by_genome
 ```
-On cluster mode, a cluster configuration file will be created, `./test_baseDmux/profile/cluster.json`. baseDmux wraps all the parameters provided in this file to submit Snakemake jobs to cluster.
+On cluster mode, a cluster configuration file will be created, `./test_baseDmux/profile/cluster.json`. baseDmux wraps
+ all the parameters provided in this file to submit Snakemake jobs to cluster with slurm.
 
-For more information of Snakemake profile and other utilities --> https://snakemake.readthedocs.io
+For other HPC job managment system (sge, ...), and more information of Snakemake profile and other utilities --> https://snakemake.readthedocs.io
 
-
+Ultimately, the required files for passing HPC scheduler parameters throught the dedicated Snakemake mecanism of
+ 'profiles' need to be stored in the folder whose path is passed to the baseDmux `profile_dir` parameter.
 
 
 
@@ -235,7 +254,7 @@ usage: baseDmux run [-h] [--snakemake_report] profile_dir
 positional arguments:
   profile_dir         profile folder to run baseDmux
 
-optional arguments:
+options:
   -h, --help          show this help message and exit
   --snakemake_report  optionally, create snakemake report
 ```
@@ -246,23 +265,22 @@ You can run `baseDmux dryrun ./test_baseDmux/profile` for dry-run to check if ev
 baseDmux run ./test_baseDmux/profile
 ```
 
-With the option `--snakemake_report`, a report file `snakemake_report.html` will be created in the report folder of pipeline output directory, when snakemake has successfully finished the workflow. **STILL TRUE? DOES IT TAKES PRECEDENCE OVER THE INFO IN THE WORKFLOW_CONFIG FILE?**
-
-#### 3. Run the workflow using a custom snakemake call
-
-FOR ADVANCED USERS
+With the option `--snakemake_report`, a report file `snakemake_report.html` will be created in the report folder of pipeline output directory, when snakemake has successfully finished the workflow.
 
 
 
 ****
 
-### Run a test
+### Run a local test
+
+Assuming the environement for baseDmux has been created as specified in the dedicated section on Installation. First
+ activate either the conda or venv environement.
 
 You can use the reads fast5 files in `sample/reads` folder for testing
 ```
 ## copy sample reads to a test folder
 mkdir ./test_baseDmux
-cp -r ./baseDmux/sample/reads ./test_baseDmux/
+cp -r ./baseDmux/sample/reads_intermediate/ ./test_baseDmux
 
 ## create configuration file for Snakemake and Snakemake profile,
 ## and (optional) a tsv file containing information about genomes corresponding to barcode IDs
@@ -274,7 +292,7 @@ baseDmux run ./test_baseDmux/profile
 ```
 
 The output will be written in `./test_baseDmux/results` by default
-The first run may take a long time for the conda environments to be installed.  
+The first run may take a long time for the conda environments to be installed even if using Mamba.  
 On a personnal computer with only a few CPU, even with this very minimal dataset,
 guppy basecalling may also take several minutes...
 

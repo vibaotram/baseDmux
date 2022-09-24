@@ -1,0 +1,45 @@
+###   This file is for setting parameters for Snakemake command-line in baseDmux workflow.
+###   For more information about Snakemake command-line, please see
+###   https://snakemake.readthedocs.io/en/stable/executing/cli.html#all-options.
+
+
+##############################
+##### EXECUTION
+configfile: "/data3/projects/xanthopore/seb/xanthopore-scripts/GTIPP_ONT_2020_assemblies/scripts/bdm_profile_r94_20220212/workflow_parameters.yaml" # REQUIRED, regardless baseDmux is run in local or HPC mode. Path to the config file for the tools
+cores: 32    # OPTIONAL, maximum value for the total number of cores used in parallel (local or HPC). "all" to use all available cores
+keep-going: true    # OPTIONAL, keep going on independent jobs even if a job fails
+rerun-incomplete: true    # OPTIONAL, whether to re-run incomplete jobs or not
+forceall: false   # OPTIONAL, whether to rerun the whole workflow or not
+
+jobs: 20 # OPTIONAL, number of jobs to run in parallel. "all" to run all possible parallel jobs at the same time. This is mostly relevant in a HPC context if you want to limit the total number of concurrent jobs handleled by the scheduler.
+max-jobs-per-second: 1 # OPTIONAL
+max-status-checks-per-second: 10 # OPTIONAL
+local-cores: 1 # OPTIONAL, Number of cores allocated to the snakemake process controlling the baseDmux wrokflow. If run as a job in scheduler system on HPC, this should ideally be inferior or equal to the number of cores allocated to the baseDmux master job.
+use-conda: "True" # Currently redoundant with what BaseDmux does
+use-singularity: "True" # Currently redoundant with what BaseDmux does
+
+##############################
+##### Job Scheduler submission
+##### See https://github.com/snakemake-profiles/doc
+jobscript: "slurm-jobscript.sh" # REQUIRED for job submission with a HPC job scheduler only.
+cluster: "slurm-submit.py" # REQUIRED for job submission with a HPC job scheduler only.
+cluster-status: "slurm-status.py" # REQUIRED for job submission with a HPC job scheduler only.
+cluster-cancel: "scancel"
+immediate-submit: false # OPTIONAL for job submission with a HPC job scheduler only.
+
+
+##############################
+##### OUTPUT
+reason: true   # whether to print the reason for each executed rule or not
+printshellcmds: true    # whether to print out the shell commands that will be executed or not
+verbose: true   # whether to print debugging output or not
+
+
+##############################
+##### BEHAVIOR
+nolock: true    # whether to lock working directory or not
+restart-times: 1    # number of times to restart failed jobs
+show-failed-logs: false   # whether to display logs for failed jobs in the console
+latency-wait: 60    # number of seconds to wait for the output file after the job finished
+
+

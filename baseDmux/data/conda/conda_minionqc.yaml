@@ -6,7 +6,8 @@ channels:
     - biobuilds
 dependencies:
     - r-minionqc=1.4.1=r36_2
-    - r-dplyr=1.0.5
+    - r-dplyr
+    - bioconductor-biostrings
     - mkl-service=2.3.0
     - fonts-conda-forge
     - pandas=1.0.1
