@@ -21,8 +21,7 @@ Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Mult
 - Porechop
 - Filtlong  
 
-We try to update the tools regularly. See versions in the [folder](`baseDmux/data/containers`) containning conda
- environment and singularity container recipie files.
+We try to update the tools regularly. See versions in the [folder](baseDmux/data/containers) containning conda environment and singularity container recipie files.
 
 
 
@@ -192,9 +191,6 @@ options:
   --edit [EDITOR]       optional, open files with editor (nano, vim, gedit, etc.)
 ```
 
-
-
-
 These files will be created:
 ```
   | dir
@@ -204,10 +200,19 @@ These files will be created:
                   -| barcodesByGenome.tsv (if --barcodes_by_genome)
                   -| ... (if mode slurm)
 ```
+
+A 'profile' folder will be created and populated in the specifid `dir` path. The files may be modified and the whole
+ folder can be moved/copied/renamed anywhere as long as you use the correct path when you call `baseDmux run` and update
+  the enclosed files, `config.yaml` and `workflow_parameter.yaml` for the new paths of `workflow_parameter.yaml ` and `barcodesByGenome.tsv`, respectively.  
+
+With the `--barcodes_by_genome` option, a formatted file `barcodesByGenome.tsv` will be created (and its path appropriately specified in `workflow_parameter.yaml`). One can then modify the information on the table accordingly. It is important that this table contains at least the same columns as those in the provided example `barcodeByGenome_sample.tsv` file and that each value in the `Genome_ID` column is unique.  
+
+Once you have adapted the templates for your typical use cases, there is no need to rerun `baseDmux configure` again, just copy and adapt your existing templates.
+
 *Note*: the 'iTRop' and 'cluster' modes are **obsolete** and will be eventually removed.
 
 
-##### **an exemple to prepare to run Snakemake locally** (local computer, local node on cluster)
+##### **an exemple to prepare to run Snakemake locally** (laptop, local node on a HPC)
 
 Use this command:  
 
@@ -215,12 +220,8 @@ Use this command:
 baseDmux configure ./test_baseDmux --mode local --barcodes_by_genome
 ```
 
-Then `workflow_parameter.yaml` and `config.yaml` will be created inside a profile to the folder `./test_baseDmux`.
+Then `workflow_parameter.yaml` and `config.yaml` will be created inside a `profile` folder within `./test_baseDmux`. `./test_baseDmux/profile/config.yaml` contains as a set of parameters for the Snakemake command-line.
 
-
-The `--barcodes_by_genome` option, a formatted file `barcodesByGenome.tsv` will be created (and its path appropriately specified in `workflow_parameter.yaml`). One can then modify the information on the table accordingly. It is important that this table contains at least the same columns as those in the provided example `barcodeByGenome_sample.tsv` file and that each value in the `Genome_ID` column is unique.  
-
-`profile/config.yaml` will be created lastly and it will contain `./test_baseDmux/profile/config.yaml` as a set of parameters for Snakemake command-line.
 
 ##### **an exemple to prepare a template to run Snakemake on a HPC** with slurm.
 
@@ -229,17 +230,15 @@ Similarly, run the command below:
 baseDmux configure ./test_baseDmux --mode slurm --barcodes_by_genome
 ```
 
-This will create a `./test_baseDmux/profile` (see an example [here](baseDmux/data/profile/slurm))) folder with the necessary
- file templates to run basDmux with slurm and the [Snakemake profile](https://github.com/Snakemake-Profiles/slurm
- ) for configuring Snakemake to run on the SLURM Workload Manager.  
+This will create a `./test_baseDmux/profile` (see an example [here](baseDmux/data/profile/slurm))) folder with, in
+ addition to the already mentionned files, the necessary file templates to run basDmux with slurm and the [Snakemake profile](https://github.com/Snakemake-Profiles/slurm) for configuring Snakemake to run on the SLURM Workload Manager.  
 
 
 For other HPC job managment system (sge, ...), and more information on Snakemake profile and other utilities refer to
  the [Snakemake documentation](https://snakemake.readthedocs.io) and [this gitHub repository](https://github.com
  /Snakemake-Profiles).
 
-Ultimately, the required files for passing HPC scheduler parameters throught the dedicated Snakemake mecanism of
- 'profiles' need to be stored in the folder whose path is passed to the baseDmux `profile_dir` parameter and will
+Ultimately, the required files for passing HPC scheduler parameters throught the dedicated Snakemake mecanism of 'profiles' need to be stored in the folder whose path is passed to the baseDmux `profile_dir` parameter and will
   most certainly **need to be adapted to suit your specific needs**.
 
 
@@ -275,15 +274,16 @@ With the option `--snakemake_report`, a report file `snakemake_report.html` will
 Assuming the environement for baseDmux has been created as specified in the dedicated section on Installation. First
  activate either the conda or venv environement.
 
-You can use the reads fast5 files in `sample/reads_intermediate` folder for testing
-```
-## copy sample reads to a test folder
-mkdir ./test_baseDmux
-cp -r ./baseDmux/sample/reads_intermediate/ ./test_baseDmux/reads
+You can use the reads fast5 files in `sample/reads_intermediate` folder for testing and generate a local `profile` directory.  
 
+```{bash}
 ## create configuration file for Snakemake and Snakemake profile,
 ## and (optional) a tsv file containing information about genomes corresponding to barcode IDs
+mkdir ./test_baseDmux
 baseDmux configure ./test_baseDmux --mode local --barcodes_by_genome
+
+## copy sample reads to a test folder
+cp -r ./baseDmux/sample/reads_intermediate/ ./test_baseDmux/reads
 
 ## check the workflow by dryrun, then run
 baseDmux dryrun ./test_baseDmux/profile
@@ -291,9 +291,10 @@ baseDmux run ./test_baseDmux/profile
 ```
 
 The output will be written in `./test_baseDmux/results` by default
-The first run may take a long time for the conda environments to be installed even if using Mamba.  
+The first run may take a long time for Singularity containers to be downloaded and the conda environments to be installed even if using Mamba.  
 On a personnal computer with only a few CPU, even with this very minimal dataset,
-guppy basecalling may also take several minutes...
+guppy basecalling may also take several minutes... So be patient depending on your underlying computing
+ infrastructure capacities.
 
 
 ### Input and Output
