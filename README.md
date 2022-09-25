@@ -21,7 +21,7 @@ Basecalling by GUPPY + Demultiplexing by GUPPY and/or DEEPBINNER + MinIONQC/Mult
 - Porechop
 - Filtlong  
 
-We try to update the tools regularly. See versions in the [folder](baseDmux/data/containers) containning conda environment and singularity container recipie files.
+We try to update the tools regularly. See versions in the folders containning [conda environment](baseDmux/data/conda) and [singularity container recipie](baseDmux/data/containers) files.
 
 
 
@@ -69,7 +69,8 @@ Filter reads by length and by quality. More details is [here](https://github.com
 
 ### Singularity containers
 
-The whole workflow runs inside Singularity images (see [our Singularity Recipe files](baseDmux/data/containers). Depending on type of 'RESOURCE' (CPU/GPU), corresponding containers will be selected and pulled.
+Workflow jobs run inside Singularity images (see [our Singularity Recipe files](baseDmux/data/containers
+)).
 
 The latest containers will be automatically downloaded and intalled in the baseDmux environement installation
  directory. They can anyhow be manually downloaded from [IRD Drive](https://drive.ird.fr/s/nTsw45jnW67tCw7).
@@ -80,7 +81,7 @@ Custom Singularity images can be specified by editing the [`./baseDmux/data/sing
 ### Conda environments
 
 Inside of the Singularity images, individual Snakemake rules use dedicated conda
-environments yaml files that are located in `./baseDmux/data/conda`
+environments yaml files that are located [there](baseDmux/data/conda).
 
 - minionqc
 - multiqc
@@ -152,16 +153,22 @@ You can decide whether guppy and deepbinner should run on GPU or CPU by specifyi
 ](baseDmux/data/config.yaml) file depending on the available computing hardware. Note that Deepbinner is not longer
  maintained and that [Deepbinner models](https://github.com/rrwick/Deepbinner/tree/master/models) are limited to specific 'earlier' flow cells and barcoding kits. One should therefore ensure that that Deepbinner is a adequate for the data at hand.  
 
-A typical usage case for baseDmux is to prepare filtered sequencing reads in individual fastq files for genome assembly (or transcripts analysis) when users have a number of genomic DNA (or RNA) preparations sequenced with the same library preparation protocol and flowcell typoe but over several runs with various sets of multiplex barcodes. For this, it is necessary to run the complete workflow.
+A typical usage case for baseDmux is to prepare filtered sequencing reads in individual fastq files for genome
+ assembly (or transcripts analysis) when users have a number of genomic DNA (or RNA) preparations sequenced with the
+  same library preparation protocol and flowcell typoe but over several runs with various sets of multiplex barcodes
+  . For this, it is necessary to run the complete workflow. **Note** that they however currently need to share, if not
+   identical, at least 'compatible' (in the guppy sense), library construction kits and flow cell types.
 
-To this end, users need to prepare a [`Barcode by genome`](/baseDmux/data/barcodeByGenome_sample.tsv) file. This is a roadmap table for subseting fastq and fast5 reads, demultiplexed with guppy and/or deepbinner, and coming from disparate runs and barcodes, in bins corresponding to individual 'genomes' (or samples).
-It must contain at least the follwing columns: Demultiplexer, Run_ID, ONT_Barcode, Genome_ID. Values in the
- `Genome_ID` correspond to the labels of the bin into which reads will eventually be grouped. **Make sure** that these
-  labels do NOT contain spaces " " or other special characters like '|' '$' ':'. As separators, the safest options
-   are to use "_" or "-".  
+Users need to prepare a [`Barcode by genome`](/baseDmux/data/barcodeByGenome_sample.tsv) file. This is a roadmap
+ table for subseting fastq and fast5 reads, demultiplexed with guppy and/or deepbinner, and coming from disparate
+  runs and barcodes, in bins corresponding to individual 'genomes' (or samples). It must contain at least the
+   follwing columns: Demultiplexer, Run_ID, ONT_Barcode, Genome_ID. Values in the `Genome_ID` correspond to the
+    labels of the bin into which reads will eventually be grouped. **Make sure** that these labels do NOT contain
+     spaces " " or other special characters like '|' '$' ':'. As separators, the safest options are to use "_" or "-".  
 Likewise, `Run_ID` values should not contain special characters. In addition, these values must match the names of the
  top folders in the input fast5 directory.  
-Importantly, the `Barcode by genome` file does not only enable to group reads, it is necessary to provide such a file for the porechop and filtlong rules to be executed.
+Importantly, the `Barcode by genome` file does not only enable to group reads, it is necessary to provide such a file
+ for the porechop and filtlong rules to be executed. A template is provided (see the section below on configuration).
 
 Appart from the workflow parameters, there are also additional parameter files that are required to specify Snakemake
  invocation arguments and, when baseDmux is run with a HPC scheduler, parameters regarding how specific jobs need to
@@ -172,7 +179,8 @@ Appart from the workflow parameters, there are also additional parameter files t
 
 #### Generating template configuration files
 
-To simplify configuration, the `baseDmux configure` command generates 'template' configuration profiles for general use cases. These files can subsequently be modified to fit specific situations.
+To simplify configuration, the `baseDmux configure` command generates a 'template' configuration profile for general
+ use cases. These files can subsequently be modified to fit specific situations.
 
 ```
 usage: baseDmux configure [-h] --mode {local,slurm,cluster,iTrop} [--barcodes_by_genome]
@@ -205,11 +213,11 @@ A 'profile' folder will be created and populated in the specifid `dir` path. The
  folder can be moved/copied/renamed anywhere as long as you use the correct path when you call `baseDmux run` and update
   the enclosed files, `config.yaml` and `workflow_parameter.yaml` for the new paths of `workflow_parameter.yaml ` and `barcodesByGenome.tsv`, respectively.  
 
-With the `--barcodes_by_genome` option, a formatted file `barcodesByGenome.tsv` will be created (and its path appropriately specified in `workflow_parameter.yaml`). One can then modify the information on the table accordingly. It is important that this table contains at least the same columns as those in the provided example `barcodeByGenome_sample.tsv` file and that each value in the `Genome_ID` column is unique.  
+With the `--barcodes_by_genome` option, a formatted file `barcodesByGenome.tsv` will be created (and its path appropriately specified in `workflow_parameter.yaml`). One can then modify the information on the table accordingly. It is important that this table contains at least the same columns as those in the provided example `barcodeByGenome_sample.tsv` file.  
 
 Once you have adapted the templates for your typical use cases, there is no need to rerun `baseDmux configure` again, just copy and adapt your existing templates.
 
-*Note*: the 'iTRop' and 'cluster' modes are **obsolete** and will be eventually removed.
+*Note*: the 'iTRop' and 'cluster' modes are **obsolete** and will eventually be removed.
 
 
 ##### **an exemple to prepare to run Snakemake locally** (laptop, local node on a HPC)
