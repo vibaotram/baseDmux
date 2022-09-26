@@ -98,7 +98,6 @@ RULE_GET_READS_PER_GENOME:
     # Values in the `Genome_ID` column must be UNIQUE for each row
     # if BARCODE_BY_GENOME is left empty this rule will not be executed and reads belonging to individual barcodes will
     # not be grouped in 'genome' bins
-    'FASTQ_TRANSFERING': "copy" # "copy"/"move" ## DEPRECATED!!!!!!
     'GET_FAST5': "True" # True/False, whether to get and group together reads in fast5 files per genome
     'MAX_THREADS': 2 # maximum number of threads available for fast5 subset. the number of threads actually used will be automatically adjusted based on the number of fast5 inputs for each genome, but not higher than MAX_THREADS
 
