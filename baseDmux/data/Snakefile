@@ -283,17 +283,18 @@ rule guppy_basecalling:
 		fi
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		### Unsucessfully trying to solve issues with CUDA_VISIBLE_DEVICES with slurm --gre gpu:n#
-		# if [ -z "${{CUDA_VISIBLE_DEVICES+x}}" ]
-		# then
-		# 	echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
-		# else
-		# 	echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '${{CUDA_DEVICE_ORDER-}}'."
+		if [ -z "${{CUDA_VISIBLE_DEVICES+x}}" ]
+		then
+			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
+		else
+			echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '$CUDA_DEVICE_ORDER'."
 		# 	CUDA_DEVICE_ORDER=PCI_BUS_ID
 		# 	echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '$CUDA_DEVICE_ORDER'."
-		# 	echo "##  Checking env variable \$CUDA_VISIBLE_DEVICES = '$CUDA_VISIBLE_DEVICES'."
+		 	echo "##  Checking env variable \$CUDA_VISIBLE_DEVICES = '$CUDA_VISIBLE_DEVICES'."
 		# 	echo "##  Overwritting the value \"$CUDA\" in \$CUDA with \$CUDA_VISIBLE_DEVICES value.."
 		# 	CUDA="cuda:${{CUDA_VISIBLE_DEVICES}}"
-		# fi
+		CUDA=auto
+		 fi
 		####
 		guppy_basecaller -i $temp_indir -s $temp_outdir {BASECALLER_OPT}
 		echo -e "\\nConcatenating passed fastq files into {params.compressed_fastq} \\n"
@@ -342,17 +343,18 @@ rule guppy_demultiplexing:
 		exec > >(tee "{SNAKEMAKE_LOG}/{params.log}") 2>&1
 		CUDA=$(python3 {CHOOSE_AVAIL_GPU} {NUM_GPUS})
 		### Unsucessfully trying to solve issues with CUDA_VISIBLE_DEVICES with slurm --gre gpu:n#
-		# if [ -z "${{CUDA_VISIBLE_DEVICES+x}}" ]
-		# then
-		# 	echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
-		# else
-		# 	echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '$CUDA_DEVICE_ORDER'."
+		if [ -z "${{CUDA_VISIBLE_DEVICES+x}}" ]
+		then
+			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
+		else
+			echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '$CUDA_DEVICE_ORDER'."
 		# 	CUDA_DEVICE_ORDER=PCI_BUS_ID
 		# 	echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '$CUDA_DEVICE_ORDER'."
-		# 	echo "##  Checking env variable \$CUDA_VISIBLE_DEVICES = '$CUDA_VISIBLE_DEVICES'."
+		 	echo "##  Checking env variable \$CUDA_VISIBLE_DEVICES = '$CUDA_VISIBLE_DEVICES'."
 		# 	echo "##  Overwritting the value \"$CUDA\" in \$CUDA with \$CUDA_VISIBLE_DEVICES value.."
 		# 	CUDA="cuda:${{CUDA_VISIBLE_DEVICES}}"
-		# fi
+		CUDA=auto
+		 fi
 		####
 		guppy_barcoder -i {input} -s {params.outpath} --config {BARCODER_CONFIG} --barcode_kits {KIT} --worker_threads {threads} {DEVICE} {BARCODER_ADDITION} # --compress_fastq
 		Rscript {RENAME_FASTQ_GUPPY_BARCODER} {params.outpath}
