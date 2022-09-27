@@ -287,10 +287,10 @@ rule guppy_basecalling:
 		then
 			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
 		else
-			#echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES' replaced with '${{CUDA:5}}'."
-			#export CUDA_VISIBLE_DEVICES="${{CUDA//cuda:}}"
-			#export CUDA_VISIBLE_DEVICES=""
-			echo "##  \$CUDA_VISIBLE_DEVICES value '$CUDA_VISIBLE_DEVICES'."
+			echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '$CUDA_DEVICE_ORDER'."
+			CUDA_DEVICE_ORDER=PCI_BUS_ID
+			echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '$CUDA_DEVICE_ORDER'."
+			echo "##  Checking env variable \$CUDA_VISIBLE_DEVICES = '$CUDA_VISIBLE_DEVICES'."
 			echo "##  Overwritting the value \"$CUDA\" in \$CUDA with \$CUDA_VISIBLE_DEVICES value.."
 			CUDA="cuda:${{CUDA_VISIBLE_DEVICES}}"
 		fi
