@@ -287,7 +287,7 @@ rule guppy_basecalling:
 		then
 			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
 		else
-			echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '$CUDA_DEVICE_ORDER'."
+		#	echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '${{CUDA_DEVICE_ORDER-}}'."
 		# 	CUDA_DEVICE_ORDER=PCI_BUS_ID
 		# 	echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '$CUDA_DEVICE_ORDER'."
 		 	echo "##  Checking env variable \$CUDA_VISIBLE_DEVICES = '$CUDA_VISIBLE_DEVICES'."
