@@ -229,11 +229,6 @@ rule finish:
 		by_cond(FAST5_PER_GENOME, expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome), ()),
 		expand(os.path.join(outdir, "reads_per_genome/fastq{filtered}/{genome}{filtered}.fastq.gz"), genome = genome, filtered = filtered),
 
-		# expand(os.path.join(outdir, "reads_per_genome/fast5/{genome}"), genome = genome)
-		# expand(os.path.join(outdir, "basecall/{run}/{fig}.png"), run=run, fig=fig),
-		# os.path.join(outdir, "report/demultiplex_report.html")
-		#expand(os.path.join(DIR, "demultiplex/{demultiplexer}/{run}/report.done"), demultiplexer=demultiplexer, run=run),
-
 
 ##############################
 ################## BASECALLING

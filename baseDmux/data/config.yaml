@@ -17,7 +17,7 @@ FLOWCELL: "FLO-MIN106"
 ##############################
 ##### resources
 RESOURCE: "CPU" # "CPU"/"GPU" ## resources for running Guppy and Deepbinner
-NUM_GPUS: 4 # mumber of GPU devices to use # baseDmux will decide CUDA devices based on availability ## GPU mode only
+NUM_GPUS: 4 # mumber of GPU devices to use # baseDmux will decide CUDA devices based on availability - relevant to GPU mode only
 
 
 ##############################
@@ -25,8 +25,8 @@ NUM_GPUS: 4 # mumber of GPU devices to use # baseDmux will decide CUDA devices b
 RULE_GUPPY_BASECALLING:
     'MIN_QSCORE': 7 # basecalling will filter reads based on minimum q-score specified here
     'NUM_CALLERS': 4 # number of parallel basecallers to create ## recommended: NUM_CALLERS=2*NUM_GPUS
-    'CPU_THREADS_PER_CALLER': 2 # number of CPU threads to create for each caller to use
-    'GPU_RUNNERS_PER_DEVICE': 4 # number of neural network runners to create per CUDA device ## GPU mode only
+    'CPU_THREADS_PER_CALLER': 12   # number of CPU threads to create for each caller to use - relevant to CPU mode only
+    'GPU_RUNNERS_PER_DEVICE': 4   # number of neural network runners to create per CUDA device - relevant to GPU mode only
      ## additional params that do not affect output format :
      ## - do NOT use --compress_fastq, because next steps use uncompressed fastq
      ## - recommended to use '--disable_trim_barcodes' if demultiplexing afterwards
