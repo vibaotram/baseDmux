@@ -288,7 +288,8 @@ rule guppy_basecalling:
 			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
 		else
 			echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '${{CUDA_DEVICE_ORDER-}}'."
-		# 	CUDA_DEVICE_ORDER=PCI_BUS_ID
+			echo "##  Checking env variable \$NVIDIA_VISIBLE_DEVICES = '${{NVIDIA_VISIBLE_DEVICES-}}'."
+		# 	export CUDA_DEVICE_ORDER=PCI_BUS_ID
 		# 	echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '${{CUDA_DEVICE_ORDER-}}'."
 			echo "##  Checking env variable \$CUDA_VISIBLE_DEVICES = '$CUDA_VISIBLE_DEVICES'."
 			echo "##  Overwritting the value \"$CUDA\" in \$CUDA with \$CUDA_VISIBLE_DEVICES value.."
@@ -336,6 +337,8 @@ rule guppy_demultiplexing:
 		log = "guppy_demultiplexing_{run}.log"
 	singularity: guppy_container
 	conda: 'conda/conda_minionqc.yaml'
+	# resources:
+	# 	ngpudevices = NUM_GPUS
 	threads: WORKER_THREADS
 	shell:
 		"""
@@ -347,7 +350,8 @@ rule guppy_demultiplexing:
 			echo "##  \$CUDA_VISIBLE_DEVICES is unset. Fine."
 		else
 			echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '${{CUDA_DEVICE_ORDER-}}'."
-		# 	CUDA_DEVICE_ORDER=PCI_BUS_ID
+			echo "##  Checking env variable \$NVIDIA_VISIBLE_DEVICES = '${{NVIDIA_VISIBLE_DEVICES-}}'."
+		# 	export CUDA_DEVICE_ORDER=PCI_BUS_ID
 		# 	echo "##  Checking env variable \$CUDA_DEVICE_ORDER = '${{CUDA_DEVICE_ORDER-}}'."
 			echo "##  Checking env variable \$CUDA_VISIBLE_DEVICES = '$CUDA_VISIBLE_DEVICES'."
 			echo "##  Overwritting the value \"$CUDA\" in \$CUDA with \$CUDA_VISIBLE_DEVICES value.."
