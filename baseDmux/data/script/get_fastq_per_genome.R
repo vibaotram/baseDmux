@@ -99,7 +99,7 @@ ori_file = dict[dict$Genome_ID == myArgs$genome, "ori_fastq"]
 dir.create(dest_fastq_dir, showWarnings = FALSE, mode = "0770")
 dest_file = file.path(dest_fastq_dir, paste0(myArgs$genome, ".fastq.gz"))
 if (length(ori_file) == 1) {
-  transfer_file = paste(cmd, ori_file, dest_file, sep = " ")
+  transfer_file = paste("rsync -avrP", ori_file, dest_file, sep = " ")
 } else {
   transfer_file = paste("zcat", do.call(paste, as.list(ori_file)), "| gzip >", dest_file)
 }
