@@ -24,8 +24,8 @@ NUM_GPUS: 4 # mumber of GPU devices to use # baseDmux will decide CUDA devices b
 ##### guppy_basecaller + fast5_subset parameters
 RULE_GUPPY_BASECALLING:
     'MIN_QSCORE': 7 # basecalling will filter reads based on minimum q-score specified here
-    'NUM_CALLERS': 4 # number of parallel basecallers to create ## recommended: NUM_CALLERS=2*NUM_GPUS
-    'CPU_THREADS_PER_CALLER': 12   # number of CPU threads to create for each caller to use - relevant to CPU mode only
+    'NUM_CALLERS': 4 # number of parallel basecallers to create - specify the number of cores used by the node on HPC in GPU mode ## recommended: NUM_CALLERS=2*NUM_GPUS
+    'CPU_THREADS_PER_CALLER': 12   # number of CPU threads to create for each caller to use - relevant to CPU mode only. The number of cores used by the node on HPC in CPU mode is NUM_CALLERS*CPU_THREADS_PER_CALLER
     'GPU_RUNNERS_PER_DEVICE': 4   # number of neural network runners to create per CUDA device - relevant to GPU mode only
      ## additional params that do not affect output format :
      ## - do NOT use --compress_fastq, because next steps use uncompressed fastq
