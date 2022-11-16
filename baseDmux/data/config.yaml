@@ -3,9 +3,9 @@
 
 ##############################
 ##### input/output directory
-INDIR: "test/reads" ## absolute path to a single folder holding 'ONT runs folders'. Each of those contains fast5 files stored in a 'fast5' folder
+INDIR: "test/reads" ## absolute path to a single folder holding 'ONT runs folders'. Each of those contains fast5 files stored in a 'fast5' subfolder
 OUTDIR: "test/results" ## absolute path to output directory
-NASID: "" ## host name, if indir and outdir in NAS but workdir is not
+NASID: "" ## if a host name is specified, files input for data heavy rules will be copied from this host input directory to a local temporary directory and ouput will be copied back to the host directory upon completion.
 
 
 ##############################
