@@ -6,7 +6,7 @@ channels:
     - anaconda
 dependencies:
     - snakemake = 7.14.0
-    - singularity = 3.8.7
+    #- singularity = 3.8.7
     - pygraphviz = 1.7
     - python = 3.8
     - ruamel.yaml = 0.17.21
