@@ -164,8 +164,8 @@ DEMULTIPLEX_REPORT = config['REPORTS']['DEMULTIPLEX_REPORT']
 ##############################
 ## use different containers for guppy and deepbinner depending on resources
 simg_container = load_configfile(os.path.abspath('data/singularity.yaml'))
-guppy_cpu_container = simg_container['guppy_conda_api_CPU']
-guppy_gpu_container = simg_container['guppy_conda_api_GPU']
+guppy_cpu_container = simg_container['guppy_conda_api']
+guppy_gpu_container = simg_container['guppy_conda_api']
 
 guppy_container = by_cond(RESOURCE == 'CPU', guppy_cpu_container, guppy_gpu_container, cond_ext = RESOURCE == 'GPU')
 
