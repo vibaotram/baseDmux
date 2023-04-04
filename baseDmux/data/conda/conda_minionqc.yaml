@@ -10,4 +10,4 @@ dependencies:
     - bioconductor-biostrings
     - mkl-service=2.3.0
     - fonts-conda-forge
-    - pandas=1.0.1
+    - pandas=1.5.0
