@@ -17,6 +17,9 @@ max-status-checks-per-second: 10 # OPTIONAL
 local-cores: 1 # OPTIONAL, Number of cores allocated to the snakemake process controlling the baseDmux wrokflow. If run as a job in scheduler system on HPC, this should ideally be inferior or equal to the number of cores allocated to the baseDmux master job.
 use-conda: "True" # Currently redoundant with what BaseDmux does
 use-singularity: "True" # Currently redoundant with what BaseDmux does
+default-resources: # Override snakemake default resources values
+    - mem_mb=None
+
 
 ##############################
 ##### Job Scheduler submission
